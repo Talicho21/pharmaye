@@ -1501,9 +1501,7 @@ export default function PharmacyDashboard() {
   const inactiveCategoryRecords = inactiveHistoryData?.categories || [];
 
   return (
-    <div
-      className={`p-8 min-h-screen font-sans print:bg-white print:p-0 ${pageTheme}`}
-    >
+    <div className={`min-h-screen font-sans print:bg-white print:p-0 ${pageTheme}`}>
       {/* Toast Notifications */}
       <div className="fixed top-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3 print:hidden">
         {toasts.map((toast) => (
@@ -1661,6 +1659,105 @@ export default function PharmacyDashboard() {
         </div>
       )}
 
+      <div className="flex min-h-screen flex-col gap-6 p-4 lg:flex-row lg:p-8 print:p-0">
+        <aside className="w-full lg:w-80 print:hidden">
+          <div className={`sticky top-8 rounded-4xl border border-white/40 p-5 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl ${cardTheme}`}>
+            <div className="rounded-3xl bg-linear-to-br from-slate-900 via-blue-800 to-cyan-600 p-5 text-white shadow-lg">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-100/90">
+                Pharmacy Dashboard
+              </p>
+              <h2 className="mt-2 text-2xl font-black leading-tight">
+                Express Pharmaceutical Wholesale
+              </h2>
+              <p className="mt-2 text-sm font-medium text-cyan-50/90">
+                Managing wholesale pharmacy stock with quick access controls.
+              </p>
+            </div>
+
+            <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                Signed in as
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-base font-black text-slate-900">
+                    {loggedInUser?.username || "User"}
+                  </p>
+                  <p className="text-sm font-medium text-slate-500">
+                    {isAdmin ? "Administrator access" : "Staff access"}
+                  </p>
+                </div>
+                <span
+                  className={`inline-flex rounded-xl border-2 px-3 py-1 text-[11px] font-black uppercase tracking-wide shadow-[2px_2px_0_0_#0f172a] ${
+                    isAdmin
+                      ? "border-blue-300 bg-blue-100 text-blue-700"
+                      : "border-slate-300 bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {isAdmin ? "ADMIN" : "STAFF"}
+                </span>
+              </div>
+            </div>
+
+            <nav className="mt-5 space-y-2">
+              <p className="px-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                Quick navigation
+              </p>
+              <a href="#dashboard" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+                Dashboard
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a href="#sales-report" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+                Reports
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a href="#quick-import" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+                Quick Import
+                <span aria-hidden="true">↗</span>
+              </a>
+              <a href="#live-inventory" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+                Live Inventory
+                <span aria-hidden="true">↗</span>
+              </a>
+            </nav>
+
+            <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="w-full rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-black text-white shadow-[0_12px_30px_-12px_rgba(37,99,235,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? "Refreshing..." : "Refresh Data"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDarkMode((prev) => !prev)}
+                className="w-full rounded-2xl border border-slate-300 bg-linear-to-r from-slate-100 to-slate-200 px-4 py-3 text-sm font-black text-slate-900 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+              >
+                {isDarkMode ? "Switch to Light" : "Switch to Dark"}
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full rounded-2xl border border-rose-200 bg-linear-to-r from-rose-100 to-orange-100 px-4 py-3 text-sm font-black text-slate-900 transition-all duration-200 hover:-translate-y-0.5 hover:text-rose-600 hover:shadow-xl"
+              >
+                Logout
+              </button>
+            </div>
+
+            {isLoggedIn && (
+              <button
+                onClick={() => setIsGeneralSaleOpen(true)}
+                className="mt-5 w-full rounded-2xl bg-linear-to-r from-emerald-600 to-green-600 px-4 py-3 text-sm font-black text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
+              >
+                🛒 Sell Out Items
+              </button>
+            )}
+          </div>
+        </aside>
+
+        <main id="dashboard" className="min-w-0 flex-1 space-y-8">
       <header className="flex justify-between items-end mb-10 print:hidden">
         <div>
           <h1
@@ -1672,57 +1769,7 @@ export default function PharmacyDashboard() {
             Managing Wholesale Pharmacy Stock
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="mr-2 flex items-center gap-2 rounded-xl border-2 border-slate-900 bg-white px-3 py-2 shadow-[4px_4px_0_0_#0f172a]">
-            <span className="text-xs font-black text-slate-900">
-              Welcome, {loggedInUser?.username || "User"}
-            </span>
-            <span
-              className={`inline-flex rounded-lg border-2 px-2 py-1 text-[10px] font-black uppercase tracking-wide shadow-[2px_2px_0_0_#0f172a] ${
-                isAdmin
-                  ? "border-blue-300 bg-blue-100 text-blue-700"
-                  : "border-slate-300 bg-slate-200 text-slate-700"
-              }`}
-            >
-              {isAdmin ? "ADMIN" : "STAFF"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="px-4 py-2 rounded-full font-bold text-white transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl bg-linear-to-r from-cyan-500 to-blue-600 shadow-[0_12px_30px_-12px_rgba(37,99,235,0.8)]"
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            className="px-4 py-2 rounded-full font-bold text-slate-900 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl bg-linear-to-r from-slate-100 to-slate-200 border border-slate-300"
-          >
-            {isDarkMode ? "Light" : "Dark"}
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-6 py-2 rounded-full font-bold text-slate-900 transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl bg-linear-to-r from-rose-100 to-orange-100 border border-rose-200 hover:text-rose-600"
-          >
-            Logout
-          </button>
-        </div>
       </header>
-
-      {/* ========== NEW: General Sale Button ========== */}
-      {isLoggedIn && (
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setIsGeneralSaleOpen(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg transition duration-200"
-          >
-            🛒 Sell Out Items
-          </button>
-        </div>
-      )}
-      {/* ========== END: General Sale Button ========== */}
 
       {isAdmin && (
         <section
@@ -2414,6 +2461,7 @@ export default function PharmacyDashboard() {
         )}
 
         <div
+          id="quick-import"
           className={`rounded-4xl border border-white/25 bg-linear-to-br from-cyan-600 via-blue-600 to-indigo-700 p-8 text-white shadow-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
             isAdmin ? "" : "mx-auto w-full max-w-4xl"
           }`}
@@ -2529,6 +2577,7 @@ export default function PharmacyDashboard() {
       </div>
 
       <div
+        id="live-inventory"
         className={`rounded-4xl shadow-sm border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl print:hidden ${cardTheme}`}
       >
         <div
@@ -2700,6 +2749,8 @@ export default function PharmacyDashboard() {
         isProcessing={isProcessingBulkSale}
       />
       {/* ========== END MODAL ========== */}
+        </main>
+      </div>
     </div>
   );
 }
