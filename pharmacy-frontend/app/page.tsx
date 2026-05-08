@@ -1501,7 +1501,9 @@ export default function PharmacyDashboard() {
   const inactiveCategoryRecords = inactiveHistoryData?.categories || [];
 
   return (
-    <div className={`min-h-screen font-sans print:bg-white print:p-0 ${pageTheme}`}>
+    <div
+      className={`min-h-screen font-sans print:bg-white print:p-0 ${pageTheme}`}
+    >
       {/* Toast Notifications */}
       <div className="fixed top-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3 print:hidden">
         {toasts.map((toast) => (
@@ -1661,7 +1663,9 @@ export default function PharmacyDashboard() {
 
       <div className="flex min-h-screen flex-col gap-6 p-4 lg:flex-row lg:p-8 print:p-0">
         <aside className="w-full lg:w-80 print:hidden">
-          <div className={`sticky top-8 rounded-4xl border border-white/40 p-5 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl ${cardTheme}`}>
+          <div
+            className={`sticky top-8 rounded-4xl border border-white/40 p-5 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl ${cardTheme}`}
+          >
             <div className="rounded-3xl bg-linear-to-br from-slate-900 via-blue-800 to-cyan-600 p-5 text-white shadow-lg">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-100/90">
                 Pharmacy Dashboard
@@ -1703,33 +1707,37 @@ export default function PharmacyDashboard() {
               <p className="px-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
                 Quick navigation
               </p>
-              <a href="#dashboard" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+              <a
+                href="#dashboard"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
+              >
                 Dashboard
                 <span aria-hidden="true">↗</span>
               </a>
-              <a href="#sales-report" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+              <a
+                href="#sales-report"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
+              >
                 Reports
                 <span aria-hidden="true">↗</span>
               </a>
-              <a href="#quick-import" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+              <a
+                href="#quick-import"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
+              >
                 Quick Import
                 <span aria-hidden="true">↗</span>
               </a>
-              <a href="#live-inventory" className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white">
+              <a
+                href="#live-inventory"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white"
+              >
                 Live Inventory
                 <span aria-hidden="true">↗</span>
               </a>
             </nav>
 
             <div className="mt-5 space-y-3">
-              <button
-                type="button"
-                onClick={handleRefresh}
-                className="w-full rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-black text-white shadow-[0_12px_30px_-12px_rgba(37,99,235,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
-                disabled={isRefreshing}
-              >
-                {isRefreshing ? "Refreshing..." : "Refresh Data"}
-              </button>
               <button
                 type="button"
                 onClick={() => setIsDarkMode((prev) => !prev)}
@@ -1745,1010 +1753,1039 @@ export default function PharmacyDashboard() {
                 Logout
               </button>
             </div>
-
-            {isLoggedIn && (
-              <button
-                onClick={() => setIsGeneralSaleOpen(true)}
-                className="mt-5 w-full rounded-2xl bg-linear-to-r from-emerald-600 to-green-600 px-4 py-3 text-sm font-black text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
-              >
-                🛒 Sell Out Items
-              </button>
-            )}
           </div>
         </aside>
 
         <main id="dashboard" className="min-w-0 flex-1 space-y-8">
-      <header className="flex justify-between items-end mb-10 print:hidden">
-        <div>
-          <h1
-            className={`inline-block text-4xl font-black tracking-tight transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:underline hover:decoration-4 hover:underline-offset-4 hover:drop-shadow-lg ${titleTheme}`}
-          >
-            Express Pharmaceutical Wholesale
-          </h1>
-          <p className={`font-medium ${mutedTheme}`}>
-            Managing Wholesale Pharmacy Stock
-          </p>
-        </div>
-      </header>
-
-      {isAdmin && (
-        <section
-          id="sales-report"
-          className="mb-10 rounded-4xl bg-linear-to-r from-cyan-500 via-indigo-500 to-violet-500 p-0.5 shadow-[0_24px_80px_-35px_rgba(59,130,246,0.55)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_30px_95px_-35px_rgba(59,130,246,0.75)] print:mb-0 print:rounded-none print:bg-white print:p-0 print:shadow-none"
-        >
-          <div
-            className={`rounded-4xl border border-slate-200/70 p-6 transition-all duration-200 hover:shadow-2xl ${cardTheme}`}
-          >
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className={`text-2xl font-black ${titleTheme}`}>
-                Reports Overview
-              </h2>
-              <button
-                type="button"
-                onClick={handleExportReport}
-                className="rounded-xl border-2 border-slate-900 bg-linear-to-r from-white to-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
+          <header className="flex justify-between items-end mb-10 print:hidden">
+            <div>
+              <h1
+                className={`inline-block text-4xl font-black tracking-tight transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:underline hover:decoration-4 hover:underline-offset-4 hover:drop-shadow-lg ${titleTheme}`}
               >
-                Export to PDF / Print
-              </button>
+                Express Pharmaceutical Wholesale
+              </h1>
+              <p className={`font-medium ${mutedTheme}`}>
+                Managing Wholesale Pharmacy Stock
+              </p>
             </div>
+          </header>
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              {REPORT_RANGE_OPTIONS.map((rangeOption) => {
-                const isActive = selectedReportRange === rangeOption.value;
-                return (
-                  <button
-                    key={rangeOption.value}
-                    type="button"
-                    onClick={() => setSelectedReportRange(rangeOption.value)}
-                    className={`rounded-xl border-2 px-4 py-2 text-sm font-black shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
-                      isActive
-                        ? "border-slate-900 bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                        : "border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    {rangeOption.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-cyan-200 bg-linear-to-br from-cyan-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-                <p className="text-xs font-black uppercase text-cyan-700">
-                  Total Revenue
-                </p>
-                <p className="mt-1 text-2xl font-black text-slate-900">
-                  ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-violet-200 bg-linear-to-br from-violet-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-                <p className="text-xs font-black uppercase text-violet-700">
-                  Total Items Sold
-                </p>
-                <p className="mt-1 text-2xl font-black text-slate-900">
-                  {Math.round(Number(reportData?.totalItemsSold || 0))}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-                <p className="text-xs font-black uppercase text-slate-500">
-                  Report Window
-                </p>
-                <p className="mt-1 text-xl font-black text-slate-900">
-                  {
-                    REPORT_RANGE_OPTIONS.find(
-                      (option) => option.value === selectedReportRange,
-                    )?.label
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-              <h3 className="text-lg font-black text-slate-900">
-                Top Selling Medicines
-              </h3>
-
-              {isLoadingReport ? (
-                <p className="mt-3 text-sm font-bold text-slate-500">
-                  Loading report data...
-                </p>
-              ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
-                <p className="mt-3 text-sm font-bold text-slate-500">
-                  No sales found for this period.
-                </p>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {reportData?.topSellingMedicines.map((medicine, index) => (
-                    <div key={medicine.medicineName}>
-                      <div className="mb-1 flex items-center justify-between text-xs font-black text-slate-700">
-                        <span>
-                          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
-                            {index + 1}
-                          </span>
-                          {medicine.medicineName}
-                        </span>
-                        <span>
-                          {medicine.quantitySold} sold • ETB{" "}
-                          {medicine.totalRevenue.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                        <div
-                          className="h-full bg-linear-to-r from-cyan-500 via-blue-600 to-violet-600"
-                          style={{
-                            width: `${Math.max(8, (medicine.quantitySold / maxSoldQty) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-lg font-black text-slate-900">
-                  Detailed Sales Log
-                </h3>
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-xs font-black uppercase text-slate-500">
-                    From
-                  </label>
-                  <input
-                    type="date"
-                    value={salesLogStartDate}
-                    onChange={(e) => setSalesLogStartDate(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                  />
-                  <label className="text-xs font-black uppercase text-slate-500">
-                    To
-                  </label>
-                  <input
-                    type="date"
-                    value={salesLogEndDate}
-                    onChange={(e) => setSalesLogEndDate(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                    Transactions
-                  </p>
-                  <p className="mt-1 text-xl font-black text-slate-900">
-                    {salesLogData?.totalRecords ?? 0}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                    Units Sold
-                  </p>
-                  <p className="mt-1 text-xl font-black text-slate-900">
-                    {Math.round(detailedSalesQuantity)}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                    Sales Value
-                  </p>
-                  <p className="mt-1 text-xl font-black text-slate-900">
-                    ETB {detailedSalesValue.toFixed(2)}
-                  </p>
-                </div>
-              </div>
-
+          {isAdmin && (
+            <section
+              id="sales-report"
+              className="mb-10 rounded-4xl bg-linear-to-r from-cyan-500 via-indigo-500 to-violet-500 p-0.5 shadow-[0_24px_80px_-35px_rgba(59,130,246,0.55)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_30px_95px_-35px_rgba(59,130,246,0.75)] print:mb-0 print:rounded-none print:bg-white print:p-0 print:shadow-none"
+            >
               <div
-                ref={salesLogScrollRef}
-                className="mt-4 max-h-125 overflow-auto rounded-xl border-2 border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a]"
+                className={`rounded-4xl border border-slate-200/70 p-6 transition-all duration-200 hover:shadow-2xl ${cardTheme}`}
               >
-                <table className="w-full min-w-280 text-left">
-                  <thead
-                    className={`sticky top-0 z-20 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
-                      salesLogHasScrolled ? "shadow-[0_4px_0_0_#0f172a]" : ""
-                    }`}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className={`text-2xl font-black ${titleTheme}`}>
+                    Reports Overview
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={handleExportReport}
+                    className="rounded-xl border-2 border-slate-900 bg-linear-to-r from-white to-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
                   >
-                    <tr>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Sale ID
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Batch ID
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Date & Time
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Medicine
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Category
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                        Qty
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                        Unit Price
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                        Total
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Seller
-                      </th>
-                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                        Receiver
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {isLoadingSalesLog ? (
-                      <tr>
-                        <td
-                          colSpan={10}
-                          className="px-4 py-6 text-center text-sm font-bold text-slate-500"
-                        >
-                          Loading detailed sales records...
-                        </td>
-                      </tr>
-                    ) : detailedSalesRecords.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={10}
-                          className="px-4 py-6 text-center text-sm font-bold text-slate-500"
-                        >
-                          No sales records found for the selected date range.
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedSalesRecords.map((record) => (
-                        <tr key={`${record.id}-${record.saleDate}`}>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                            {record.id}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                            {record.batchId}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                            {new Date(record.saleDate).toLocaleString("en-GB")}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-bold text-slate-900">
-                            {record.medicineName}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                            {record.category}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
-                            {record.quantitySold}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
-                            ETB {Number(record.unitPrice || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
-                            ETB {Number(record.totalPrice || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                            {record.sellerName}
-                          </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                            {record.receiverName}
-                          </td>
+                    Export to PDF / Print
+                  </button>
+                </div>
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {REPORT_RANGE_OPTIONS.map((rangeOption) => {
+                    const isActive = selectedReportRange === rangeOption.value;
+                    return (
+                      <button
+                        key={rangeOption.value}
+                        type="button"
+                        onClick={() =>
+                          setSelectedReportRange(rangeOption.value)
+                        }
+                        className={`rounded-xl border-2 px-4 py-2 text-sm font-black shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
+                          isActive
+                            ? "border-slate-900 bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                            : "border-slate-300 bg-white text-slate-700"
+                        }`}
+                      >
+                        {rangeOption.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-cyan-200 bg-linear-to-br from-cyan-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                    <p className="text-xs font-black uppercase text-cyan-700">
+                      Total Revenue
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-slate-900">
+                      ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-violet-200 bg-linear-to-br from-violet-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                    <p className="text-xs font-black uppercase text-violet-700">
+                      Total Items Sold
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-slate-900">
+                      {Math.round(Number(reportData?.totalItemsSold || 0))}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                    <p className="text-xs font-black uppercase text-slate-500">
+                      Report Window
+                    </p>
+                    <p className="mt-1 text-xl font-black text-slate-900">
+                      {
+                        REPORT_RANGE_OPTIONS.find(
+                          (option) => option.value === selectedReportRange,
+                        )?.label
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                  <h3 className="text-lg font-black text-slate-900">
+                    Top Selling Medicines
+                  </h3>
+
+                  {isLoadingReport ? (
+                    <p className="mt-3 text-sm font-bold text-slate-500">
+                      Loading report data...
+                    </p>
+                  ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
+                    <p className="mt-3 text-sm font-bold text-slate-500">
+                      No sales found for this period.
+                    </p>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      {reportData?.topSellingMedicines.map(
+                        (medicine, index) => (
+                          <div key={medicine.medicineName}>
+                            <div className="mb-1 flex items-center justify-between text-xs font-black text-slate-700">
+                              <span>
+                                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+                                  {index + 1}
+                                </span>
+                                {medicine.medicineName}
+                              </span>
+                              <span>
+                                {medicine.quantitySold} sold • ETB{" "}
+                                {medicine.totalRevenue.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                              <div
+                                className="h-full bg-linear-to-r from-cyan-500 via-blue-600 to-violet-600"
+                                style={{
+                                  width: `${Math.max(8, (medicine.quantitySold / maxSoldQty) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-black text-slate-900">
+                      Detailed Sales Log
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-xs font-black uppercase text-slate-500">
+                        From
+                      </label>
+                      <input
+                        type="date"
+                        value={salesLogStartDate}
+                        onChange={(e) => setSalesLogStartDate(e.target.value)}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
+                      />
+                      <label className="text-xs font-black uppercase text-slate-500">
+                        To
+                      </label>
+                      <input
+                        type="date"
+                        value={salesLogEndDate}
+                        onChange={(e) => setSalesLogEndDate(e.target.value)}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                        Transactions
+                      </p>
+                      <p className="mt-1 text-xl font-black text-slate-900">
+                        {salesLogData?.totalRecords ?? 0}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                        Units Sold
+                      </p>
+                      <p className="mt-1 text-xl font-black text-slate-900">
+                        {Math.round(detailedSalesQuantity)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                        Sales Value
+                      </p>
+                      <p className="mt-1 text-xl font-black text-slate-900">
+                        ETB {detailedSalesValue.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    ref={salesLogScrollRef}
+                    className="mt-4 max-h-125 overflow-auto rounded-xl border-2 border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a]"
+                  >
+                    <table className="w-full min-w-280 text-left">
+                      <thead
+                        className={`sticky top-0 z-20 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
+                          salesLogHasScrolled
+                            ? "shadow-[0_4px_0_0_#0f172a]"
+                            : ""
+                        }`}
+                      >
+                        <tr>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Sale ID
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Batch ID
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Date & Time
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Medicine
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Category
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                            Qty
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                            Unit Price
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                            Total
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Seller
+                          </th>
+                          <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                            Receiver
+                          </th>
                         </tr>
-                      ))
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {isLoadingSalesLog ? (
+                          <tr>
+                            <td
+                              colSpan={10}
+                              className="px-4 py-6 text-center text-sm font-bold text-slate-500"
+                            >
+                              Loading detailed sales records...
+                            </td>
+                          </tr>
+                        ) : detailedSalesRecords.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={10}
+                              className="px-4 py-6 text-center text-sm font-bold text-slate-500"
+                            >
+                              No sales records found for the selected date
+                              range.
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedSalesRecords.map((record) => (
+                            <tr key={`${record.id}-${record.saleDate}`}>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-700">
+                                {record.id}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-700">
+                                {record.batchId}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                                {new Date(record.saleDate).toLocaleString(
+                                  "en-GB",
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                                {record.medicineName}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                                {record.category}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
+                                {record.quantitySold}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                                ETB {Number(record.unitPrice || 0).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
+                                ETB {Number(record.totalPrice || 0).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                                {record.sellerName}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                                {record.receiverName}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+                    <p className="text-sm font-black text-slate-700">
+                      Showing {visibleSalesLogStart}-{visibleSalesLogEnd} of{" "}
+                      {totalSalesLogRecords} records
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Rows per page
+                      </label>
+                      <select
+                        value={salesLogRowsPerPage}
+                        onChange={(e) =>
+                          handleRowsPerPageChange(e.target.value)
+                        }
+                        className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_#0f172a] outline-none"
+                      >
+                        {SALES_LOG_ROWS_PER_PAGE_OPTIONS.map((optionValue) => (
+                          <option key={optionValue} value={optionValue}>
+                            {optionValue === "all" ? "All" : optionValue}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSalesLogPage((previousPage) =>
+                            Math.max(1, previousPage - 1),
+                          )
+                        }
+                        disabled={salesLogPage <= 1}
+                        className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                      >
+                        Previous
+                      </button>
+
+                      <span className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
+                        Page {Math.min(salesLogPage, totalSalesLogPages)} of{" "}
+                        {totalSalesLogPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSalesLogPage((previousPage) =>
+                            Math.min(totalSalesLogPages, previousPage + 1),
+                          )
+                        }
+                        disabled={salesLogPage >= totalSalesLogPages}
+                        className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 rounded-3xl border border-amber-200 bg-linear-to-br from-amber-50 to-white p-5 shadow-md print:hidden">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                      <div>
+                        <h3 className={`text-lg font-black ${titleTheme}`}>
+                          Inactive Sales History
+                        </h3>
+                        <p
+                          className={`mt-1 text-xs font-semibold ${mutedTheme}`}
+                        >
+                          Medicines and categories with no sales for 3 months or
+                          more.
+                        </p>
+                      </div>
+                      <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 shadow-[3px_3px_0_0_#78350f]">
+                        3+ months
+                      </span>
+                    </div>
+
+                    {isLoadingInactiveHistory ? (
+                      <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
+                        Loading inactivity history...
+                      </div>
+                    ) : !inactiveHistoryData ? (
+                      <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
+                        Unable to load inactivity history right now.
+                      </div>
+                    ) : (
+                      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                        <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-sm font-black text-slate-900">
+                              Inactive Medicines
+                            </h4>
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
+                              {inactiveMedicineRecords.length} records
+                            </span>
+                          </div>
+
+                          {inactiveMedicineRecords.length === 0 ? (
+                            <p className="text-sm font-semibold text-slate-500">
+                              No medicines are inactive for the selected
+                              threshold.
+                            </p>
+                          ) : (
+                            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+                              <table className="min-w-full text-left text-xs">
+                                <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                                  <tr>
+                                    <th className="px-3 py-2">Medicine</th>
+                                    <th className="px-3 py-2">Category</th>
+                                    <th className="px-3 py-2">Last Sale</th>
+                                    <th className="px-3 py-2 text-right">
+                                      Days
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {inactiveMedicineRecords.map((record) => (
+                                    <tr key={record.medicineId}>
+                                      <td className="px-3 py-2 font-bold text-slate-900">
+                                        {record.medicineName}
+                                      </td>
+                                      <td className="px-3 py-2 font-semibold text-slate-700">
+                                        {record.categoryName}
+                                      </td>
+                                      <td className="px-3 py-2 font-semibold text-slate-700">
+                                        {record.lastSaleDate
+                                          ? new Date(
+                                              record.lastSaleDate,
+                                            ).toLocaleDateString("en-GB")
+                                          : "Never sold"}
+                                      </td>
+                                      <td className="px-3 py-2 text-right font-black text-amber-700">
+                                        {record.daysSinceLastSale === null
+                                          ? "—"
+                                          : `${record.daysSinceLastSale}d`}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-sm font-black text-slate-900">
+                              Inactive Categories
+                            </h4>
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
+                              {inactiveCategoryRecords.length} records
+                            </span>
+                          </div>
+
+                          {inactiveCategoryRecords.length === 0 ? (
+                            <p className="text-sm font-semibold text-slate-500">
+                              No categories are inactive for the selected
+                              threshold.
+                            </p>
+                          ) : (
+                            <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+                              <table className="min-w-full text-left text-xs">
+                                <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                                  <tr>
+                                    <th className="px-3 py-2">Category</th>
+                                    <th className="px-3 py-2 text-right">
+                                      Medicines
+                                    </th>
+                                    <th className="px-3 py-2">Last Sale</th>
+                                    <th className="px-3 py-2 text-right">
+                                      Days
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {inactiveCategoryRecords.map((record) => (
+                                    <tr key={record.categoryId}>
+                                      <td className="px-3 py-2 font-bold text-slate-900">
+                                        {record.categoryName}
+                                      </td>
+                                      <td className="px-3 py-2 text-right font-black text-slate-700">
+                                        {record.medicineCount}
+                                      </td>
+                                      <td className="px-3 py-2 font-semibold text-slate-700">
+                                        {record.lastSaleDate
+                                          ? new Date(
+                                              record.lastSaleDate,
+                                            ).toLocaleDateString("en-GB")
+                                          : "Never sold"}
+                                      </td>
+                                      <td className="px-3 py-2 text-right font-black text-amber-700">
+                                        {record.daysSinceLastSale === null
+                                          ? "—"
+                                          : `${record.daysSinceLastSale}d`}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
+            </section>
+          )}
 
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                <p className="text-sm font-black text-slate-700">
-                  Showing {visibleSalesLogStart}-{visibleSalesLogEnd} of{" "}
-                  {totalSalesLogRecords} records
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-xs font-black uppercase tracking-wide text-slate-500">
-                    Rows per page
-                  </label>
+          <div
+            className={`mb-10 grid grid-cols-1 gap-8 print:hidden ${
+              isAdmin ? "xl:grid-cols-4" : "mx-auto max-w-5xl"
+            }`}
+          >
+            {isAdmin && (
+              <div
+                className={`xl:col-span-3 h-96 rounded-4xl border p-8 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${cardTheme}`}
+              >
+                <div className="mb-6 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className={`text-xl font-bold ${titleTheme}`}>
+                      Stock Analytics by Category
+                    </h2>
+                    <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
+                      Real-time distribution of inventory across categories.
+                    </p>
+                  </div>
                   <select
-                    value={salesLogRowsPerPage}
-                    onChange={(e) => handleRowsPerPageChange(e.target.value)}
-                    className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_#0f172a] outline-none"
+                    value={selectedCategoryMetric}
+                    onChange={(e) =>
+                      setSelectedCategoryMetric(
+                        e.target.value as CategoryAnalyticsViewKey,
+                      )
+                    }
+                    className={`rounded-xl border-2 border-slate-900 px-4 py-2 text-xs font-black shadow-[4px_4px_0_0_#0f172a] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a] ${searchTheme}`}
                   >
-                    {SALES_LOG_ROWS_PER_PAGE_OPTIONS.map((optionValue) => (
-                      <option key={optionValue} value={optionValue}>
-                        {optionValue === "all" ? "All" : optionValue}
+                    <option value="allMetricsCombined">
+                      Total Units + Medicine Count + Total Stock Value
+                    </option>
+                    <option value="medicineCountAndStockValue">
+                      Medicine Count + Total Stock Value
+                    </option>
+                    {(
+                      Object.entries(CATEGORY_ANALYTICS_METRICS) as Array<
+                        [
+                          CategoryMetricKey,
+                          (typeof CATEGORY_ANALYTICS_METRICS)[CategoryMetricKey],
+                        ]
+                      >
+                    ).map(([metricKey, metric]) => (
+                      <option key={metricKey} value={metricKey}>
+                        {metric.label}
                       </option>
                     ))}
                   </select>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSalesLogPage((previousPage) =>
-                        Math.max(1, previousPage - 1),
-                      )
-                    }
-                    disabled={salesLogPage <= 1}
-                    className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                  >
-                    Previous
-                  </button>
-
-                  <span className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
-                    Page {Math.min(salesLogPage, totalSalesLogPages)} of{" "}
-                    {totalSalesLogPages}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSalesLogPage((previousPage) =>
-                        Math.min(totalSalesLogPages, previousPage + 1),
-                      )
-                    }
-                    disabled={salesLogPage >= totalSalesLogPages}
-                    className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                  >
-                    Next
-                  </button>
                 </div>
+                <ResponsiveContainer width="100%" height="80%">
+                  {selectedCategoryMetric === "allMetricsCombined" ? (
+                    <BarChart data={categoryAnalyticsData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="category"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
+                      <YAxis
+                        yAxisId="count"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tickFormatter={(value) =>
+                          `${Math.round(Number(value))}`
+                        }
+                      />
+                      <YAxis
+                        yAxisId="value"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tickFormatter={(value) =>
+                          `ETB ${Number(value).toFixed(0)}`
+                        }
+                      />
+                      <Tooltip
+                        cursor={{ fill: "#f8fafc" }}
+                        contentStyle={{ borderRadius: "15px", border: "none" }}
+                        formatter={(value, name) => {
+                          if (name === "Total Stock Value") {
+                            return [
+                              `ETB ${Number(value ?? 0).toFixed(2)}`,
+                              name,
+                            ];
+                          }
+
+                          if (name === "Medicine Count") {
+                            return [
+                              `${Math.round(Number(value ?? 0))} medicines`,
+                              name,
+                            ];
+                          }
+
+                          return [
+                            `${Math.round(Number(value ?? 0))} units`,
+                            name,
+                          ];
+                        }}
+                      />
+                      <Bar
+                        yAxisId="count"
+                        dataKey="totalQuantity"
+                        name="Total Units"
+                        fill={CATEGORY_ANALYTICS_METRICS.totalQuantity.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={20}
+                      />
+                      <Bar
+                        yAxisId="count"
+                        dataKey="medicineCount"
+                        name="Medicine Count"
+                        fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={20}
+                      />
+                      <Bar
+                        yAxisId="value"
+                        dataKey="totalValue"
+                        name="Total Stock Value"
+                        fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={20}
+                      />
+                    </BarChart>
+                  ) : selectedCategoryMetric ===
+                    "medicineCountAndStockValue" ? (
+                    <BarChart data={categoryAnalyticsData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="category"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
+                      <YAxis
+                        yAxisId="count"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tickFormatter={(value) =>
+                          `${Math.round(Number(value))}`
+                        }
+                      />
+                      <YAxis
+                        yAxisId="value"
+                        orientation="right"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tickFormatter={(value) =>
+                          `ETB ${Number(value).toFixed(0)}`
+                        }
+                      />
+                      <Tooltip
+                        cursor={{ fill: "#f8fafc" }}
+                        contentStyle={{ borderRadius: "15px", border: "none" }}
+                        formatter={(value, name) => {
+                          if (name === "Medicine Count") {
+                            return [
+                              `${Math.round(Number(value ?? 0))} medicines`,
+                              name,
+                            ];
+                          }
+
+                          return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
+                        }}
+                      />
+                      <Bar
+                        yAxisId="count"
+                        dataKey="medicineCount"
+                        name="Medicine Count"
+                        fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={24}
+                      />
+                      <Bar
+                        yAxisId="value"
+                        dataKey="totalValue"
+                        name="Total Stock Value"
+                        fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={24}
+                      />
+                    </BarChart>
+                  ) : (
+                    <BarChart data={categoryAnalyticsData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
+                      />
+                      <XAxis
+                        dataKey="category"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#94a3b8", fontSize: 12 }}
+                        tickFormatter={(value) =>
+                          selectedCategoryMetric === "totalValue"
+                            ? `ETB ${Number(value).toFixed(0)}`
+                            : `${Math.round(Number(value))}`
+                        }
+                      />
+                      <Tooltip
+                        cursor={{ fill: "#f8fafc" }}
+                        contentStyle={{ borderRadius: "15px", border: "none" }}
+                        formatter={(value) =>
+                          currentCategoryMetric.formatValue(Number(value ?? 0))
+                        }
+                      />
+                      <Bar
+                        dataKey={selectedCategoryMetric}
+                        fill={currentCategoryMetric.color}
+                        radius={[6, 6, 0, 0]}
+                        barSize={40}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
               </div>
+            )}
 
-              <div className="mt-8 rounded-3xl border border-amber-200 bg-linear-to-br from-amber-50 to-white p-5 shadow-md print:hidden">
-                <div className="flex flex-wrap items-end justify-between gap-3">
-                  <div>
-                    <h3 className={`text-lg font-black ${titleTheme}`}>
-                      Inactive Sales History
-                    </h3>
-                    <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
-                      Medicines and categories with no sales for 3 months or
-                      more.
-                    </p>
-                  </div>
-                  <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 shadow-[3px_3px_0_0_#78350f]">
-                    3+ months
-                  </span>
-                </div>
-
-                {isLoadingInactiveHistory ? (
-                  <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
-                    Loading inactivity history...
-                  </div>
-                ) : !inactiveHistoryData ? (
-                  <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
-                    Unable to load inactivity history right now.
-                  </div>
-                ) : (
-                  <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                    <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <h4 className="text-sm font-black text-slate-900">
-                          Inactive Medicines
-                        </h4>
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                          {inactiveMedicineRecords.length} records
-                        </span>
-                      </div>
-
-                      {inactiveMedicineRecords.length === 0 ? (
-                        <p className="text-sm font-semibold text-slate-500">
-                          No medicines are inactive for the selected threshold.
-                        </p>
-                      ) : (
-                        <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
-                          <table className="min-w-full text-left text-xs">
-                            <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                              <tr>
-                                <th className="px-3 py-2">Medicine</th>
-                                <th className="px-3 py-2">Category</th>
-                                <th className="px-3 py-2">Last Sale</th>
-                                <th className="px-3 py-2 text-right">Days</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {inactiveMedicineRecords.map((record) => (
-                                <tr key={record.medicineId}>
-                                  <td className="px-3 py-2 font-bold text-slate-900">
-                                    {record.medicineName}
-                                  </td>
-                                  <td className="px-3 py-2 font-semibold text-slate-700">
-                                    {record.categoryName}
-                                  </td>
-                                  <td className="px-3 py-2 font-semibold text-slate-700">
-                                    {record.lastSaleDate
-                                      ? new Date(
-                                          record.lastSaleDate,
-                                        ).toLocaleDateString("en-GB")
-                                      : "Never sold"}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-black text-amber-700">
-                                    {record.daysSinceLastSale === null
-                                      ? "—"
-                                      : `${record.daysSinceLastSale}d`}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <h4 className="text-sm font-black text-slate-900">
-                          Inactive Categories
-                        </h4>
-                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                          {inactiveCategoryRecords.length} records
-                        </span>
-                      </div>
-
-                      {inactiveCategoryRecords.length === 0 ? (
-                        <p className="text-sm font-semibold text-slate-500">
-                          No categories are inactive for the selected threshold.
-                        </p>
-                      ) : (
-                        <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
-                          <table className="min-w-full text-left text-xs">
-                            <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                              <tr>
-                                <th className="px-3 py-2">Category</th>
-                                <th className="px-3 py-2 text-right">
-                                  Medicines
-                                </th>
-                                <th className="px-3 py-2">Last Sale</th>
-                                <th className="px-3 py-2 text-right">Days</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {inactiveCategoryRecords.map((record) => (
-                                <tr key={record.categoryId}>
-                                  <td className="px-3 py-2 font-bold text-slate-900">
-                                    {record.categoryName}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-black text-slate-700">
-                                    {record.medicineCount}
-                                  </td>
-                                  <td className="px-3 py-2 font-semibold text-slate-700">
-                                    {record.lastSaleDate
-                                      ? new Date(
-                                          record.lastSaleDate,
-                                        ).toLocaleDateString("en-GB")
-                                      : "Never sold"}
-                                  </td>
-                                  <td className="px-3 py-2 text-right font-black text-amber-700">
-                                    {record.daysSinceLastSale === null
-                                      ? "—"
-                                      : `${record.daysSinceLastSale}d`}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      <div
-        className={`mb-10 grid grid-cols-1 gap-8 print:hidden ${
-          isAdmin ? "xl:grid-cols-4" : "mx-auto max-w-5xl"
-        }`}
-      >
-        {isAdmin && (
-          <div
-            className={`xl:col-span-3 h-96 rounded-4xl border p-8 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${cardTheme}`}
-          >
-            <div className="mb-6 flex items-center justify-between gap-3">
-              <div>
-                <h2 className={`text-xl font-bold ${titleTheme}`}>
-                  Stock Analytics by Category
-                </h2>
-                <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
-                  Real-time distribution of inventory across categories.
-                </p>
-              </div>
-              <select
-                value={selectedCategoryMetric}
-                onChange={(e) =>
-                  setSelectedCategoryMetric(
-                    e.target.value as CategoryAnalyticsViewKey,
-                  )
-                }
-                className={`rounded-xl border-2 border-slate-900 px-4 py-2 text-xs font-black shadow-[4px_4px_0_0_#0f172a] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a] ${searchTheme}`}
-              >
-                <option value="allMetricsCombined">
-                  Total Units + Medicine Count + Total Stock Value
-                </option>
-                <option value="medicineCountAndStockValue">
-                  Medicine Count + Total Stock Value
-                </option>
-                {(
-                  Object.entries(CATEGORY_ANALYTICS_METRICS) as Array<
-                    [
-                      CategoryMetricKey,
-                      (typeof CATEGORY_ANALYTICS_METRICS)[CategoryMetricKey],
-                    ]
-                  >
-                ).map(([metricKey, metric]) => (
-                  <option key={metricKey} value={metricKey}>
-                    {metric.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <ResponsiveContainer width="100%" height="80%">
-              {selectedCategoryMetric === "allMetricsCombined" ? (
-                <BarChart data={categoryAnalyticsData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="category"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="count"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `${Math.round(Number(value))}`}
-                  />
-                  <YAxis
-                    yAxisId="value"
-                    orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f8fafc" }}
-                    contentStyle={{ borderRadius: "15px", border: "none" }}
-                    formatter={(value, name) => {
-                      if (name === "Total Stock Value") {
-                        return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
-                      }
-
-                      if (name === "Medicine Count") {
-                        return [
-                          `${Math.round(Number(value ?? 0))} medicines`,
-                          name,
-                        ];
-                      }
-
-                      return [`${Math.round(Number(value ?? 0))} units`, name];
-                    }}
-                  />
-                  <Bar
-                    yAxisId="count"
-                    dataKey="totalQuantity"
-                    name="Total Units"
-                    fill={CATEGORY_ANALYTICS_METRICS.totalQuantity.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="count"
-                    dataKey="medicineCount"
-                    name="Medicine Count"
-                    fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={20}
-                  />
-                  <Bar
-                    yAxisId="value"
-                    dataKey="totalValue"
-                    name="Total Stock Value"
-                    fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={20}
-                  />
-                </BarChart>
-              ) : selectedCategoryMetric === "medicineCountAndStockValue" ? (
-                <BarChart data={categoryAnalyticsData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="category"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    yAxisId="count"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `${Math.round(Number(value))}`}
-                  />
-                  <YAxis
-                    yAxisId="value"
-                    orientation="right"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f8fafc" }}
-                    contentStyle={{ borderRadius: "15px", border: "none" }}
-                    formatter={(value, name) => {
-                      if (name === "Medicine Count") {
-                        return [
-                          `${Math.round(Number(value ?? 0))} medicines`,
-                          name,
-                        ];
-                      }
-
-                      return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
-                    }}
-                  />
-                  <Bar
-                    yAxisId="count"
-                    dataKey="medicineCount"
-                    name="Medicine Count"
-                    fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={24}
-                  />
-                  <Bar
-                    yAxisId="value"
-                    dataKey="totalValue"
-                    name="Total Stock Value"
-                    fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={24}
-                  />
-                </BarChart>
-              ) : (
-                <BarChart data={categoryAnalyticsData}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#f1f5f9"
-                  />
-                  <XAxis
-                    dataKey="category"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: "#94a3b8", fontSize: 12 }}
-                    tickFormatter={(value) =>
-                      selectedCategoryMetric === "totalValue"
-                        ? `ETB ${Number(value).toFixed(0)}`
-                        : `${Math.round(Number(value))}`
-                    }
-                  />
-                  <Tooltip
-                    cursor={{ fill: "#f8fafc" }}
-                    contentStyle={{ borderRadius: "15px", border: "none" }}
-                    formatter={(value) =>
-                      currentCategoryMetric.formatValue(Number(value ?? 0))
-                    }
-                  />
-                  <Bar
-                    dataKey={selectedCategoryMetric}
-                    fill={currentCategoryMetric.color}
-                    radius={[6, 6, 0, 0]}
-                    barSize={40}
-                  />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        <div
-          id="quick-import"
-          className={`rounded-4xl border border-white/25 bg-linear-to-br from-cyan-600 via-blue-600 to-indigo-700 p-8 text-white shadow-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
-            isAdmin ? "" : "mx-auto w-full max-w-4xl"
-          }`}
-        >
-          <div className="mb-6">
-            <h2 className="text-3xl font-black tracking-tight">Quick Import</h2>
-            <p className="mt-1 text-sm font-medium text-blue-100/90">
-              Add new stock batches with complete product details.
-            </p>
-          </div>
-          <form
-            onSubmit={handleAddStock}
-            className={`gap-3 ${isAdmin ? "flex flex-col" : "grid grid-cols-1 md:grid-cols-2"}`}
-          >
-            <input
-              type="text"
-              placeholder="Search Category"
-              className={quickImportFieldClass}
-              value={categorySearchTerm}
-              onChange={(e) => setCategorySearchTerm(e.target.value)}
-            />
-            <select
-              value={formData.categoryId}
-              onChange={(e) =>
-                setFormData({ ...formData, categoryId: e.target.value })
-              }
-              className={`${quickImportFieldClass} font-bold text-slate-900`}
-              required
-            >
-              <option value="" className="text-slate-500">
-                Select Category
-              </option>
-              {filteredCategories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.id}
-                  className="text-slate-900"
-                >
-                  {category.category_name}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Med ID"
-              className={quickImportFieldClass}
-              value={formData.medId}
-              onChange={(e) =>
-                setFormData({ ...formData, medId: e.target.value })
-              }
-              required
-            />
-            <input
-              type="text"
-              placeholder="Medicine Name"
-              className={quickImportFieldClass}
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              required
-            />
-            <input
-              type="text"
-              placeholder="Batch #"
-              className={quickImportFieldClass}
-              value={formData.batch}
-              onChange={(e) =>
-                setFormData({ ...formData, batch: e.target.value })
-              }
-              required
-            />
-            <input
-              type="number"
-              placeholder="Qty"
-              className={quickImportFieldClass}
-              value={formData.qty}
-              onChange={(e) =>
-                setFormData({ ...formData, qty: e.target.value })
-              }
-              required
-            />
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Price per Unit"
-              className={quickImportFieldClass}
-              value={formData.price}
-              onChange={(e) =>
-                setFormData({ ...formData, price: e.target.value })
-              }
-              required
-            />
-            <input
-              type="date"
-              className={quickImportFieldClass}
-              value={formData.expiry}
-              onChange={(e) =>
-                setFormData({ ...formData, expiry: e.target.value })
-              }
-              required
-            />
-            <button
-              type="submit"
-              className={`mt-1 rounded-2xl border-2 border-slate-900 bg-white py-4 font-black text-blue-700 shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-50 hover:shadow-[6px_6px_0_0_#0f172a] active:scale-[0.99] ${
-                isAdmin ? "" : "md:col-span-2"
+            <div
+              id="quick-import"
+              className={`rounded-4xl border border-white/25 bg-linear-to-br from-cyan-600 via-blue-600 to-indigo-700 p-8 text-white shadow-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
+                isAdmin ? "" : "mx-auto w-full max-w-4xl"
               }`}
             >
-              Update Stock
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div
-        id="live-inventory"
-        className={`rounded-4xl shadow-sm border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl print:hidden ${cardTheme}`}
-      >
-        <div
-          className={`p-8 border-b flex justify-between items-center ${isDarkMode ? "border-slate-700" : "border-slate-50"}`}
-        >
-          <h2 className={`text-xl font-bold ${titleTheme}`}>Live Inventory</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative w-80">
-              <input
-                type="text"
-                placeholder="Search by name or ID..."
-                value={searchTerm}
-                className={`px-6 py-3 pr-12 rounded-full w-full outline-none text-sm border-2 border-slate-900 shadow-md ${searchTheme}`}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
+              <div className="mb-6">
+                <h2 className="text-3xl font-black tracking-tight">
+                  Quick Import
+                </h2>
+                <p className="mt-1 text-sm font-medium text-blue-100/90">
+                  Add new stock batches with complete product details.
+                </p>
+              </div>
+              <form
+                onSubmit={handleAddStock}
+                className={`gap-3 ${isAdmin ? "flex flex-col" : "grid grid-cols-1 md:grid-cols-2"}`}
+              >
+                <input
+                  type="text"
+                  placeholder="Search Category"
+                  className={quickImportFieldClass}
+                  value={categorySearchTerm}
+                  onChange={(e) => setCategorySearchTerm(e.target.value)}
+                />
+                <select
+                  value={formData.categoryId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, categoryId: e.target.value })
+                  }
+                  className={`${quickImportFieldClass} font-bold text-slate-900`}
+                  required
+                >
+                  <option value="" className="text-slate-500">
+                    Select Category
+                  </option>
+                  {filteredCategories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={category.id}
+                      className="text-slate-900"
+                    >
+                      {category.category_name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  placeholder="Med ID"
+                  className={quickImportFieldClass}
+                  value={formData.medId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, medId: e.target.value })
+                  }
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Medicine Name"
+                  className={quickImportFieldClass}
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Batch #"
+                  className={quickImportFieldClass}
+                  value={formData.batch}
+                  onChange={(e) =>
+                    setFormData({ ...formData, batch: e.target.value })
+                  }
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  className={quickImportFieldClass}
+                  value={formData.qty}
+                  onChange={(e) =>
+                    setFormData({ ...formData, qty: e.target.value })
+                  }
+                  required
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Price per Unit"
+                  className={quickImportFieldClass}
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                  required
+                />
+                <input
+                  type="date"
+                  className={quickImportFieldClass}
+                  value={formData.expiry}
+                  onChange={(e) =>
+                    setFormData({ ...formData, expiry: e.target.value })
+                  }
+                  required
+                />
                 <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full border-2 border-slate-900 bg-white text-slate-900 text-sm font-black shadow-md"
+                  type="submit"
+                  className={`mt-1 rounded-2xl border-2 border-slate-900 bg-white py-4 font-black text-blue-700 shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:bg-cyan-50 hover:shadow-[6px_6px_0_0_#0f172a] active:scale-[0.99] ${
+                    isAdmin ? "" : "md:col-span-2"
+                  }`}
                 >
-                  ×
+                  Update Stock
                 </button>
-              )}
+              </form>
             </div>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className={`px-4 py-3 rounded-full outline-none text-sm border-2 border-slate-900 bg-white text-slate-900 shadow-md ${searchTheme}`}
-            >
-              <option value="all" className="text-slate-900">
-                All Categories
-              </option>
-              {categories.map((category) => (
-                <option
-                  key={category.id}
-                  value={String(category.id)}
-                  className="text-slate-900"
-                >
-                  {category.category_name}
-                </option>
-              ))}
-            </select>
           </div>
-        </div>
-        <table className="w-full text-left">
-          <thead
-            className={`text-[10px] uppercase tracking-widest font-black ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-50 text-slate-400"}`}
-          >
-            <tr>
-              <th className="px-8 py-4">Medicine Info</th>
-              <th className="px-8 py-4">Batch Details</th>
-              <th className="px-8 py-4">Price / Unit</th>
-              <th className="px-8 py-4">Stock Status</th>
-              <th className="px-8 py-4">Expiration</th>
-              <th className="px-8 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody
-            className={
-              isDarkMode
-                ? "divide-y divide-slate-700"
-                : "divide-y divide-slate-50"
-            }
-          >
-            {filteredInventory.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className={`px-8 py-10 text-center text-sm font-bold ${mutedTheme}`}
-                >
-                  No matching medicines found
-                </td>
-              </tr>
-            ) : (
-              filteredInventory.map((item) => {
-                const rowStatus = getStatusStyles(
-                  item.quantity,
-                  item.expiry_date,
-                  item.initial_batch_quantity ?? item.initial_quantity,
-                );
-                const expiryDate = new Date(item.expiry_date);
-                const isSellDisabled =
-                  rowStatus.isExpired || item.quantity <= 0;
-                return (
-                  <tr
-                    key={item.id}
-                    className={`group transition-all ${isDarkMode ? "hover:bg-slate-700/40" : "hover:bg-slate-50/50"}`}
-                  >
-                    <td className={`px-8 py-6 font-bold ${titleTheme}`}>
-                      <div className="flex flex-col gap-2">
-                        <span>{item.name}</span>
-                        <span className="inline-flex w-fit rounded-xl border-2 border-slate-900 bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-900 shadow-md">
-                          {item.category_name || "Uncategorized"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-6 font-mono text-xs text-slate-400">
-                      {item.batch_number}
-                    </td>
-                    <td className="px-8 py-6 text-sm font-black text-blue-700">
-                      ETB {Number(item.price_per_unit || 0).toFixed(2)}
-                    </td>
-                    <td className="px-8 py-6">
-                      <div className={rowStatus.stockBadgeClass}>
-                        {rowStatus.isLowStock && (
-                          <span aria-hidden="true">⚠️</span>
-                        )}
-                        {item.quantity} UNITS
-                      </div>
-                      <p className={rowStatus.stockWarningClass}>
-                        {rowStatus.stockWarningText}
-                      </p>
-                    </td>
-                    <td className="px-8 py-6">
-                      <p className={rowStatus.expiryTextClass}>
-                        {expiryDate.toLocaleDateString("en-GB")}
-                      </p>
-                      <p className={rowStatus.expiryWarningClass}>
-                        <span aria-hidden="true" className="mr-1">
-                          {rowStatus.expiryIcon}
-                        </span>
-                        {rowStatus.expiryWarningText}
-                      </p>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        {isAdmin && activeActionMenuId === item.id && (
-                          <button
-                            onClick={() => {
-                              setDeleteModalItem(item);
-                              setActiveActionMenuId(null);
-                            }}
-                            className="px-3 py-2 rounded-xl bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200"
-                          >
-                            Delete
-                          </button>
-                        )}
 
-                        {isAdmin && (
-                          <button
-                            onClick={() =>
-                              setActiveActionMenuId((prev) =>
-                                prev === item.id ? null : item.id,
-                              )
-                            }
-                            className="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-lg leading-none font-black"
-                            aria-label="Open actions menu"
-                          >
-                            ⋯
-                          </button>
-                        )}
-                      </div>
+          <div
+            id="live-inventory"
+            className={`rounded-4xl shadow-sm border overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl print:hidden ${cardTheme}`}
+          >
+            <div
+              className={`p-8 border-b flex justify-between items-center ${isDarkMode ? "border-slate-700" : "border-slate-50"}`}
+            >
+              <h2 className={`text-xl font-bold ${titleTheme}`}>
+                Live Inventory
+              </h2>
+              <div className="flex items-center gap-3">
+                <div className="relative w-80">
+                  <input
+                    type="text"
+                    placeholder="Search by name or ID..."
+                    value={searchTerm}
+                    className={`px-6 py-3 pr-12 rounded-full w-full outline-none text-sm border-2 border-slate-900 shadow-md ${searchTheme}`}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full border-2 border-slate-900 bg-white text-slate-900 text-sm font-black shadow-md"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className={`px-4 py-3 rounded-full outline-none text-sm border-2 border-slate-900 bg-white text-slate-900 shadow-md ${searchTheme}`}
+                >
+                  <option value="all" className="text-slate-900">
+                    All Categories
+                  </option>
+                  {categories.map((category) => (
+                    <option
+                      key={category.id}
+                      value={String(category.id)}
+                      className="text-slate-900"
+                    >
+                      {category.category_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <table className="w-full text-left">
+              <thead
+                className={`text-[10px] uppercase tracking-widest font-black ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-slate-50 text-slate-400"}`}
+              >
+                <tr>
+                  <th className="px-8 py-4">Medicine Info</th>
+                  <th className="px-8 py-4">Batch Details</th>
+                  <th className="px-8 py-4">Price / Unit</th>
+                  <th className="px-8 py-4">Stock Status</th>
+                  <th className="px-8 py-4">Expiration</th>
+                  <th className="px-8 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody
+                className={
+                  isDarkMode
+                    ? "divide-y divide-slate-700"
+                    : "divide-y divide-slate-50"
+                }
+              >
+                {filteredInventory.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className={`px-8 py-10 text-center text-sm font-bold ${mutedTheme}`}
+                    >
+                      No matching medicines found
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  filteredInventory.map((item) => {
+                    const rowStatus = getStatusStyles(
+                      item.quantity,
+                      item.expiry_date,
+                      item.initial_batch_quantity ?? item.initial_quantity,
+                    );
+                    const expiryDate = new Date(item.expiry_date);
+                    const isSellDisabled =
+                      rowStatus.isExpired || item.quantity <= 0;
+                    return (
+                      <tr
+                        key={item.id}
+                        className={`group transition-all ${isDarkMode ? "hover:bg-slate-700/40" : "hover:bg-slate-50/50"}`}
+                      >
+                        <td className={`px-8 py-6 font-bold ${titleTheme}`}>
+                          <div className="flex flex-col gap-2">
+                            <span>{item.name}</span>
+                            <span className="inline-flex w-fit rounded-xl border-2 border-slate-900 bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-900 shadow-md">
+                              {item.category_name || "Uncategorized"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 font-mono text-xs text-slate-400">
+                          {item.batch_number}
+                        </td>
+                        <td className="px-8 py-6 text-sm font-black text-blue-700">
+                          ETB {Number(item.price_per_unit || 0).toFixed(2)}
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className={rowStatus.stockBadgeClass}>
+                            {rowStatus.isLowStock && (
+                              <span aria-hidden="true">⚠️</span>
+                            )}
+                            {item.quantity} UNITS
+                          </div>
+                          <p className={rowStatus.stockWarningClass}>
+                            {rowStatus.stockWarningText}
+                          </p>
+                        </td>
+                        <td className="px-8 py-6">
+                          <p className={rowStatus.expiryTextClass}>
+                            {expiryDate.toLocaleDateString("en-GB")}
+                          </p>
+                          <p className={rowStatus.expiryWarningClass}>
+                            <span aria-hidden="true" className="mr-1">
+                              {rowStatus.expiryIcon}
+                            </span>
+                            {rowStatus.expiryWarningText}
+                          </p>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex justify-end items-center gap-2">
+                            {isAdmin && activeActionMenuId === item.id && (
+                              <button
+                                onClick={() => {
+                                  setDeleteModalItem(item);
+                                  setActiveActionMenuId(null);
+                                }}
+                                className="px-3 py-2 rounded-xl bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200"
+                              >
+                                Delete
+                              </button>
+                            )}
 
-      {/* ========== MULTI-ITEM ORDER MODAL ========== */}
-      <MultiItemOrderCart
-        isOpen={isGeneralSaleOpen}
-        onClose={() => setIsGeneralSaleOpen(false)}
-        onSubmit={handleBulkSaleSubmit}
-        isProcessing={isProcessingBulkSale}
-      />
-      {/* ========== END MODAL ========== */}
+                            {isAdmin && (
+                              <button
+                                onClick={() =>
+                                  setActiveActionMenuId((prev) =>
+                                    prev === item.id ? null : item.id,
+                                  )
+                                }
+                                className="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-600 text-lg leading-none font-black"
+                                aria-label="Open actions menu"
+                              >
+                                ⋯
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ========== MULTI-ITEM ORDER MODAL ========== */}
+          <MultiItemOrderCart
+            isOpen={isGeneralSaleOpen}
+            onClose={() => setIsGeneralSaleOpen(false)}
+            onSubmit={handleBulkSaleSubmit}
+            isProcessing={isProcessingBulkSale}
+          />
+          {/* ========== END MODAL ========== */}
         </main>
       </div>
     </div>
