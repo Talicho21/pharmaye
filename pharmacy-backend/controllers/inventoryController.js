@@ -198,6 +198,69 @@ exports.getInventory = async (_req, res) => {
     }
 };
 
+exports.searchInventory = async (req, res) => {
+    const query = String(req.query?.query || "").trim();
+
+    if (!query) {
+        return res.status(400).json({
+            success: false,
+            message: "query is required.",
+        });
+    }
+
+    try {
+        await ensureCategoriesTable();
+        await ensureMedicineCategoryColumn();
+        await ensurePriceColumn();
+
+        const searchPattern = `%${query}%`;
+
+        const [rows] = await db.execute(
+            `
+                SELECT
+                    b.id AS batch_id,
+                    m.id AS medicine_id,
+                    m.name AS medicine_name,
+                    b.batch_number,
+                    b.quantity,
+                    b.price_per_unit,
+                    b.expiry_date,
+                    c.category_name
+                FROM batches b
+                JOIN medicines m ON b.medicine_id = m.id
+                LEFT JOIN categories c ON m.category_id = c.id
+                WHERE b.quantity > 0
+                  AND (
+                    m.name LIKE ?
+                    OR b.batch_number LIKE ?
+                  )
+                ORDER BY
+                    CASE
+                        WHEN m.name LIKE ? THEN 0
+                        WHEN b.batch_number LIKE ? THEN 1
+                        ELSE 2
+                    END,
+                    b.expiry_date ASC,
+                    b.quantity DESC,
+                    b.id DESC
+                LIMIT 10
+            `,
+            [searchPattern, searchPattern, searchPattern, searchPattern],
+        );
+
+        return res.status(200).json({
+            success: true,
+            results: rows,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to search inventory.",
+            error: error.message,
+        });
+    }
+};
+
 exports.getCategories = async (_req, res) => {
     try {
         await ensureCategoriesTable();

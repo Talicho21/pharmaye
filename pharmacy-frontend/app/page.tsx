@@ -9,6 +9,10 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import {
+  MultiItemOrderCart,
+  type CartItem,
+} from "@/app/components/MultiItemOrderCart";
 
 type InventoryItem = {
   id: number;
@@ -356,6 +360,13 @@ export default function PharmacyDashboard() {
   );
   const [sellerNameInput, setSellerNameInput] = useState("");
   const [receiverNameInput, setReceiverNameInput] = useState("");
+
+  // ========== NEW: Multi-Item Order (Bulk Sale) State ==========
+  const [isGeneralSaleOpen, setIsGeneralSaleOpen] = useState(false);
+  const [isProcessingBulkSale, setIsProcessingBulkSale] = useState(false);
+  const [bulkSaleSellerName, setBulkSaleSellerName] = useState("");
+  const [bulkSaleReceiverName, setBulkSaleReceiverName] = useState("");
+  // ========== END: Multi-Item Order State ===========
   const toastIdRef = useRef(0);
   const salesLogScrollRef = useRef<HTMLDivElement | null>(null);
   const [salesLogRowsPerPage, setSalesLogRowsPerPage] =
@@ -514,11 +525,7 @@ export default function PharmacyDashboard() {
     } catch (err) {
       console.error("Inactive history fetch error:", err);
       setInactiveHistoryData(null);
-      showToast(
-        "Inactive history unavailable",
-        "Unable to load inactivity alerts right now.",
-        "error",
-      );
+      // Silent fail - don't show error toast
     } finally {
       setIsLoadingInactiveHistory(false);
     }
@@ -719,11 +726,7 @@ export default function PharmacyDashboard() {
 
         setLoginErrorMessage(message);
 
-        showToast(
-          "Login failed",
-          message,
-          "error",
-        );
+        showToast("Login failed", message, "error");
 
         return nextAttempts;
       });
@@ -746,7 +749,11 @@ export default function PharmacyDashboard() {
     setUsername("");
     setPassword("");
     setShowPassword(false);
-    showToast("Login successful", `Welcome back, ${typedPayload.user.username}.`, "success");
+    showToast(
+      "Login successful",
+      `Welcome back, ${typedPayload.user.username}.`,
+      "success",
+    );
   };
 
   const handleLogout = () => {
@@ -1035,6 +1042,130 @@ export default function PharmacyDashboard() {
       showToast("Connection issue", "Server unreachable.", "error");
     }
   };
+
+  // ========== NEW: Bulk Sale Handler ==========
+  /**
+   * Handle Multi-Item Order (Wholesale)
+   * Called when user clicks "Process Sale" in the cart modal
+   * Sends MULTIPLE items to backend in ONE transaction
+   */
+  const handleBulkSaleSubmit = async (
+    cartItems: CartItem[],
+    customerName: string,
+    tinNumber: string,
+    sellerName?: string,
+    customerSNo?: string,
+    paymentMethod?: "cash" | "credit",
+  ) => {
+    // ========== INPUT VALIDATION ==========
+    if (!cartItems || cartItems.length === 0) {
+      showToast(
+        "Empty Cart",
+        "Please add at least one item to the order.",
+        "error",
+      );
+      return;
+    }
+
+    const safeSellerName = sellerName?.trim() || "";
+    const safeReceiverName = customerName.trim();
+
+    // ========== TRANSFORM CART INTO API FORMAT ==========
+    const items = cartItems.map((item) => ({
+      medicine_id: item.medicineId,
+      batch_number: item.batchNumber,
+      medicine_name: item.medicineName,
+      quantity: item.quantity,
+      price_per_unit: item.pricePerUnit,
+    }));
+
+    // ========== BUILD PAYLOAD ==========
+    const payload = {
+      items: items,
+      seller_name: safeSellerName,
+      receiver_name: safeReceiverName,
+      customer_name: customerName,
+      tin_number: tinNumber,
+      customer_sno: customerSNo || null,
+      payment_method: paymentMethod || "cash",
+    };
+
+    // ========== SEND TO BACKEND ==========
+    setIsProcessingBulkSale(true);
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/inventory/bulk-sell",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const result = await response.json();
+
+      // ========== ERROR HANDLING ==========
+      if (!response.ok) {
+        showToast(
+          "Order Processing Failed ❌",
+          result.message ||
+            "Could not process bulk sale. Please check your order and try again.",
+          "error",
+        );
+        console.error("Bulk sale error response:", {
+          status: response.status,
+          message: result.message,
+          error: result.error,
+        });
+        return;
+      }
+
+      // ========== SUCCESS HANDLING ==========
+      const {
+        data: { total_items_processed, total_revenue, items: processedItems },
+      } = result;
+
+      const itemsSummary = processedItems
+        .slice(0, 3)
+        .map(
+          (item: any) =>
+            `${item.medicine_name} (${item.quantity_deducted || item.quantity_sold} units)`,
+        )
+        .join(", ");
+
+      const summary =
+        processedItems.length > 3
+          ? `${itemsSummary}, +${processedItems.length - 3} more`
+          : itemsSummary;
+
+      showToast(
+        "✅ Order Processed Successfully!",
+        `${total_items_processed} items | ${summary} | Total: ETB ${total_revenue}`,
+        "success",
+      );
+
+      // ========== UPDATE UI ==========
+      setIsGeneralSaleOpen(false);
+      setBulkSaleSellerName("");
+
+      // ✅ REFRESH INVENTORY
+      await fetchData();
+    } catch (error) {
+      showToast(
+        "🌐 Network Error",
+        "Failed to submit order. Please check your connection and try again.",
+        "error",
+      );
+      console.error("Bulk sale network error:", error);
+    } finally {
+      setIsProcessingBulkSale(false);
+    }
+  };
+  // ========== END: Bulk Sale Handler ==========
 
   const handleAddStock = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1587,6 +1718,19 @@ export default function PharmacyDashboard() {
         </div>
       </header>
 
+      {/* ========== NEW: General Sale Button ========== */}
+      {isLoggedIn && (
+        <div className="mb-6 flex gap-3">
+          <button
+            onClick={() => setIsGeneralSaleOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl shadow-lg transition duration-200"
+          >
+            🛒 Sell Out Items
+          </button>
+        </div>
+      )}
+      {/* ========== END: General Sale Button ========== */}
+
       {isAdmin && (
         <section
           id="sales-report"
@@ -1595,462 +1739,463 @@ export default function PharmacyDashboard() {
           <div
             className={`rounded-4xl border border-slate-200/70 p-6 transition-all duration-200 hover:shadow-2xl ${cardTheme}`}
           >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className={`text-2xl font-black ${titleTheme}`}>
-              Reports Overview
-            </h2>
-            <button
-              type="button"
-              onClick={handleExportReport}
-              className="rounded-xl border-2 border-slate-900 bg-linear-to-r from-white to-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
-            >
-              Export to PDF / Print
-            </button>
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2">
-            {REPORT_RANGE_OPTIONS.map((rangeOption) => {
-              const isActive = selectedReportRange === rangeOption.value;
-              return (
-                <button
-                  key={rangeOption.value}
-                  type="button"
-                  onClick={() => setSelectedReportRange(rangeOption.value)}
-                  className={`rounded-xl border-2 px-4 py-2 text-sm font-black shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
-                    isActive
-                      ? "border-slate-900 bg-linear-to-r from-cyan-500 to-blue-600 text-white"
-                      : "border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  {rangeOption.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-cyan-200 bg-linear-to-br from-cyan-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-              <p className="text-xs font-black uppercase text-cyan-700">
-                Total Revenue
-              </p>
-              <p className="mt-1 text-2xl font-black text-slate-900">
-                ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
-              </p>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className={`text-2xl font-black ${titleTheme}`}>
+                Reports Overview
+              </h2>
+              <button
+                type="button"
+                onClick={handleExportReport}
+                className="rounded-xl border-2 border-slate-900 bg-linear-to-r from-white to-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl"
+              >
+                Export to PDF / Print
+              </button>
             </div>
-            <div className="rounded-2xl border border-violet-200 bg-linear-to-br from-violet-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-              <p className="text-xs font-black uppercase text-violet-700">
-                Total Items Sold
-              </p>
-              <p className="mt-1 text-2xl font-black text-slate-900">
-                {Math.round(Number(reportData?.totalItemsSold || 0))}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-              <p className="text-xs font-black uppercase text-slate-500">
-                Report Window
-              </p>
-              <p className="mt-1 text-xl font-black text-slate-900">
-                {
-                  REPORT_RANGE_OPTIONS.find(
-                    (option) => option.value === selectedReportRange,
-                  )?.label
-                }
-              </p>
-            </div>
-          </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-            <h3 className="text-lg font-black text-slate-900">
-              Top Selling Medicines
-            </h3>
+            <div className="mb-4 flex flex-wrap gap-2">
+              {REPORT_RANGE_OPTIONS.map((rangeOption) => {
+                const isActive = selectedReportRange === rangeOption.value;
+                return (
+                  <button
+                    key={rangeOption.value}
+                    type="button"
+                    onClick={() => setSelectedReportRange(rangeOption.value)}
+                    className={`rounded-xl border-2 px-4 py-2 text-sm font-black shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${
+                      isActive
+                        ? "border-slate-900 bg-linear-to-r from-cyan-500 to-blue-600 text-white"
+                        : "border-slate-300 bg-white text-slate-700"
+                    }`}
+                  >
+                    {rangeOption.label}
+                  </button>
+                );
+              })}
+            </div>
 
-            {isLoadingReport ? (
-              <p className="mt-3 text-sm font-bold text-slate-500">
-                Loading report data...
-              </p>
-            ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
-              <p className="mt-3 text-sm font-bold text-slate-500">
-                No sales found for this period.
-              </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {reportData?.topSellingMedicines.map((medicine, index) => (
-                  <div key={medicine.medicineName}>
-                    <div className="mb-1 flex items-center justify-between text-xs font-black text-slate-700">
-                      <span>
-                        <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
-                          {index + 1}
-                        </span>
-                        {medicine.medicineName}
-                      </span>
-                      <span>
-                        {medicine.quantitySold} sold • ETB{" "}
-                        {medicine.totalRevenue.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
-                      <div
-                        className="h-full bg-linear-to-r from-cyan-500 via-blue-600 to-violet-600"
-                        style={{
-                          width: `${Math.max(8, (medicine.quantitySold / maxSoldQty) * 100)}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-cyan-200 bg-linear-to-br from-cyan-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                <p className="text-xs font-black uppercase text-cyan-700">
+                  Total Revenue
+                </p>
+                <p className="mt-1 text-2xl font-black text-slate-900">
+                  ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
+                </p>
               </div>
-            )}
-          </div>
+              <div className="rounded-2xl border border-violet-200 bg-linear-to-br from-violet-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                <p className="text-xs font-black uppercase text-violet-700">
+                  Total Items Sold
+                </p>
+                <p className="mt-1 text-2xl font-black text-slate-900">
+                  {Math.round(Number(reportData?.totalItemsSold || 0))}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+                <p className="text-xs font-black uppercase text-slate-500">
+                  Report Window
+                </p>
+                <p className="mt-1 text-xl font-black text-slate-900">
+                  {
+                    REPORT_RANGE_OPTIONS.find(
+                      (option) => option.value === selectedReportRange,
+                    )?.label
+                  }
+                </p>
+              </div>
+            </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
               <h3 className="text-lg font-black text-slate-900">
-                Detailed Sales Log
+                Top Selling Medicines
               </h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="text-xs font-black uppercase text-slate-500">
-                  From
-                </label>
-                <input
-                  type="date"
-                  value={salesLogStartDate}
-                  onChange={(e) => setSalesLogStartDate(e.target.value)}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                />
-                <label className="text-xs font-black uppercase text-slate-500">
-                  To
-                </label>
-                <input
-                  type="date"
-                  value={salesLogEndDate}
-                  onChange={(e) => setSalesLogEndDate(e.target.value)}
-                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                />
-              </div>
-            </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                  Transactions
+              {isLoadingReport ? (
+                <p className="mt-3 text-sm font-bold text-slate-500">
+                  Loading report data...
                 </p>
-                <p className="mt-1 text-xl font-black text-slate-900">
-                  {salesLogData?.totalRecords ?? 0}
+              ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
+                <p className="mt-3 text-sm font-bold text-slate-500">
+                  No sales found for this period.
                 </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                  Units Sold
-                </p>
-                <p className="mt-1 text-xl font-black text-slate-900">
-                  {Math.round(detailedSalesQuantity)}
-                </p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                  Sales Value
-                </p>
-                <p className="mt-1 text-xl font-black text-slate-900">
-                  ETB {detailedSalesValue.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <div
-              ref={salesLogScrollRef}
-              className="mt-4 max-h-125 overflow-auto rounded-xl border-2 border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a]"
-            >
-              <table className="w-full min-w-280 text-left">
-                <thead
-                  className={`sticky top-0 z-20 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
-                    salesLogHasScrolled ? "shadow-[0_4px_0_0_#0f172a]" : ""
-                  }`}
-                >
-                  <tr>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Sale ID
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Batch ID
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Date & Time
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Medicine
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Category
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                      Qty
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                      Unit Price
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
-                      Total
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Seller
-                    </th>
-                    <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
-                      Receiver
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {isLoadingSalesLog ? (
-                    <tr>
-                      <td
-                        colSpan={10}
-                        className="px-4 py-6 text-center text-sm font-bold text-slate-500"
-                      >
-                        Loading detailed sales records...
-                      </td>
-                    </tr>
-                  ) : detailedSalesRecords.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={10}
-                        className="px-4 py-6 text-center text-sm font-bold text-slate-500"
-                      >
-                        No sales records found for the selected date range.
-                      </td>
-                    </tr>
-                  ) : (
-                    paginatedSalesRecords.map((record) => (
-                      <tr key={`${record.id}-${record.saleDate}`}>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                          {record.id}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                          {record.batchId}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                          {new Date(record.saleDate).toLocaleString("en-GB")}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-bold text-slate-900">
-                          {record.medicineName}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                          {record.category}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
-                          {record.quantitySold}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
-                          ETB {Number(record.unitPrice || 0).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
-                          ETB {Number(record.totalPrice || 0).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                          {record.sellerName}
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                          {record.receiverName}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-              <p className="text-sm font-black text-slate-700">
-                Showing {visibleSalesLogStart}-{visibleSalesLogEnd} of{" "}
-                {totalSalesLogRecords} records
-              </p>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="text-xs font-black uppercase tracking-wide text-slate-500">
-                  Rows per page
-                </label>
-                <select
-                  value={salesLogRowsPerPage}
-                  onChange={(e) => handleRowsPerPageChange(e.target.value)}
-                  className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_#0f172a] outline-none"
-                >
-                  {SALES_LOG_ROWS_PER_PAGE_OPTIONS.map((optionValue) => (
-                    <option key={optionValue} value={optionValue}>
-                      {optionValue === "all" ? "All" : optionValue}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSalesLogPage((previousPage) =>
-                      Math.max(1, previousPage - 1),
-                    )
-                  }
-                  disabled={salesLogPage <= 1}
-                  className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                >
-                  Previous
-                </button>
-
-                <span className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
-                  Page {Math.min(salesLogPage, totalSalesLogPages)} of{" "}
-                  {totalSalesLogPages}
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSalesLogPage((previousPage) =>
-                      Math.min(totalSalesLogPages, previousPage + 1),
-                    )
-                  }
-                  disabled={salesLogPage >= totalSalesLogPages}
-                  className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-8 rounded-3xl border border-amber-200 bg-linear-to-br from-amber-50 to-white p-5 shadow-md print:hidden">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h3 className={`text-lg font-black ${titleTheme}`}>
-                    Inactive Sales History
-                  </h3>
-                  <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
-                    Medicines and categories with no sales for 3 months or more.
-                  </p>
-                </div>
-                <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 shadow-[3px_3px_0_0_#78350f]">
-                  3+ months
-                </span>
-              </div>
-
-              {isLoadingInactiveHistory ? (
-                <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
-                  Loading inactivity history...
-                </div>
-              ) : !inactiveHistoryData ? (
-                <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
-                  Unable to load inactivity history right now.
-                </div>
               ) : (
-                <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                  <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-slate-900">
-                        Inactive Medicines
-                      </h4>
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                        {inactiveMedicineRecords.length} records
-                      </span>
-                    </div>
-
-                    {inactiveMedicineRecords.length === 0 ? (
-                      <p className="text-sm font-semibold text-slate-500">
-                        No medicines are inactive for the selected threshold.
-                      </p>
-                    ) : (
-                      <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                            <tr>
-                              <th className="px-3 py-2">Medicine</th>
-                              <th className="px-3 py-2">Category</th>
-                              <th className="px-3 py-2">Last Sale</th>
-                              <th className="px-3 py-2 text-right">Days</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {inactiveMedicineRecords.map((record) => (
-                              <tr key={record.medicineId}>
-                                <td className="px-3 py-2 font-bold text-slate-900">
-                                  {record.medicineName}
-                                </td>
-                                <td className="px-3 py-2 font-semibold text-slate-700">
-                                  {record.categoryName}
-                                </td>
-                                <td className="px-3 py-2 font-semibold text-slate-700">
-                                  {record.lastSaleDate
-                                    ? new Date(
-                                        record.lastSaleDate,
-                                      ).toLocaleDateString("en-GB")
-                                    : "Never sold"}
-                                </td>
-                                <td className="px-3 py-2 text-right font-black text-amber-700">
-                                  {record.daysSinceLastSale === null
-                                    ? "—"
-                                    : `${record.daysSinceLastSale}d`}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                <div className="mt-4 space-y-3">
+                  {reportData?.topSellingMedicines.map((medicine, index) => (
+                    <div key={medicine.medicineName}>
+                      <div className="mb-1 flex items-center justify-between text-xs font-black text-slate-700">
+                        <span>
+                          <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
+                            {index + 1}
+                          </span>
+                          {medicine.medicineName}
+                        </span>
+                        <span>
+                          {medicine.quantitySold} sold • ETB{" "}
+                          {medicine.totalRevenue.toFixed(2)}
+                        </span>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h4 className="text-sm font-black text-slate-900">
-                        Inactive Categories
-                      </h4>
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                        {inactiveCategoryRecords.length} records
-                      </span>
-                    </div>
-
-                    {inactiveCategoryRecords.length === 0 ? (
-                      <p className="text-sm font-semibold text-slate-500">
-                        No categories are inactive for the selected threshold.
-                      </p>
-                    ) : (
-                      <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
-                        <table className="min-w-full text-left text-xs">
-                          <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                            <tr>
-                              <th className="px-3 py-2">Category</th>
-                              <th className="px-3 py-2 text-right">
-                                Medicines
-                              </th>
-                              <th className="px-3 py-2">Last Sale</th>
-                              <th className="px-3 py-2 text-right">Days</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {inactiveCategoryRecords.map((record) => (
-                              <tr key={record.categoryId}>
-                                <td className="px-3 py-2 font-bold text-slate-900">
-                                  {record.categoryName}
-                                </td>
-                                <td className="px-3 py-2 text-right font-black text-slate-700">
-                                  {record.medicineCount}
-                                </td>
-                                <td className="px-3 py-2 font-semibold text-slate-700">
-                                  {record.lastSaleDate
-                                    ? new Date(
-                                        record.lastSaleDate,
-                                      ).toLocaleDateString("en-GB")
-                                    : "Never sold"}
-                                </td>
-                                <td className="px-3 py-2 text-right font-black text-amber-700">
-                                  {record.daysSinceLastSale === null
-                                    ? "—"
-                                    : `${record.daysSinceLastSale}d`}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                      <div className="h-4 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+                        <div
+                          className="h-full bg-linear-to-r from-cyan-500 via-blue-600 to-violet-600"
+                          style={{
+                            width: `${Math.max(8, (medicine.quantitySold / maxSoldQty) * 100)}%`,
+                          }}
+                        />
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-lg font-black text-slate-900">
+                  Detailed Sales Log
+                </h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-xs font-black uppercase text-slate-500">
+                    From
+                  </label>
+                  <input
+                    type="date"
+                    value={salesLogStartDate}
+                    onChange={(e) => setSalesLogStartDate(e.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
+                  />
+                  <label className="text-xs font-black uppercase text-slate-500">
+                    To
+                  </label>
+                  <input
+                    type="date"
+                    value={salesLogEndDate}
+                    onChange={(e) => setSalesLogEndDate(e.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                    Transactions
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-900">
+                    {salesLogData?.totalRecords ?? 0}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                    Units Sold
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-900">
+                    {Math.round(detailedSalesQuantity)}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                    Sales Value
+                  </p>
+                  <p className="mt-1 text-xl font-black text-slate-900">
+                    ETB {detailedSalesValue.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                ref={salesLogScrollRef}
+                className="mt-4 max-h-125 overflow-auto rounded-xl border-2 border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a]"
+              >
+                <table className="w-full min-w-280 text-left">
+                  <thead
+                    className={`sticky top-0 z-20 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
+                      salesLogHasScrolled ? "shadow-[0_4px_0_0_#0f172a]" : ""
+                    }`}
+                  >
+                    <tr>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Sale ID
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Batch ID
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Date & Time
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Medicine
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Category
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                        Qty
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                        Unit Price
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3 text-right">
+                        Total
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Seller
+                      </th>
+                      <th className="border-b-2 border-slate-900 bg-slate-50 px-4 py-3">
+                        Receiver
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {isLoadingSalesLog ? (
+                      <tr>
+                        <td
+                          colSpan={10}
+                          className="px-4 py-6 text-center text-sm font-bold text-slate-500"
+                        >
+                          Loading detailed sales records...
+                        </td>
+                      </tr>
+                    ) : detailedSalesRecords.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={10}
+                          className="px-4 py-6 text-center text-sm font-bold text-slate-500"
+                        >
+                          No sales records found for the selected date range.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedSalesRecords.map((record) => (
+                        <tr key={`${record.id}-${record.saleDate}`}>
+                          <td className="px-4 py-3 text-sm font-bold text-slate-700">
+                            {record.id}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-slate-700">
+                            {record.batchId}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                            {new Date(record.saleDate).toLocaleString("en-GB")}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-slate-900">
+                            {record.medicineName}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                            {record.category}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
+                            {record.quantitySold}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
+                            ETB {Number(record.unitPrice || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-black text-slate-900">
+                            ETB {Number(record.totalPrice || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                            {record.sellerName}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-700">
+                            {record.receiverName}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+                <p className="text-sm font-black text-slate-700">
+                  Showing {visibleSalesLogStart}-{visibleSalesLogEnd} of{" "}
+                  {totalSalesLogRecords} records
+                </p>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-xs font-black uppercase tracking-wide text-slate-500">
+                    Rows per page
+                  </label>
+                  <select
+                    value={salesLogRowsPerPage}
+                    onChange={(e) => handleRowsPerPageChange(e.target.value)}
+                    className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-[3px_3px_0_0_#0f172a] outline-none"
+                  >
+                    {SALES_LOG_ROWS_PER_PAGE_OPTIONS.map((optionValue) => (
+                      <option key={optionValue} value={optionValue}>
+                        {optionValue === "all" ? "All" : optionValue}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSalesLogPage((previousPage) =>
+                        Math.max(1, previousPage - 1),
+                      )
+                    }
+                    disabled={salesLogPage <= 1}
+                    className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="rounded-xl border-2 border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
+                    Page {Math.min(salesLogPage, totalSalesLogPages)} of{" "}
+                    {totalSalesLogPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSalesLogPage((previousPage) =>
+                        Math.min(totalSalesLogPages, previousPage + 1),
+                      )
+                    }
+                    disabled={salesLogPage >= totalSalesLogPages}
+                    className="rounded-xl border-2 border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-slate-900 shadow-[4px_4px_0_0_#0f172a] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 rounded-3xl border border-amber-200 bg-linear-to-br from-amber-50 to-white p-5 shadow-md print:hidden">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h3 className={`text-lg font-black ${titleTheme}`}>
+                      Inactive Sales History
+                    </h3>
+                    <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
+                      Medicines and categories with no sales for 3 months or
+                      more.
+                    </p>
+                  </div>
+                  <span className="rounded-full border-2 border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 shadow-[3px_3px_0_0_#78350f]">
+                    3+ months
+                  </span>
+                </div>
+
+                {isLoadingInactiveHistory ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
+                    Loading inactivity history...
+                  </div>
+                ) : !inactiveHistoryData ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-white p-4 text-sm font-bold text-slate-500 shadow-sm">
+                    Unable to load inactivity history right now.
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-sm font-black text-slate-900">
+                          Inactive Medicines
+                        </h4>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
+                          {inactiveMedicineRecords.length} records
+                        </span>
+                      </div>
+
+                      {inactiveMedicineRecords.length === 0 ? (
+                        <p className="text-sm font-semibold text-slate-500">
+                          No medicines are inactive for the selected threshold.
+                        </p>
+                      ) : (
+                        <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+                          <table className="min-w-full text-left text-xs">
+                            <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">Medicine</th>
+                                <th className="px-3 py-2">Category</th>
+                                <th className="px-3 py-2">Last Sale</th>
+                                <th className="px-3 py-2 text-right">Days</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {inactiveMedicineRecords.map((record) => (
+                                <tr key={record.medicineId}>
+                                  <td className="px-3 py-2 font-bold text-slate-900">
+                                    {record.medicineName}
+                                  </td>
+                                  <td className="px-3 py-2 font-semibold text-slate-700">
+                                    {record.categoryName}
+                                  </td>
+                                  <td className="px-3 py-2 font-semibold text-slate-700">
+                                    {record.lastSaleDate
+                                      ? new Date(
+                                          record.lastSaleDate,
+                                        ).toLocaleDateString("en-GB")
+                                      : "Never sold"}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-black text-amber-700">
+                                    {record.daysSinceLastSale === null
+                                      ? "—"
+                                      : `${record.daysSinceLastSale}d`}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <h4 className="text-sm font-black text-slate-900">
+                          Inactive Categories
+                        </h4>
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
+                          {inactiveCategoryRecords.length} records
+                        </span>
+                      </div>
+
+                      {inactiveCategoryRecords.length === 0 ? (
+                        <p className="text-sm font-semibold text-slate-500">
+                          No categories are inactive for the selected threshold.
+                        </p>
+                      ) : (
+                        <div className="max-h-72 overflow-auto rounded-xl border border-slate-200">
+                          <table className="min-w-full text-left text-xs">
+                            <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                              <tr>
+                                <th className="px-3 py-2">Category</th>
+                                <th className="px-3 py-2 text-right">
+                                  Medicines
+                                </th>
+                                <th className="px-3 py-2">Last Sale</th>
+                                <th className="px-3 py-2 text-right">Days</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {inactiveCategoryRecords.map((record) => (
+                                <tr key={record.categoryId}>
+                                  <td className="px-3 py-2 font-bold text-slate-900">
+                                    {record.categoryName}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-black text-slate-700">
+                                    {record.medicineCount}
+                                  </td>
+                                  <td className="px-3 py-2 font-semibold text-slate-700">
+                                    {record.lastSaleDate
+                                      ? new Date(
+                                          record.lastSaleDate,
+                                        ).toLocaleDateString("en-GB")
+                                      : "Never sold"}
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-black text-amber-700">
+                                    {record.daysSinceLastSale === null
+                                      ? "—"
+                                      : `${record.daysSinceLastSale}d`}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}
@@ -2064,214 +2209,214 @@ export default function PharmacyDashboard() {
           <div
             className={`xl:col-span-3 h-96 rounded-4xl border p-8 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl ${cardTheme}`}
           >
-          <div className="mb-6 flex items-center justify-between gap-3">
-            <div>
-              <h2 className={`text-xl font-bold ${titleTheme}`}>
-                Stock Analytics by Category
-              </h2>
-              <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
-                Real-time distribution of inventory across categories.
-              </p>
-            </div>
-            <select
-              value={selectedCategoryMetric}
-              onChange={(e) =>
-                setSelectedCategoryMetric(
-                  e.target.value as CategoryAnalyticsViewKey,
-                )
-              }
-              className={`rounded-xl border-2 border-slate-900 px-4 py-2 text-xs font-black shadow-[4px_4px_0_0_#0f172a] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a] ${searchTheme}`}
-            >
-              <option value="allMetricsCombined">
-                Total Units + Medicine Count + Total Stock Value
-              </option>
-              <option value="medicineCountAndStockValue">
-                Medicine Count + Total Stock Value
-              </option>
-              {(
-                Object.entries(CATEGORY_ANALYTICS_METRICS) as Array<
-                  [
-                    CategoryMetricKey,
-                    (typeof CATEGORY_ANALYTICS_METRICS)[CategoryMetricKey],
-                  ]
-                >
-              ).map(([metricKey, metric]) => (
-                <option key={metricKey} value={metricKey}>
-                  {metric.label}
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <div>
+                <h2 className={`text-xl font-bold ${titleTheme}`}>
+                  Stock Analytics by Category
+                </h2>
+                <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
+                  Real-time distribution of inventory across categories.
+                </p>
+              </div>
+              <select
+                value={selectedCategoryMetric}
+                onChange={(e) =>
+                  setSelectedCategoryMetric(
+                    e.target.value as CategoryAnalyticsViewKey,
+                  )
+                }
+                className={`rounded-xl border-2 border-slate-900 px-4 py-2 text-xs font-black shadow-[4px_4px_0_0_#0f172a] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#0f172a] ${searchTheme}`}
+              >
+                <option value="allMetricsCombined">
+                  Total Units + Medicine Count + Total Stock Value
                 </option>
-              ))}
-            </select>
-          </div>
-          <ResponsiveContainer width="100%" height="80%">
-            {selectedCategoryMetric === "allMetricsCombined" ? (
-              <BarChart data={categoryAnalyticsData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#f1f5f9"
-                />
-                <XAxis
-                  dataKey="category"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                />
-                <YAxis
-                  yAxisId="count"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `${Math.round(Number(value))}`}
-                />
-                <YAxis
-                  yAxisId="value"
-                  orientation="right"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
-                />
-                <Tooltip
-                  cursor={{ fill: "#f8fafc" }}
-                  contentStyle={{ borderRadius: "15px", border: "none" }}
-                  formatter={(value, name) => {
-                    if (name === "Total Stock Value") {
+                <option value="medicineCountAndStockValue">
+                  Medicine Count + Total Stock Value
+                </option>
+                {(
+                  Object.entries(CATEGORY_ANALYTICS_METRICS) as Array<
+                    [
+                      CategoryMetricKey,
+                      (typeof CATEGORY_ANALYTICS_METRICS)[CategoryMetricKey],
+                    ]
+                  >
+                ).map(([metricKey, metric]) => (
+                  <option key={metricKey} value={metricKey}>
+                    {metric.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <ResponsiveContainer width="100%" height="80%">
+              {selectedCategoryMetric === "allMetricsCombined" ? (
+                <BarChart data={categoryAnalyticsData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#f1f5f9"
+                  />
+                  <XAxis
+                    dataKey="category"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  />
+                  <YAxis
+                    yAxisId="count"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tickFormatter={(value) => `${Math.round(Number(value))}`}
+                  />
+                  <YAxis
+                    yAxisId="value"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f8fafc" }}
+                    contentStyle={{ borderRadius: "15px", border: "none" }}
+                    formatter={(value, name) => {
+                      if (name === "Total Stock Value") {
+                        return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
+                      }
+
+                      if (name === "Medicine Count") {
+                        return [
+                          `${Math.round(Number(value ?? 0))} medicines`,
+                          name,
+                        ];
+                      }
+
+                      return [`${Math.round(Number(value ?? 0))} units`, name];
+                    }}
+                  />
+                  <Bar
+                    yAxisId="count"
+                    dataKey="totalQuantity"
+                    name="Total Units"
+                    fill={CATEGORY_ANALYTICS_METRICS.totalQuantity.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={20}
+                  />
+                  <Bar
+                    yAxisId="count"
+                    dataKey="medicineCount"
+                    name="Medicine Count"
+                    fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={20}
+                  />
+                  <Bar
+                    yAxisId="value"
+                    dataKey="totalValue"
+                    name="Total Stock Value"
+                    fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={20}
+                  />
+                </BarChart>
+              ) : selectedCategoryMetric === "medicineCountAndStockValue" ? (
+                <BarChart data={categoryAnalyticsData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#f1f5f9"
+                  />
+                  <XAxis
+                    dataKey="category"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  />
+                  <YAxis
+                    yAxisId="count"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tickFormatter={(value) => `${Math.round(Number(value))}`}
+                  />
+                  <YAxis
+                    yAxisId="value"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f8fafc" }}
+                    contentStyle={{ borderRadius: "15px", border: "none" }}
+                    formatter={(value, name) => {
+                      if (name === "Medicine Count") {
+                        return [
+                          `${Math.round(Number(value ?? 0))} medicines`,
+                          name,
+                        ];
+                      }
+
                       return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
+                    }}
+                  />
+                  <Bar
+                    yAxisId="count"
+                    dataKey="medicineCount"
+                    name="Medicine Count"
+                    fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={24}
+                  />
+                  <Bar
+                    yAxisId="value"
+                    dataKey="totalValue"
+                    name="Total Stock Value"
+                    fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={24}
+                  />
+                </BarChart>
+              ) : (
+                <BarChart data={categoryAnalyticsData}>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="#f1f5f9"
+                  />
+                  <XAxis
+                    dataKey="category"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: "#94a3b8", fontSize: 12 }}
+                    tickFormatter={(value) =>
+                      selectedCategoryMetric === "totalValue"
+                        ? `ETB ${Number(value).toFixed(0)}`
+                        : `${Math.round(Number(value))}`
                     }
-
-                    if (name === "Medicine Count") {
-                      return [
-                        `${Math.round(Number(value ?? 0))} medicines`,
-                        name,
-                      ];
+                  />
+                  <Tooltip
+                    cursor={{ fill: "#f8fafc" }}
+                    contentStyle={{ borderRadius: "15px", border: "none" }}
+                    formatter={(value) =>
+                      currentCategoryMetric.formatValue(Number(value ?? 0))
                     }
-
-                    return [`${Math.round(Number(value ?? 0))} units`, name];
-                  }}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="totalQuantity"
-                  name="Total Units"
-                  fill={CATEGORY_ANALYTICS_METRICS.totalQuantity.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={20}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="medicineCount"
-                  name="Medicine Count"
-                  fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={20}
-                />
-                <Bar
-                  yAxisId="value"
-                  dataKey="totalValue"
-                  name="Total Stock Value"
-                  fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={20}
-                />
-              </BarChart>
-            ) : selectedCategoryMetric === "medicineCountAndStockValue" ? (
-              <BarChart data={categoryAnalyticsData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#f1f5f9"
-                />
-                <XAxis
-                  dataKey="category"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                />
-                <YAxis
-                  yAxisId="count"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `${Math.round(Number(value))}`}
-                />
-                <YAxis
-                  yAxisId="value"
-                  orientation="right"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) => `ETB ${Number(value).toFixed(0)}`}
-                />
-                <Tooltip
-                  cursor={{ fill: "#f8fafc" }}
-                  contentStyle={{ borderRadius: "15px", border: "none" }}
-                  formatter={(value, name) => {
-                    if (name === "Medicine Count") {
-                      return [
-                        `${Math.round(Number(value ?? 0))} medicines`,
-                        name,
-                      ];
-                    }
-
-                    return [`ETB ${Number(value ?? 0).toFixed(2)}`, name];
-                  }}
-                />
-                <Bar
-                  yAxisId="count"
-                  dataKey="medicineCount"
-                  name="Medicine Count"
-                  fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={24}
-                />
-                <Bar
-                  yAxisId="value"
-                  dataKey="totalValue"
-                  name="Total Stock Value"
-                  fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={24}
-                />
-              </BarChart>
-            ) : (
-              <BarChart data={categoryAnalyticsData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="#f1f5f9"
-                />
-                <XAxis
-                  dataKey="category"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#94a3b8", fontSize: 12 }}
-                  tickFormatter={(value) =>
-                    selectedCategoryMetric === "totalValue"
-                      ? `ETB ${Number(value).toFixed(0)}`
-                      : `${Math.round(Number(value))}`
-                  }
-                />
-                <Tooltip
-                  cursor={{ fill: "#f8fafc" }}
-                  contentStyle={{ borderRadius: "15px", border: "none" }}
-                  formatter={(value) =>
-                    currentCategoryMetric.formatValue(Number(value ?? 0))
-                  }
-                />
-                <Bar
-                  dataKey={selectedCategoryMetric}
-                  fill={currentCategoryMetric.color}
-                  radius={[6, 6, 0, 0]}
-                  barSize={40}
-                />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
+                  />
+                  <Bar
+                    dataKey={selectedCategoryMetric}
+                    fill={currentCategoryMetric.color}
+                    radius={[6, 6, 0, 0]}
+                    barSize={40}
+                  />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
           </div>
         )}
 
@@ -2519,21 +2664,6 @@ export default function PharmacyDashboard() {
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <button
-                          onClick={() => {
-                            startSellInput(item);
-                            setActiveActionMenuId(null);
-                          }}
-                          disabled={isSellDisabled}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold border-2 shadow-md ${
-                            isSellDisabled
-                              ? "border-slate-300 bg-slate-200 text-slate-500 cursor-not-allowed"
-                              : "border-slate-900 bg-slate-900 text-white"
-                          }`}
-                        >
-                          Sell
-                        </button>
-
                         {isAdmin && activeActionMenuId === item.id && (
                           <button
                             onClick={() => {
@@ -2568,6 +2698,15 @@ export default function PharmacyDashboard() {
           </tbody>
         </table>
       </div>
+
+      {/* ========== MULTI-ITEM ORDER MODAL ========== */}
+      <MultiItemOrderCart
+        isOpen={isGeneralSaleOpen}
+        onClose={() => setIsGeneralSaleOpen(false)}
+        onSubmit={handleBulkSaleSubmit}
+        isProcessing={isProcessingBulkSale}
+      />
+      {/* ========== END MODAL ========== */}
     </div>
   );
 }
