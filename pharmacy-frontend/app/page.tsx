@@ -531,23 +531,16 @@ export default function PharmacyDashboard() {
     }
   };
 
-  // Automatically fetch data when the user logs in
+  // NOTE: Do not auto-restore a saved session on first load.
+  // This ensures opening the site (e.g. clicking the localhost link)
+  // always directs users to the login UI instead of silently showing
+  // the dashboard when a previous session exists.
   useEffect(() => {
-    const storedSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!storedSession) return;
-
+    // Clear any saved session on initial load so the login page is shown.
     try {
-      const parsed = JSON.parse(storedSession) as {
-        token?: string;
-        user?: AuthUser;
-      };
-
-      if (parsed.token && parsed.user?.role) {
-        setAuthToken(parsed.token);
-        setLoggedInUser(parsed.user);
-      }
-    } catch (_error) {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (_e) {
+      // ignore
     }
   }, []);
 
