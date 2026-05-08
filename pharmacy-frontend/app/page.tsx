@@ -1757,7 +1757,7 @@ export default function PharmacyDashboard() {
         </aside>
 
         <main id="dashboard" className="min-w-0 flex-1 space-y-8">
-          <header className="flex justify-between items-end mb-10 print:hidden">
+          <header className="flex justify-between items-end mb-10 gap-4 print:hidden">
             <div>
               <h1
                 className={`inline-block text-4xl font-black tracking-tight transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:underline hover:decoration-4 hover:underline-offset-4 hover:drop-shadow-lg ${titleTheme}`}
@@ -1767,6 +1767,24 @@ export default function PharmacyDashboard() {
               <p className={`font-medium ${mutedTheme}`}>
                 Managing Wholesale Pharmacy Stock
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {isLoggedIn && (
+                <button
+                  onClick={() => setIsGeneralSaleOpen(true)}
+                  className="rounded-2xl bg-linear-to-r from-emerald-600 to-green-600 px-4 py-3 text-sm font-black text-white shadow-lg transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
+                >
+                  🛒 Sell Out Items
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="rounded-2xl bg-linear-to-r from-cyan-500 to-blue-600 px-4 py-3 text-sm font-black text-white shadow-[0_12px_30px_-12px_rgba(37,99,235,0.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? "Refreshing..." : "Refresh"}
+              </button>
             </div>
           </header>
 
