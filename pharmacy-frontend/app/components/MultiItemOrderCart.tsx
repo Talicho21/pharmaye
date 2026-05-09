@@ -500,7 +500,7 @@ export function MultiItemOrderCart({
               <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
                 <h3 className="font-semibold text-slate-900 mb-4">
                   👤 Customer Information
-                </h3>
+              I   </h3>
                 <div className="grid grid-cols-1 gap-3">
                   <input
                     type="text"
