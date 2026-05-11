@@ -228,6 +228,23 @@ export function PrintableInvoice({
             print-color-adjust: exact !important;
           }
 
+          /* CRITICAL: Keep signature footer horizontal in print */
+          .invoice-footer > div {
+            display: flex !important;
+            justify-content: space-between !important;
+            gap: 1.5rem !important;
+            width: 100% !important;
+            align-items: flex-start !important;
+            flex-wrap: nowrap !important;
+          }
+
+          .invoice-footer > div > div {
+            display: block !important;
+            flex: 1 1 0% !important;
+            text-align: center !important;
+            min-width: 0 !important;
+          }
+
           /* Responsive adjustments for A4 */
           .invoice-container {
             width: 100%;
@@ -247,29 +264,21 @@ export function PrintableInvoice({
       <div id="invoice-container" className="w-full bg-white p-0">
         {/* ========== HEADER SECTION ========== */}
         <div className="invoice-header border-b-2 border-gray-900 pb-4 mb-6">
-          {/* Company Branding */}
+          {/* Company Branding - Simplified without Logo */}
           <div className="flex items-start justify-between mb-4">
-            {/* Left: Logo + Company Name */}
-            <div className="flex items-center gap-4">
-              <img
-                src="/Logo.jpg"
-                alt="Express Pharmaceutical Wholesale"
-                className="w-16 h-16 object-contain"
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  EXPRESS PHARMA ONE ME.PLS
-                </h1>
-                <p className="text-sm text-gray-600">
-                  Pharmaceutical Wholesale & Distribution
-                </p>
-              </div>
+            {/* Left: Company Name */}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                EXPRESS PHARMA ONE ME. PLC
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Pharmaceutical Wholesale & Distribution
+              </p>
             </div>
 
             {/* Right: Invoice Title */}
             <div className="text-right">
               <h2 className="text-4xl font-extrabold text-gray-900">INVOICE</h2>
-              <p className="text-xs text-gray-500 mt-1">Professional Receipt</p>
             </div>
           </div>
 
@@ -429,16 +438,11 @@ export function PrintableInvoice({
         {/* ========== PROFESSIONAL PHARMACEUTICAL ACCOUNTING TOTALS SECTION ========== */}
         {/* 
           ACCOUNTING FORMAT DESIGN:
-          - Three-row vertical layout (sub total → Non-Taxable → Grand Total)
-          - Pinned to right side of page using ml-auto (margin-left: auto)
-          - Fixed width (w-64) for consistent decimal alignment
-          - Professional accounting lines: single line above Grand Total, double line below
-          - Labels left-aligned, currency values right-aligned for columnar alignment
-          
-          WHY THIS DESIGN?
-          - Mimics traditional pharmaceutical invoices used by auditors and tax authorities
-          - Decimal alignment ensures visual accuracy on printed A4
-          - Bottom double-line signals "final amount" in accounting convention
+          - Three-row vertical layout (sub total → Not Taxable → Grand Total)
+          - Single line separator above Grand Total
+          - Double line beneath Grand Total amount to signify closed balance
+          - Pinned to right side using ml-auto
+          - Fixed width for consistent decimal alignment
         */}
         <div className="invoice-summary mt-8 mb-6">
           {/* TOP SECTION: Order Summary Stats (Left-aligned for reference) */}
@@ -457,107 +461,107 @@ export function PrintableInvoice({
             </div>
           </div>
 
-          {/* ACCOUNTING TOTALS: Three-row format pinned to RIGHT using ml-auto */}
-          <div className="w-64 ml-auto">
-            {/* ROW 1: sub total (lowercase) */}
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-gray-700 font-normal">sub total</span>
-              <span className="text-gray-900 font-semibold tabular-nums">
-                {formatCurrency(subtotal)}
-              </span>
+          {/* TOTALS BLOCK: Grouped and positioned to RIGHT */}
+          <div className="ml-auto w-72 border border-gray-400 rounded p-4">
+            {/* Totals Group Header */}
+            <div className="mb-3">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+                Order Totals
+              </p>
+
+              {/* ROW 1: sub total (lowercase) */}
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-700 font-normal">sub total</span>
+                <span className="text-gray-900 font-semibold tabular-nums">
+                  {formatCurrency(subtotal)}
+                </span>
+              </div>
+
+              {/* ROW 2: Not Taxable */}
+              <div className="flex justify-between text-sm mb-3">
+                <span className="text-gray-700 font-normal">Not Taxable</span>
+                <span className="text-gray-900 font-semibold tabular-nums">
+                  {formatCurrency(nonTaxable)}
+                </span>
+              </div>
+
+              {/* SEPARATOR: Single line above Grand Total */}
+              <div className="border-t border-gray-900 my-3" />
+
+              {/* ROW 3: Grand Total with Double line below */}
+              <div className="flex justify-between">
+                <span className="text-gray-900 font-bold text-sm">
+                  GRAND TOTAL
+                </span>
+                <span className="text-gray-900 font-bold text-sm tabular-nums">
+                  {formatCurrency(grandTotal)}
+                </span>
+              </div>
+
+              {/* Double underline below Grand Total (accounting convention) */}
+              <div className="border-b-4 border-gray-900 mt-1" />
             </div>
-
-            {/* ROW 2: Not Taxable (proper case) */}
-            {/* 
-              NON-TAXABLE LOGIC:
-              - Default: 0 (displays "ETB 0.00")
-              - Future: Calculate based on medicine category
-              - Example: Vaccines, Essential medicines could be 0% VAT
-            */}
-            <div className="flex justify-between text-sm mb-3">
-              <span className="text-gray-700 font-normal">Not Taxable</span>
-              <span className="text-gray-900 font-semibold tabular-nums">
-                {formatCurrency(nonTaxable)}
-              </span>
-            </div>
-
-            {/* SEPARATOR: Single line above Grand Total */}
-            <div className="border-t border-gray-900 my-2" />
-
-            {/* ROW 3: Grand Total (Bold with accounting line below) */}
-            <div className="flex justify-between mb-0">
-              <span className="text-gray-900 font-bold text-sm">
-                GRAND TOTAL
-              </span>
-              <span className="text-gray-900 font-bold text-sm tabular-nums">
-                {formatCurrency(grandTotal)}
-              </span>
-            </div>
-
-            {/* Double line below Grand Total (pharmaceutical accounting convention) */}
-            <div className="border-b-4 border-gray-900 my-0" />
           </div>
         </div>
 
-        {/* ========== FOOTER: HORIZONTAL SIGNATURE SECTION (REFACTORED) ========== */}
+        {/* ========== FOOTER: HORIZONTAL SIGNATURE SECTION (SINGLE LINE) ========== */}
         {/* 
-          SIGNATURE LAYOUT:
-          - Flex row with three equal columns (Prepared By | Received By | Approved By)
-          - Each has a solid line above for signature
-          - Lines are 100% width within column for clean alignment
-          - Solid border ensures it prints clearly on A4 paper
+          SIGNATURE LAYOUT (Professional Format):
+          - Single row with three equal-width columns using flex and space-between
+          - Each column contains: Label and signature line
+          - All on one horizontal row with proper spacing
         */}
         <div className="invoice-footer border-t-2 border-gray-900 mt-8 pt-6">
-          <div className="grid grid-cols-3 gap-8">
+          <div
+            className="flex justify-between gap-6"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "1.5rem",
+              alignItems: "flex-start",
+              width: "100%",
+            }}
+          >
             {/* Column 1: Prepared By */}
-            <div className="flex flex-col">
-              {/* Signature Line */}
-              <div
-                className="border-b-2 border-gray-900 mb-2"
-                style={{ height: "50px" }}
-              />
-
-              {/* Label */}
-              <p className="text-xs font-semibold text-gray-900 text-center uppercase tracking-wide">
+            <div
+              className="flex-1 text-center"
+              style={{ flex: "1 1 0%", minWidth: 0 }}
+            >
+              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
                 Prepared By
               </p>
-              <p className="text-xs text-gray-600 text-center mt-1">
-                Name & Date
-              </p>
+              <div
+                className="border-b-2 border-gray-900"
+                style={{ height: "30px" }}
+              />
             </div>
 
             {/* Column 2: Received By */}
-            <div className="flex flex-col">
-              {/* Signature Line */}
-              <div
-                className="border-b-2 border-gray-900 mb-2"
-                style={{ height: "50px" }}
-              />
-
-              {/* Label */}
-              <p className="text-xs font-semibold text-gray-900 text-center uppercase tracking-wide">
+            <div
+              className="flex-1 text-center"
+              style={{ flex: "1 1 0%", minWidth: 0 }}
+            >
+              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
                 Received By
               </p>
-              <p className="text-xs text-gray-600 text-center mt-1">
-                Name & Date
-              </p>
+              <div
+                className="border-b-2 border-gray-900"
+                style={{ height: "30px" }}
+              />
             </div>
 
             {/* Column 3: Approved By */}
-            <div className="flex flex-col">
-              {/* Signature Line */}
-              <div
-                className="border-b-2 border-gray-900 mb-2"
-                style={{ height: "50px" }}
-              />
-
-              {/* Label */}
-              <p className="text-xs font-semibold text-gray-900 text-center uppercase tracking-wide">
+            <div
+              className="flex-1 text-center"
+              style={{ flex: "1 1 0%", minWidth: 0 }}
+            >
+              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
                 Approved By
               </p>
-              <p className="text-xs text-gray-600 text-center mt-1">
-                Name & Date
-              </p>
+              <div
+                className="border-b-2 border-gray-900"
+                style={{ height: "30px" }}
+              />
             </div>
           </div>
         </div>

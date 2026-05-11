@@ -246,7 +246,6 @@ export function MultiItemOrderCart({
         <div class="receipt-shell">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
-            <img src="${window.location.origin}/Logo.jpg" alt="Logo" style="width:80px;height:80px;object-fit:contain;border-radius:6px;" />
             <div>
               <div style="font-size:18px;font-weight:700;">EXPRESS PHARMA ONE ME.PLS</div>
             </div>
@@ -499,8 +498,8 @@ export function MultiItemOrderCart({
               {/* Customer Details */}
               <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
                 <h3 className="font-semibold text-slate-900 mb-4">
-                  👤 Customer Information
-              I   </h3>
+                  👤 Customer Information I{" "}
+                </h3>
                 <div className="grid grid-cols-1 gap-3">
                   <input
                     type="text"
