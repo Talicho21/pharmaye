@@ -263,35 +263,39 @@ export function PrintableInvoice({
       {/* DOCUMENT WRAPPER - Only this renders in print mode */}
       <div id="invoice-container" className="w-full bg-white p-0">
         {/* ========== HEADER SECTION ========== */}
-        <div className="invoice-header border-b-2 border-gray-900 pb-4 mb-6">
+        <div className="invoice-header border-b-2 border-[#2563EB] pb-4 mb-6">
           {/* Company Branding - Simplified without Logo */}
           <div className="flex items-start justify-between mb-4">
             {/* Left: Company Name */}
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-[#2563EB]">
                 EXPRESS PHARMA ONE ME. PLC
               </h1>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-[#64748B] mt-1">
                 Pharmaceutical Wholesale & Distribution
               </p>
             </div>
 
             {/* Right: Invoice Title */}
             <div className="text-right">
-              <h2 className="text-4xl font-extrabold text-gray-900">INVOICE</h2>
+              <h2 className="text-4xl font-extrabold text-[#2563EB]">
+                INVOICE
+              </h2>
             </div>
           </div>
 
           {/* Company Contact Info */}
-          <div className="grid grid-cols-2 gap-8 text-sm text-gray-700 border-t pt-2">
+          <div className="grid grid-cols-2 gap-8 text-sm text-[#64748B] border-t pt-2">
             <div>
-              <p className="font-semibold text-gray-900">Contact Information</p>
+              <p className="font-semibold text-[#2563EB]">
+                Contact Information
+              </p>
               <p>TIN: 0098248381</p>
               <p>Phone: 0981798081</p>
               <p>Email: israelmohamed3@gmail.com</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-gray-900">Invoice Details</p>
+              <p className="font-semibold text-[#2563EB]">Invoice Details</p>
               <p>
                 Invoice No:{" "}
                 <span className="font-mono font-bold">{invoiceNo}</span>
@@ -303,26 +307,26 @@ export function PrintableInvoice({
         </div>
 
         {/* ========== CUSTOMER SECTION (ENHANCED) ========== */}
-        <div className="grid grid-cols-3 gap-6 mb-6 p-4 bg-gray-50 border border-gray-200 rounded">
+        <div className="grid grid-cols-3 gap-6 mb-6 p-4 bg-white border border-[#E2E8F0] rounded">
           {/* Left: Bill To */}
           <div>
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Bill To
             </p>
-            <p className="text-sm text-gray-600">S.No: {customerSNo || "-"}</p>
-            <p className="text-lg font-semibold text-gray-900">
+            <p className="text-sm text-[#64748B]">S.No: {customerSNo || "-"}</p>
+            <p className="text-lg font-semibold text-[#334155]">
               {customerName || "N/A"}
             </p>
-            <p className="text-sm text-gray-600">TIN: {tinNumber || "N/A"}</p>
+            <p className="text-sm text-[#64748B]">TIN: {tinNumber || "N/A"}</p>
           </div>
 
           {/* Center: Payment Method */}
           <div className="text-center">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Payment Method
             </p>
             <p
-              className={`text-lg font-bold text-gray-900 px-3 py-1 rounded inline-block ${paymentDisplay.color}`}
+              className={`text-lg font-bold text-[#334155] px-3 py-1 rounded inline-block ${paymentDisplay.color}`}
             >
               {paymentDisplay.label}
             </p>
@@ -330,13 +334,13 @@ export function PrintableInvoice({
 
           {/* Right: Transaction Details */}
           <div className="text-right">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">
+            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Transaction
             </p>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-[#64748B]">
               <span className="font-semibold">Items:</span> {totalItems}
             </p>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-[#64748B]">
               <span className="font-semibold">Total Qty:</span> {totalQuantity}
             </p>
           </div>
@@ -471,35 +475,35 @@ export function PrintableInvoice({
 
               {/* ROW 1: sub total (lowercase) */}
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-700 font-normal">sub total</span>
-                <span className="text-gray-900 font-semibold tabular-nums">
+                <span className="text-[#64748B] font-normal">sub total</span>
+                <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
 
               {/* ROW 2: Not Taxable */}
               <div className="flex justify-between text-sm mb-3">
-                <span className="text-gray-700 font-normal">Not Taxable</span>
-                <span className="text-gray-900 font-semibold tabular-nums">
+                <span className="text-[#64748B] font-normal">Not Taxable</span>
+                <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(nonTaxable)}
                 </span>
               </div>
 
               {/* SEPARATOR: Single line above Grand Total */}
-              <div className="border-t border-gray-900 my-3" />
+              <div className="border-t border-[#2563EB] my-3" />
 
               {/* ROW 3: Grand Total with Double line below */}
               <div className="flex justify-between">
-                <span className="text-gray-900 font-bold text-sm">
+                <span className="text-[#10B981] font-bold text-sm">
                   GRAND TOTAL
                 </span>
-                <span className="text-gray-900 font-bold text-sm tabular-nums">
+                <span className="text-[#10B981] font-bold text-sm tabular-nums">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
 
               {/* Double underline below Grand Total (accounting convention) */}
-              <div className="border-b-4 border-gray-900 mt-1" />
+              <div className="border-b-4 border-[#10B981] mt-1" />
             </div>
           </div>
         </div>
@@ -511,7 +515,7 @@ export function PrintableInvoice({
           - Each column contains: Label and signature line
           - All on one horizontal row with proper spacing
         */}
-        <div className="invoice-footer border-t-2 border-gray-900 mt-8 pt-6">
+        <div className="invoice-footer border-t-2 border-[#2563EB] mt-8 pt-6">
           <div
             className="flex justify-between gap-6"
             style={{

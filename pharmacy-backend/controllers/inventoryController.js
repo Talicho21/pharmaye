@@ -614,12 +614,8 @@ exports.stockIn = async (req, res) => {
         expiry_date,
         price_per_unit,
         category_id,
+        category_name,
     } = req.body;
-
-    const parsedCategoryId = Number(category_id);
-    if (!Number.isInteger(parsedCategoryId) || parsedCategoryId <= 0) {
-        return res.status(400).json({ message: "A valid category_id is required." });
-    }
 
     const unitPrice = Number(price_per_unit);
     const safeUnitPrice = Number.isFinite(unitPrice) && unitPrice >= 0 ? unitPrice : 0;
@@ -629,13 +625,64 @@ exports.stockIn = async (req, res) => {
         await ensureMedicineCategoryColumn();
         await ensurePriceColumn();
 
-        const [categoryRows] = await db.execute(
-            `SELECT id FROM categories WHERE id = ? LIMIT 1`,
-            [parsedCategoryId],
-        );
+        // Category is optional - only validate if one is provided
+        let finalCategoryId = category_id;
 
-        if (!categoryRows.length) {
-            return res.status(400).json({ message: "Selected category does not exist." });
+        // If custom category name is provided, find or create it
+        if (category_name && category_name.trim()) {
+            const trimmedCategoryName = category_name.trim();
+            
+            // Try to find existing category with this name
+            const [existingCategoryRows] = await db.execute(
+                `SELECT id FROM categories WHERE category_name = ? LIMIT 1`,
+                [trimmedCategoryName],
+            );
+
+            if (existingCategoryRows.length) {
+                finalCategoryId = existingCategoryRows[0].id;
+            } else {
+                // Create new category
+                try {
+                    const [insertResult] = await db.execute(
+                        `INSERT INTO categories (category_name) VALUES (?)`,
+                        [trimmedCategoryName],
+                    );
+                    finalCategoryId = insertResult.insertId;
+                } catch (insertError) {
+                    // Handle unique constraint violation (race condition)
+                    if (insertError?.code === "ER_DUP_ENTRY") {
+                        const [retryRows] = await db.execute(
+                            `SELECT id FROM categories WHERE category_name = ? LIMIT 1`,
+                            [trimmedCategoryName],
+                        );
+                        if (retryRows.length) {
+                            finalCategoryId = retryRows[0].id;
+                        } else {
+                            throw insertError;
+                        }
+                    } else {
+                        throw insertError;
+                    }
+                }
+            }
+        }
+
+        // Parse and validate category if provided
+        let parsedCategoryId = null;
+        if (finalCategoryId) {
+            parsedCategoryId = Number(finalCategoryId);
+            if (!Number.isInteger(parsedCategoryId) || parsedCategoryId <= 0) {
+                return res.status(400).json({ message: "Invalid category ID format." });
+            }
+
+            const [categoryRows] = await db.execute(
+                `SELECT id FROM categories WHERE id = ? LIMIT 1`,
+                [parsedCategoryId],
+            );
+
+            if (!categoryRows.length) {
+                return res.status(400).json({ message: "Selected category does not exist." });
+            }
         }
 
         try {
@@ -680,10 +727,13 @@ exports.stockIn = async (req, res) => {
             }
         }
 
-        await db.execute(
-            `UPDATE medicines SET category_id = ? WHERE id = ?`,
-            [parsedCategoryId, medicine_id],
-        );
+        // Only update category if one was provided
+        if (parsedCategoryId) {
+            await db.execute(
+                `UPDATE medicines SET category_id = ? WHERE id = ?`,
+                [parsedCategoryId, medicine_id],
+            );
+        }
 
         const [latestBatchRows] = await db.execute(
             `

@@ -466,11 +466,11 @@ export function MultiItemOrderCart({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end bg-black bg-opacity-50 sm:items-center sm:justify-center">
+    <div className="fixed inset-0 z-50 flex items-end bg-[#2563EB]/10 backdrop-blur-sm sm:items-center sm:justify-center">
       <div className="w-full max-h-[90vh] bg-white rounded-t-lg sm:rounded-lg shadow-2xl flex flex-col max-w-2xl">
         {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
+        <div className="border-b border-[#E2E8F0] px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-[#2563EB]">
             🛒 Multi-Item Order (General Sale)
           </h2>
           <button
@@ -496,8 +496,8 @@ export function MultiItemOrderCart({
               )}
 
               {/* Customer Details */}
-              <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                <h3 className="font-semibold text-slate-900 mb-4">
+              <div className="mb-6 p-4 bg-white rounded-lg border border-[#E2E8F0]">
+                <h3 className="mb-4 font-semibold text-[#2563EB]">
                   👤 Customer Information I{" "}
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
@@ -507,7 +507,7 @@ export function MultiItemOrderCart({
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
                   />
                   <input
                     type="text"
@@ -515,7 +515,7 @@ export function MultiItemOrderCart({
                     value={tinNumber}
                     onChange={(e) => setTinNumber(e.target.value)}
                     disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
                   />
                   <input
                     type="text"
@@ -822,8 +822,8 @@ export function MultiItemOrderCart({
               </div>
 
               {/* Receipt Items */}
-              <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-200 px-4 py-3 grid grid-cols-12 gap-2 text-xs font-bold text-gray-900">
+              <div className="border border-[#E2E8F0] rounded-lg overflow-hidden bg-white">
+                <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-xs font-bold text-[#64748B]">
                   <div className="col-span-4">Medicine</div>
                   <div className="col-span-2">Batch #</div>
                   <div className="col-span-2">Expiry Date</div>
@@ -839,19 +839,19 @@ export function MultiItemOrderCart({
                         key={item.id}
                         className="px-4 py-3 grid grid-cols-12 gap-2 text-sm"
                       >
-                        <div className="col-span-4 font-semibold text-gray-900">
+                        <div className="col-span-4 font-semibold text-[#334155]">
                           {item.medicineName}
                         </div>
-                        <div className="col-span-2 text-gray-600">
+                        <div className="col-span-2 text-[#64748B]">
                           {item.batchNumber}
                         </div>
-                        <div className="col-span-2 text-gray-600">
+                        <div className="col-span-2 text-[#64748B]">
                           {item.expiryDate}
                         </div>
-                        <div className="col-span-1 text-right text-gray-900">
+                        <div className="col-span-1 text-right text-[#334155]">
                           {item.quantity}
                         </div>
-                        <div className="col-span-1 text-right font-semibold text-gray-900">
+                        <div className="col-span-1 text-right font-semibold text-[#334155]">
                           ETB {item.pricePerUnit.toFixed(2)}
                         </div>
                         <div className="col-span-2 text-right font-bold text-green-600">
@@ -864,12 +864,12 @@ export function MultiItemOrderCart({
               </div>
 
               {/* Receipt Summary */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="mb-3 inline-block rounded border border-blue-200 bg-white px-3 py-2">
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-blue-900">
+              <div className="p-4 bg-white rounded-lg border border-[#E2E8F0]">
+                <div className="mb-3 inline-block rounded border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-[#2563EB]">
                     Order Summary
                   </div>
-                  <div className="mt-1 space-y-1 text-sm text-blue-900">
+                  <div className="mt-1 space-y-1 text-sm text-[#334155]">
                     <div className="flex justify-between gap-4">
                       <span>Total Items</span>
                       <span className="font-semibold">
@@ -887,27 +887,29 @@ export function MultiItemOrderCart({
 
                 <div className="ml-auto w-64">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-gray-700">sub total</span>
-                    <span className="font-semibold tabular-nums">
+                    <span className="text-[#64748B]">sub total</span>
+                    <span className="font-semibold tabular-nums text-[#334155]">
                       ETB {cartTotals.totalPrice.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm mb-3">
-                    <span className="text-gray-700">Not Taxable</span>
-                    <span className="font-semibold tabular-nums">ETB 0.00</span>
+                    <span className="text-[#64748B]">Not Taxable</span>
+                    <span className="font-semibold tabular-nums text-[#334155]">
+                      ETB 0.00
+                    </span>
                   </div>
-                  <div className="border-t border-gray-900 my-2" />
+                  <div className="border-t border-[#2563EB] my-2" />
                   <div className="flex justify-between text-base font-bold">
-                    <span>GRAND TOTAL</span>
-                    <span className="tabular-nums">
+                    <span className="text-[#10B981]">GRAND TOTAL</span>
+                    <span className="tabular-nums text-[#10B981]">
                       ETB {cartTotals.totalPrice.toFixed(2)}
                     </span>
                   </div>
-                  <div className="border-b-4 border-gray-900 mt-1" />
+                  <div className="border-b-4 border-[#10B981] mt-1" />
                 </div>
               </div>
 
-              <div className="text-center text-xs text-gray-500 italic py-2">
+              <div className="text-center text-xs text-[#64748B] italic py-2">
                 Please review all details carefully before confirming the sale.
               </div>
             </div>
@@ -915,23 +917,23 @@ export function MultiItemOrderCart({
         </div>
 
         {/* Footer / Summary & Actions */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50">
+        <div className="border-t border-[#E2E8F0] px-6 py-4 bg-white">
           {viewMode === "cart" ? (
             <>
               <div className="mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Items in Cart:</span>
+                  <span className="text-[#64748B]">Items in Cart:</span>
                   <span className="font-semibold">{cartTotals.itemCount}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Quantity:</span>
+                  <span className="text-[#64748B]">Total Quantity:</span>
                   <span className="font-semibold">
                     {cartTotals.totalQuantity}
                   </span>
                 </div>
                 <div className="flex justify-between text-lg font-bold">
-                  <span className="text-gray-900">Total Price (ETB):</span>
-                  <span className="text-green-600">
+                  <span className="text-[#2563EB]">Total Price (ETB):</span>
+                  <span className="text-[#10B981]">
                     {cartTotals.totalPrice.toFixed(2)}
                   </span>
                 </div>
@@ -941,14 +943,14 @@ export function MultiItemOrderCart({
                 <button
                   onClick={onClose}
                   disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#64748B] font-semibold rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={isProcessing || cartItems.length === 0}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-lg transition"
+                  className="flex-1 px-4 py-2 bg-[#10B981] hover:bg-[#059669] disabled:bg-green-300 text-white font-semibold rounded-lg transition"
                 >
                   {isProcessing ? "Processing..." : "📋 Review & Continue"}
                 </button>
@@ -963,7 +965,7 @@ export function MultiItemOrderCart({
                     setStockValidationError("");
                   }}
                   disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                  className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#64748B] font-semibold rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
                 >
                   ← Back to Cart
                 </button>
