@@ -11,6 +11,7 @@ router.get("/inventory", inventoryController.getInventory);
 router.get("/inventory/search", inventoryController.searchInventory);
 router.get("/categories", inventoryController.getCategories);
 router.get("/reports", ...requireAdmin, inventoryController.getSalesReport);
+router.delete("/reports/reset", ...requireAdmin, inventoryController.resetSalesHistory);
 router.get(
 	"/reports/sales-log",
 	...requireAdmin,

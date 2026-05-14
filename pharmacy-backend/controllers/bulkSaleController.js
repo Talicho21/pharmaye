@@ -11,11 +11,15 @@ const db = require("../config/db");
  */
 
 exports.bulkSaleMedicine = async (req, res) => {
-  const { items, seller_name, receiver_name } = req.body;
+  const { items, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin } = req.body;
 
   // ========== INPUT VALIDATION ==========
   const safeSellerName = String(seller_name || "").trim();
   const safeReceiverName = String(receiver_name || "").trim();
+  const safeInvoiceNo = String(invoice_no || "").trim();
+  const safeReference = String(reference || "").trim();
+  const safeCustomerName = String(customer_name || "").trim();
+  const safeCustomerTin = String(customer_tin || "").trim();
 
   if (!safeReceiverName) {
     return res
@@ -132,8 +136,8 @@ exports.bulkSaleMedicine = async (req, res) => {
         await connection.execute(
           `
             INSERT INTO sales 
-            (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             batch.id,
@@ -143,6 +147,10 @@ exports.bulkSaleMedicine = async (req, res) => {
             totalPrice,
             finalSellerName,
             safeReceiverName,
+            safeInvoiceNo,
+            safeReference,
+            safeCustomerName,
+            safeCustomerTin,
           ]
         );
 
@@ -237,8 +245,8 @@ exports.bulkSaleMedicine = async (req, res) => {
           await connection.execute(
             `
               INSERT INTO sales 
-              (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name)
-              VALUES (?, ?, ?, ?, ?, ?, ?)
+              (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               batch.id,
@@ -248,6 +256,10 @@ exports.bulkSaleMedicine = async (req, res) => {
               totalPrice,
               finalSellerName,
               safeReceiverName,
+              safeInvoiceNo,
+              safeReference,
+              safeCustomerName,
+              safeCustomerTin,
             ]
           );
 
@@ -344,7 +356,11 @@ const ensureSalesTable = async () => {
       total_price DECIMAL(12,2) NOT NULL DEFAULT 0,
       seller_name VARCHAR(255) NOT NULL,
       receiver_name VARCHAR(255) NOT NULL,
-      sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+      sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      invoice_no VARCHAR(50),
+      reference VARCHAR(255),
+      customer_name VARCHAR(255),
+      customer_tin VARCHAR(50)
     )
   `);
 

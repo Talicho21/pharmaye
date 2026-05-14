@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { generateInvoiceNumber } from "../utils/invoiceUtils";
 
 export type CartItem = {
   id: string; // Unique ID for this cart item (not batch_id)
@@ -23,6 +24,8 @@ type MultiItemOrderCartProps = {
     sellerName?: string,
     customerSNo?: string,
     paymentMethod?: "cash" | "credit",
+    invoiceNo?: string,
+    reference?: string,
   ) => Promise<void>;
   isProcessing?: boolean;
 };
@@ -56,7 +59,9 @@ export function MultiItemOrderCart({
   const [newExpiryDate, setNewExpiryDate] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [tinNumber, setTinNumber] = useState("");
+  const [invoiceNo, setInvoiceNo] = useState("");
   const [customerSNo, setCustomerSNo] = useState("");
+  const [reference, setReference] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "credit">("cash");
   const [sellerName, setSellerName] = useState("");
   const [newAvailableStock, setNewAvailableStock] = useState<number | null>(
@@ -64,6 +69,17 @@ export function MultiItemOrderCart({
   );
   const [viewMode, setViewMode] = useState<"cart" | "receipt">("cart");
   const [stockValidationError, setStockValidationError] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [itemSoldOutDate, setItemSoldOutDate] = useState("");
+
+  const formattedSoldOutDate = (() => {
+    const source = itemSoldOutDate || new Date().toISOString();
+    const parsed = new Date(source);
+    if (Number.isNaN(parsed.getTime())) {
+      return new Date().toLocaleDateString("en-GB");
+    }
+    return parsed.toLocaleDateString("en-GB");
+  })();
 
   useEffect(() => {
     const trimmedQuery = medicineSearch.trim();
@@ -216,6 +232,11 @@ export function MultiItemOrderCart({
   const exportReceiptPDF = () => {
     const printWindow = window.open("", "", "height=600,width=800");
     if (!printWindow) return;
+    const printableInvoiceNumber =
+      invoiceNumber ||
+      invoiceNo ||
+      generateInvoiceNumber(customerName, tinNumber);
+    const printableSoldOutDate = formattedSoldOutDate;
 
     const receiptHTML = `
       <!DOCTYPE html>
@@ -223,7 +244,7 @@ export function MultiItemOrderCart({
       <head>
         <style>
           body { font-family: Arial, sans-serif; padding: 8px; margin: 0; }
-          .receipt-shell { display: block; }
+          .receipt-shell { position: relative; min-height: 100vh; display: block; padding-bottom: 28px; }
           .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 8px; }
           .receipt-title { font-size: 24px; font-weight: bold; }
           .receipt-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
@@ -239,8 +260,47 @@ export function MultiItemOrderCart({
           .signature-box { text-align: left; }
           .signature-label { font-size: 12px; font-weight: bold; color: #111; }
           .footer { display: none; }
-          @media print { body { margin: 0; padding: 0; } }
+          .legal-disclaimer {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-top: 2px solid #333;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding-top: 6px;
+          }
+          @media print {
+            @page { margin: 0; }
+            html, body { margin: 0; padding: 0; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .legal-disclaimer {
+              position: fixed;
+              left: 0;
+              right: 0;
+              bottom: 6mm;
+            }
+          }
         </style>
+        <script>
+          function sanitizeAboutBlank() {
+            try {
+              const elements = document.querySelectorAll('body *');
+              elements.forEach((el) => {
+                el.childNodes.forEach((child) => {
+                  if (child.nodeType === Node.TEXT_NODE && child.nodeValue && child.nodeValue.indexOf('about:blank') !== -1) {
+                    child.nodeValue = child.nodeValue.replace(/about:blank/gi, '');
+                  }
+                });
+              });
+            } catch (e) { /* ignore */ }
+          }
+          window.addEventListener('DOMContentLoaded', sanitizeAboutBlank);
+          window.addEventListener('beforeprint', sanitizeAboutBlank);
+        </script>
       </head>
       <body>
         <div class="receipt-shell">
@@ -248,6 +308,24 @@ export function MultiItemOrderCart({
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
             <div>
               <div style="font-size:18px;font-weight:700;">EXPRESS PHARMA ONE ME.PLS</div>
+              <table style="margin-top:8px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px;">
+                <tr>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Invoice No</td>
+                  <td style="border:1px solid #111;padding:4px 8px;">${printableInvoiceNumber}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">FS No</td>
+                  <td style="border:1px solid #111;padding:4px 8px;">${customerSNo || "-"}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Reference</td>
+                  <td style="border:1px solid #111;padding:4px 8px;">${reference || ""}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Date</td>
+                  <td style="border:1px solid #111;padding:4px 8px;color:#2563EB;font-weight:700;">${printableSoldOutDate}</td>
+                </tr>
+              </table>
             </div>
           </div>
 
@@ -257,16 +335,12 @@ export function MultiItemOrderCart({
               <div>Express Pharma One Me. Plc</div>
               <div>TIN: 0098248381</div>
               <div>Tell: 0981798081</div>
-              <div>E-mail: israelmohamed3@gmail.com</div>
+              <div>E-mail: epharm38@gmail.com</div>
             </div>
           </div>
         </div>
 
         <div class="receipt-info">
-          <div class="info-box">
-            <div class="label">S.No (Customer):</div>
-            <div>${customerSNo || "-"}</div>
-          </div>
           <div class="info-box">
             <div class="label">Customer Name:</div>
             <div>${customerName || "N/A"}</div>
@@ -285,17 +359,18 @@ export function MultiItemOrderCart({
         <table>
           <thead>
             <tr>
-              <th>Medicine Name</th>
+              <th>S.No</th>
+              <th>Description</th>
               <th>Batch #</th>
               <th>Expiry Date</th>
               <th style="text-align: right;">Qty</th>
               <th style="text-align: right;">Unit Price (ETB)</th>
-              <th style="text-align: right;">Subtotal (ETB)</th>
+              <th style="text-align: right;">Total (ETB)</th>
             </tr>
           </thead>
           <tbody>
             ${cartItems
-              .map((item) => {
+              .map((item, index) => {
                 const d = new Date(item.expiryDate);
                 const mm = String(d.getMonth() + 1).padStart(2, "0");
                 const yyyy = d.getFullYear();
@@ -304,6 +379,7 @@ export function MultiItemOrderCart({
                   : `${mm}/${yyyy}`;
                 return `
               <tr>
+                <td>${index + 1}</td>
                 <td>${item.medicineName}</td>
                 <td>${item.batchNumber}</td>
                 <td>${expiry}</td>
@@ -319,21 +395,9 @@ export function MultiItemOrderCart({
         </div>
 
         <div style="margin-top: 8px; padding-top: 10px; border-top: 2px solid #111;">
-          <div style="display: inline-block; min-width: 220px; margin-bottom: 10px; padding: 8px 10px; border: 1px solid #cfe8ff; background: #f5fbff; border-radius: 4px;">
-            <div style="font-size: 11px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; margin-bottom: 4px;">Order Summary</div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #1e3a8a; margin-bottom: 2px;">
-              <span>Total Items</span>
-              <span style="font-weight: 700;">${cartTotals.itemCount}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #1e3a8a;">
-              <span>Total Quantity</span>
-              <span style="font-weight: 700;">${cartTotals.totalQuantity}</span>
-            </div>
-          </div>
-
           <div style="width: 260px; margin-left: auto;">
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span style="color: #374151;">sub total</span>
+              <span style="color: #374151;">total</span>
               <span style="font-weight: 700; color: #111827;">ETB ${cartTotals.totalPrice.toFixed(2)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
@@ -361,6 +425,10 @@ export function MultiItemOrderCart({
               <div class="signature-label">Approved By</div>
             </div>
           </div>
+        </div>
+
+        <div class="legal-disclaimer">
+          INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
         </div>
 
         </div>
@@ -436,6 +504,12 @@ export function MultiItemOrderCart({
       if (!validateStock()) {
         return;
       }
+      // Generate dynamic invoice number: INV-[First 3 Letters of Customer Name]-[Last 4 Digits of TIN]
+      const generatedInvoiceNo =
+        invoiceNo.trim() || generateInvoiceNumber(customerName, tinNumber);
+      setInvoiceNo(generatedInvoiceNo);
+      setInvoiceNumber(generatedInvoiceNo);
+      setItemSoldOutDate(new Date().toISOString());
       // Switch to receipt view
       setViewMode("receipt");
       return;
@@ -443,6 +517,7 @@ export function MultiItemOrderCart({
 
     // Process the sale (only when in receipt view)
     try {
+      // Pass invoice_no and reference (empty string) to backend
       await onSubmit(
         cartItems,
         customerName.trim(),
@@ -450,12 +525,18 @@ export function MultiItemOrderCart({
         sellerName.trim() || undefined,
         customerSNo.trim() || undefined,
         paymentMethod,
+        invoiceNumber || invoiceNo, // Dynamic invoice number
+        reference.trim() || undefined,
       );
       setCartItems([]); // Clear cart on success
       setCustomerName("");
       setTinNumber("");
       setSellerName("");
+      setInvoiceNo("");
       setCustomerSNo("");
+      setReference("");
+      setInvoiceNumber("");
+      setItemSoldOutDate("");
       setViewMode("cart");
       onClose(); // Close modal after successful sale
     } catch (error) {
@@ -519,9 +600,25 @@ export function MultiItemOrderCart({
                   />
                   <input
                     type="text"
+                    placeholder="Invoice No"
+                    value={invoiceNo}
+                    onChange={(e) => setInvoiceNo(e.target.value)}
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
+                  />
+                  <input
+                    type="text"
                     placeholder="S.No "
                     value={customerSNo}
                     onChange={(e) => setCustomerSNo(e.target.value)}
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Reference (optional)"
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
                     disabled={isProcessing}
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
@@ -777,8 +874,44 @@ export function MultiItemOrderCart({
                     />
                     <div>
                       <h2 className="text-xl font-bold text-slate-900">
-                        EXPRESS PHARMA ONE ME.PLS
+                        EXPRESS PHARMA ONE ME.PLC
                       </h2>
+                      <table className="mt-2 border-collapse font-[Arial] text-[11px]">
+                        <tbody>
+                          <tr>
+                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                              Invoice No
+                            </td>
+                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
+                              {invoiceNumber || `INV-${Date.now()}`}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                              FS No
+                            </td>
+                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
+                              000000010
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                              Terms (Days)
+                            </td>
+                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
+                              30
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                              Date
+                            </td>
+                            <td className="border border-black bg-blue-50 px-2 py-1 font-mono font-bold text-[#2563EB]">
+                              {formattedSoldOutDate}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
@@ -790,22 +923,12 @@ export function MultiItemOrderCart({
                       <div>Express Pharma One Me. Plc</div>
                       <div>TIN: 0098248381</div>
                       <div>Tell: 0981798081</div>
-                      <div>E-mail: israelmohamed3@gmail.com</div>
+                      <div>E-mail: epharm38@gmail.com</div>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-600 font-semibold">Receipt #:</p>
-                    <p className="text-gray-900">{Date.now()}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-semibold">Date & Time:</p>
-                    <p className="text-gray-900">
-                      {new Date().toLocaleString()}
-                    </p>
-                  </div>
                   <div>
                     <p className="text-gray-600 font-semibold">
                       Customer Name:
@@ -824,12 +947,12 @@ export function MultiItemOrderCart({
               {/* Receipt Items */}
               <div className="border border-[#E2E8F0] rounded-lg overflow-hidden bg-white">
                 <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-xs font-bold text-[#64748B]">
-                  <div className="col-span-4">Medicine</div>
+                  <div className="col-span-4">Description</div>
                   <div className="col-span-2">Batch #</div>
                   <div className="col-span-2">Expiry Date</div>
                   <div className="col-span-1 text-right">Qty</div>
                   <div className="col-span-1 text-right">Unit Price</div>
-                  <div className="col-span-2 text-right">Subtotal</div>
+                  <div className="col-span-2 text-right">Total</div>
                 </div>
                 <div className="divide-y">
                   {cartItems.map((item) => {
@@ -887,7 +1010,7 @@ export function MultiItemOrderCart({
 
                 <div className="ml-auto w-64">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-[#64748B]">sub total</span>
+                    <span className="text-[#64748B]">total</span>
                     <span className="font-semibold tabular-nums text-[#334155]">
                       ETB {cartTotals.totalPrice.toFixed(2)}
                     </span>

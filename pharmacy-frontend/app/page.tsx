@@ -100,6 +100,23 @@ type InactivityReportData = {
   categories: InactiveCategoryRecord[];
 };
 
+const createEmptySalesReportData = (range: ReportRange): SalesReportData => ({
+  range,
+  totalRevenue: 0,
+  totalItemsSold: 0,
+  topSellingMedicines: [],
+});
+
+const createEmptySalesLogData = (
+  startDate: string,
+  endDate: string,
+): SalesLogData => ({
+  startDate,
+  endDate,
+  totalRecords: 0,
+  records: [],
+});
+
 type UserRole = "admin" | "staff";
 
 type AuthUser = {
@@ -118,7 +135,11 @@ type RowStatusStyles = {
   isLowStock: boolean;
   isExpired: boolean;
   isNearExpiry: boolean;
+  stockPercentage: number;
+  isPulseAnimation: boolean;
   stockBadgeClass: string;
+  stockBadgeStyle: React.CSSProperties;
+  stockDisplayText: string;
   stockWarningClass: string;
   stockWarningText: string;
   expiryTextClass: string;
@@ -169,23 +190,40 @@ export const getStatusStyles = (
     Number.isFinite(initialBatchQuantity) &&
     initialBatchQuantity > 0;
 
-  const lowStockThreshold = hasInitialBatch
-    ? Math.max(5, Math.ceil(initialBatchQuantity * 0.2))
-    : 5;
+  // Calculate percentage: 20% threshold
+  const stockPercentage = hasInitialBatch
+    ? Math.round((stock / initialBatchQuantity) * 100)
+    : 100;
+
+  // Dynamic 20% threshold without hard minimum
+  const lowStockThreshold = hasInitialBatch ? initialBatchQuantity * 0.2 : 0;
 
   const isOutOfStock = stock <= 0;
-  const isLowStock = !isOutOfStock && stock < lowStockThreshold;
+  const isLowStock = !isOutOfStock && stock <= lowStockThreshold;
+  const isCriticalLow = !isOutOfStock && stock < lowStockThreshold * 0.5; // Critical if below 10%
   const isExpired = now > expiry;
   const isNearExpiry = !isExpired && expiry <= sixMonthsFromNow;
+
+  // Vibrant colors: #10B981 (Emerald), #722F37 (Wine-Red)
+  const EMERALD_GREEN = "#10B981";
+  const WINE_RED = "#722F37";
 
   if (isOutOfStock) {
     return {
       isLowStock: false,
       isExpired,
       isNearExpiry,
+      stockPercentage: 0,
+      isPulseAnimation: false,
       stockBadgeClass:
-        "inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-100 px-3 py-1 text-xs font-black text-red-700 shadow-none",
-      stockWarningClass: "mt-1 text-[10px] font-black text-red-700",
+        "inline-flex items-center gap-2 rounded-lg border px-3 py-1 text-xs font-black",
+      stockBadgeStyle: {
+        borderColor: WINE_RED,
+        backgroundColor: "rgba(114, 47, 55, 0.15)",
+        color: WINE_RED,
+      },
+      stockDisplayText: "Out of Stock",
+      stockWarningClass: "mt-1 text-[10px] font-black",
       stockWarningText: "Out of Stock: Restocking required before dispensing.",
       expiryTextClass: isExpired
         ? "text-sm font-black text-red-700"
@@ -210,15 +248,23 @@ export const getStatusStyles = (
     isLowStock,
     isExpired,
     isNearExpiry,
-    stockBadgeClass: isLowStock
-      ? "inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 shadow-none"
-      : "inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 shadow-none",
-    stockWarningClass: isLowStock
-      ? "mt-1 text-[10px] font-black text-amber-700"
-      : "mt-1 text-[10px] font-bold text-emerald-700",
+    stockPercentage,
+    isPulseAnimation: isCriticalLow,
+    stockBadgeClass: `inline-flex items-center gap-2 rounded-lg border px-3 py-1 text-xs font-black ${
+      isLowStock ? "animate-pulse" : ""
+    }`,
+    stockBadgeStyle: {
+      borderColor: isLowStock ? WINE_RED : EMERALD_GREEN,
+      backgroundColor: isLowStock
+        ? "rgba(114, 47, 55, 0.15)"
+        : "rgba(16, 185, 129, 0.15)",
+      color: isLowStock ? WINE_RED : EMERALD_GREEN,
+    },
+    stockDisplayText: `${stock} Units - ${stockPercentage}% remaining`,
+    stockWarningClass: `mt-1 text-[10px] font-black ${isLowStock ? "animate-pulse" : ""}`,
     stockWarningText: isLowStock
-      ? "Low Stock Warning: Please restock soon to avoid service interruption."
-      : "Stock level healthy.",
+      ? "⚠️ Low Stock: Restock Immediately"
+      : "✅ Stock Level Healthy",
     expiryTextClass: isExpired
       ? "text-sm font-black text-red-700"
       : isNearExpiry
@@ -292,6 +338,7 @@ const SALES_LOG_ROWS_PER_PAGE_OPTIONS: SalesLogRowsPerPageOption[] = [
 ];
 
 const INACTIVE_THRESHOLD_MONTHS = 3;
+const REPORT_LIVE_REFRESH_INTERVAL_MS = 10000;
 const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 
 export default function PharmacyDashboard() {
@@ -374,6 +421,8 @@ export default function PharmacyDashboard() {
     useState<SalesLogRowsPerPageOption>(10);
   const [salesLogPage, setSalesLogPage] = useState(1);
   const [salesLogHasScrolled, setSalesLogHasScrolled] = useState(false);
+  const [isResettingSalesData, setIsResettingSalesData] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const isLoggedIn = Boolean(authToken && loggedInUser);
   const isAdmin = loggedInUser?.role === "admin";
@@ -466,11 +515,7 @@ export default function PharmacyDashboard() {
       setReportData(data);
     } catch (err) {
       console.error("Report fetch error:", err);
-      showToast(
-        "Report unavailable",
-        "Unable to load sales report data right now.",
-        "error",
-      );
+      setReportData(createEmptySalesReportData(range));
     } finally {
       setIsLoadingReport(false);
     }
@@ -495,12 +540,7 @@ export default function PharmacyDashboard() {
       setSalesLogData(data);
     } catch (err) {
       console.error("Sales log fetch error:", err);
-      setSalesLogData(null);
-      showToast(
-        "Sales log unavailable",
-        "Unable to load detailed sales records right now.",
-        "error",
-      );
+      setSalesLogData(createEmptySalesLogData(startDate, endDate));
     } finally {
       setIsLoadingSalesLog(false);
     }
@@ -530,6 +570,18 @@ export default function PharmacyDashboard() {
     } finally {
       setIsLoadingInactiveHistory(false);
     }
+  };
+
+  const refreshAdminData = async () => {
+    if (!isLoggedIn || !isAdmin) {
+      return;
+    }
+
+    await Promise.all([
+      fetchReportData(selectedReportRange),
+      fetchSalesLogData(salesLogStartDate, salesLogEndDate),
+      fetchInactiveHistoryData(),
+    ]);
   };
 
   // NOTE: Do not auto-restore a saved session on first load.
@@ -623,6 +675,26 @@ export default function PharmacyDashboard() {
       scrollContainer.removeEventListener("scroll", onScroll);
     };
   }, [salesLogData, salesLogRowsPerPage, salesLogPage, isLoadingSalesLog]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !isAdmin) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refreshAdminData();
+    }, REPORT_LIVE_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    isLoggedIn,
+    isAdmin,
+    selectedReportRange,
+    salesLogStartDate,
+    salesLogEndDate,
+  ]);
 
   useEffect(() => {
     if (!loginLockUntil) return;
@@ -768,9 +840,7 @@ export default function PharmacyDashboard() {
     const refreshTasks: Array<Promise<void>> = [fetchData(), fetchCategories()];
 
     if (isAdmin) {
-      refreshTasks.push(fetchReportData(selectedReportRange));
-      refreshTasks.push(fetchSalesLogData(salesLogStartDate, salesLogEndDate));
-      refreshTasks.push(fetchInactiveHistoryData());
+      refreshTasks.push(refreshAdminData());
     }
 
     await Promise.all(refreshTasks);
@@ -782,6 +852,53 @@ export default function PharmacyDashboard() {
         : "Latest stock data loaded.",
       "success",
     );
+  };
+
+  const handleResetSalesHistory = async () => {
+    if (!isAdmin) {
+      showToast(
+        "Forbidden",
+        "Staff users cannot reset sales history.",
+        "error",
+      );
+      return;
+    }
+
+    setIsResettingSalesData(true);
+    setIsResetConfirmOpen(false);
+
+    try {
+      const response = await fetchJsonWithFallback<{
+        deletedRows?: number;
+      }>("/api/reports/reset", "http://localhost:5000/api/reports/reset", {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      setReportData(createEmptySalesReportData(selectedReportRange));
+      setSalesLogData(
+        createEmptySalesLogData(salesLogStartDate, salesLogEndDate),
+      );
+
+      await refreshAdminData();
+
+      showToast(
+        "Sales history cleared",
+        `Removed ${response.deletedRows || 0} transaction${
+          response.deletedRows === 1 ? "" : "s"
+        }.`,
+        "success",
+      );
+    } catch (error) {
+      console.error("Sales reset error:", error);
+      showToast(
+        "Reset failed",
+        "Unable to clear sales history right now.",
+        "error",
+      );
+    } finally {
+      setIsResettingSalesData(false);
+    }
   };
 
   const handleRowsPerPageChange = (value: string) => {
@@ -1019,6 +1136,9 @@ export default function PharmacyDashboard() {
 
       if (res.ok) {
         await fetchData();
+        if (isAdmin) {
+          await refreshAdminData();
+        }
         setSellModalItem(null);
         setSellQtyInput("1");
         setSellerNameInput("");
@@ -1050,6 +1170,8 @@ export default function PharmacyDashboard() {
     sellerName?: string,
     customerSNo?: string,
     paymentMethod?: "cash" | "credit",
+    invoiceNo?: string,
+    reference?: string,
   ) => {
     // ========== INPUT VALIDATION ==========
     if (!cartItems || cartItems.length === 0) {
@@ -1079,9 +1201,11 @@ export default function PharmacyDashboard() {
       seller_name: safeSellerName,
       receiver_name: safeReceiverName,
       customer_name: customerName,
-      tin_number: tinNumber,
+      customer_tin: tinNumber,
       customer_sno: customerSNo || null,
       payment_method: paymentMethod || "cash",
+      invoice_no: invoiceNo || undefined,
+      reference: reference || undefined,
     };
 
     // ========== SEND TO BACKEND ==========
@@ -1126,7 +1250,11 @@ export default function PharmacyDashboard() {
       const itemsSummary = processedItems
         .slice(0, 3)
         .map(
-          (item: any) =>
+          (item: {
+            medicine_name: string;
+            quantity_deducted?: number;
+            quantity_sold?: number;
+          }) =>
             `${item.medicine_name} (${item.quantity_deducted || item.quantity_sold} units)`,
         )
         .join(", ");
@@ -1148,6 +1276,9 @@ export default function PharmacyDashboard() {
 
       // ✅ REFRESH INVENTORY
       await fetchData();
+      if (isAdmin) {
+        await refreshAdminData();
+      }
     } catch (error) {
       showToast(
         "🌐 Network Error",
@@ -1836,13 +1967,25 @@ export default function PharmacyDashboard() {
                   <h2 className={`text-2xl font-black ${titleTheme}`}>
                     Reports Overview
                   </h2>
-                  <button
-                    type="button"
-                    onClick={handleExportReport}
-                    className="rounded-lg border border-slate-900 bg-white px-4 py-2 text-sm font-black text-black shadow-none transition-all duration-200 "
-                  >
-                    Export to PDF / Print
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsResetConfirmOpen(true)}
+                      disabled={isResettingSalesData}
+                      className="rounded-xl border border-emerald-300 bg-linear-to-r from-emerald-50 via-white to-blue-50 px-4 py-2.5 text-sm font-black text-emerald-700 shadow-[0_12px_26px_-18px_rgba(16,185,129,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:text-emerald-800 hover:shadow-[0_16px_30px_-20px_rgba(16,185,129,0.65)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isResettingSalesData
+                        ? "Resetting..."
+                        : "Reset Sales History"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportReport}
+                      className="rounded-lg border border-slate-900 bg-white px-4 py-2 text-sm font-black text-black shadow-none transition-all duration-200 "
+                    >
+                      Export to PDF / Print
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-4 flex flex-wrap gap-2">
@@ -1867,20 +2010,96 @@ export default function PharmacyDashboard() {
                   })}
                 </div>
 
+                {isAdmin && isResetConfirmOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 print:hidden">
+                    <button
+                      type="button"
+                      aria-label="Close reset confirmation"
+                      className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+                      onClick={() => setIsResetConfirmOpen(false)}
+                    />
+                    <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-[0_28px_80px_-28px_rgba(15,23,42,0.55)]">
+                      <div className="h-2 bg-linear-to-r from-emerald-400 via-blue-400 to-emerald-400" />
+                      <div className="p-6 md:p-8">
+                        <div className="flex items-start gap-4">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-2xl">
+                            ♻️
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-600">
+                              Reset Sales History
+                            </p>
+                            <h3 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                              Clear the report history and start fresh
+                            </h3>
+                            <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
+                              This will remove all sales transactions from the
+                              report log. Inventory, categories, and medicine
+                              stock will stay intact so new sales can start
+                              immediately.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 md:grid-cols-2">
+                          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
+                            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">
+                              Will be reset
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-700">
+                              Revenue, items sold, top sellers, and detailed
+                              sales log.
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
+                            <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">
+                              Will remain
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-700">
+                              Stock quantities, categories, analytics, and
+                              medicines.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setIsResetConfirmOpen(false)}
+                            disabled={isResettingSalesData}
+                            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-black text-slate-700 transition-all duration-200 hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleResetSalesHistory}
+                            disabled={isResettingSalesData}
+                            className="rounded-xl border border-emerald-300 bg-linear-to-r from-emerald-600 via-emerald-500 to-blue-600 px-5 py-2.5 text-sm font-black text-white shadow-[0_16px_30px_-18px_rgba(16,185,129,0.65)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-18px_rgba(16,185,129,0.75)] disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isResettingSalesData
+                              ? "Clearing..."
+                              : "Confirm Reset"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-cyan-200 bg-linear-to-br from-cyan-50 to-white p-4 shadow-none transition-all duration-200 ">
-                    <p className="text-xs font-black uppercase text-cyan-700">
+                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200 ">
+                    <p className="text-xs font-black uppercase text-emerald-700">
                       Total Revenue
                     </p>
-                    <p className="mt-1 text-2xl font-black text-black">
+                    <p className="mt-1 text-2xl font-black text-emerald-700">
                       ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-violet-200 bg-linear-to-br from-violet-50 to-white p-4 shadow-none transition-all duration-200 ">
-                    <p className="text-xs font-black uppercase text-violet-700">
+                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200 ">
+                    <p className="text-xs font-black uppercase text-emerald-700">
                       Total Items Sold
                     </p>
-                    <p className="mt-1 text-2xl font-black text-black">
+                    <p className="mt-1 text-2xl font-black text-emerald-700">
                       {Math.round(Number(reportData?.totalItemsSold || 0))}
                     </p>
                   </div>
@@ -1908,9 +2127,14 @@ export default function PharmacyDashboard() {
                       Loading report data...
                     </p>
                   ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
-                    <p className="mt-3 text-sm font-bold text-slate-600">
-                      No sales found for this period.
-                    </p>
+                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-blue-50 p-5 shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)]">
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
+                        Ready for new sales data
+                      </p>
+                      <p className="mt-2 text-sm font-bold text-slate-700">
+                        No transactions recorded for this period.
+                      </p>
+                    </div>
                   ) : (
                     <div className="mt-4 space-y-3">
                       {reportData?.topSellingMedicines.map(
@@ -2054,12 +2278,16 @@ export default function PharmacyDashboard() {
                           </tr>
                         ) : detailedSalesRecords.length === 0 ? (
                           <tr>
-                            <td
-                              colSpan={10}
-                              className="px-4 py-6 text-center text-sm font-bold text-slate-600"
-                            >
-                              No sales records found for the selected date
-                              range.
+                            <td colSpan={10} className="px-4 py-6">
+                              <div className="rounded-2xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-blue-50 px-4 py-6 text-center shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)]">
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
+                                  No transactions recorded for this period
+                                </p>
+                                <p className="mt-2 text-sm font-bold text-slate-700">
+                                  The sales log is clear and ready for fresh
+                                  history.
+                                </p>
+                              </div>
                             </td>
                           </tr>
                         ) : (
@@ -2791,7 +3019,15 @@ export default function PharmacyDashboard() {
                     return (
                       <tr
                         key={item.id}
-                        className={`group transition-all ${isDarkMode ? "hover:bg-slate-700/40" : "hover:bg-white/50"}`}
+                        className={`group transition-all ${
+                          item.quantity <= 0
+                            ? isDarkMode
+                              ? "bg-slate-800/50 opacity-60"
+                              : "bg-slate-100/50 opacity-60"
+                            : isDarkMode
+                              ? "hover:bg-slate-700/40"
+                              : "hover:bg-white/50"
+                        }`}
                       >
                         <td className={`px-8 py-6 font-bold ${titleTheme}`}>
                           <div className="flex flex-col gap-2">
@@ -2808,13 +3044,20 @@ export default function PharmacyDashboard() {
                           ETB {Number(item.price_per_unit || 0).toFixed(2)}
                         </td>
                         <td className="px-8 py-6">
-                          <div className={rowStatus.stockBadgeClass}>
-                            {rowStatus.isLowStock && (
-                              <span aria-hidden="true">⚠️</span>
-                            )}
-                            {item.quantity} UNITS
+                          <div
+                            className={rowStatus.stockBadgeClass}
+                            style={rowStatus.stockBadgeStyle}
+                          >
+                            {rowStatus.stockDisplayText}
                           </div>
-                          <p className={rowStatus.stockWarningClass}>
+                          <p
+                            className={rowStatus.stockWarningClass}
+                            style={{
+                              color: rowStatus.isLowStock
+                                ? "#722F37"
+                                : "#10B981",
+                            }}
+                          >
                             {rowStatus.stockWarningText}
                           </p>
                         </td>

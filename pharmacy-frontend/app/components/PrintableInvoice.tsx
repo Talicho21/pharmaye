@@ -31,6 +31,7 @@ type PrintableInvoiceProps = {
   invoiceNo: string; // Generated from transaction ID
   paymentMethod?: "cash" | "credit"; // NEW: Cash or Credit payment
   customerSNo?: string;
+  reference?: string; // NEW: Reference note (can be blank/null for manual input)
   onPrint?: () => void; // Called after print dialog closes
 };
 
@@ -144,6 +145,7 @@ export function PrintableInvoice({
   invoiceNo,
   paymentMethod = "cash",
   customerSNo,
+  reference = "",
   onPrint,
 }: PrintableInvoiceProps) {
   const currentDate = new Date();
@@ -170,7 +172,31 @@ export function PrintableInvoice({
    */
   const handlePrint = () => {
     // Small delay ensures DOM has fully rendered
+    const sanitizeAboutBlank = () => {
+      try {
+        const container = document.getElementById("invoice-container");
+        if (!container) return;
+        // Walk elements and clean text nodes that include 'about:blank'
+        const elements = container.querySelectorAll("*");
+        elements.forEach((el) => {
+          el.childNodes.forEach((child) => {
+            if (
+              child.nodeType === Node.TEXT_NODE &&
+              child.nodeValue &&
+              child.nodeValue.indexOf("about:blank") !== -1
+            ) {
+              child.nodeValue = child.nodeValue.replace(/about:blank/gi, "");
+            }
+          });
+        });
+      } catch (err) {
+        // silent
+        console.warn("sanitizeAboutBlank failed", err);
+      }
+    };
+
     setTimeout(() => {
+      sanitizeAboutBlank();
       window.print();
       onPrint?.();
     }, 100);
@@ -189,19 +215,38 @@ export function PrintableInvoice({
         @media print {
           /* Hide entire page body so only invoice prints */
           body * {
-            display: none;
+            visibility: hidden;
           }
 
           /* Show ONLY the invoice container */
           #invoice-container,
           #invoice-container * {
-            display: block;
+            visibility: visible;
+          }
+
+          #invoice-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            padding: 10mm;
+            box-sizing: border-box;
           }
 
           /* Page setup */
           @page {
-            margin: 10mm;
+            margin: 0;
             size: A4;
+          }
+
+          html,
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
+          body::before,
+          body::after {
+            content: none !important;
           }
 
           /* Prevent table rows from breaking across pages */
@@ -250,6 +295,18 @@ export function PrintableInvoice({
             width: 100%;
             max-width: 210mm;
           }
+
+          /* Legal footer: pin to bottom of page when printing */
+          .invoice-legal {
+            position: fixed !important;
+            bottom: 8mm !important;
+            left: 0 !important;
+            right: 0 !important;
+            text-align: center !important;
+            background: transparent !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
         }
 
         @media screen {
@@ -261,7 +318,10 @@ export function PrintableInvoice({
       `}</style>
 
       {/* DOCUMENT WRAPPER - Only this renders in print mode */}
-      <div id="invoice-container" className="w-full bg-white p-0">
+      <div
+        id="invoice-container"
+        className="relative w-full bg-white p-0 pb-16"
+      >
         {/* ========== HEADER SECTION ========== */}
         <div className="invoice-header border-b-2 border-[#2563EB] pb-4 mb-6">
           {/* Company Branding - Simplified without Logo */}
@@ -271,9 +331,61 @@ export function PrintableInvoice({
               <h1 className="text-3xl font-bold text-[#2563EB]">
                 EXPRESS PHARMA ONE ME. PLC
               </h1>
+
               <p className="text-sm text-[#64748B] mt-1">
                 Pharmaceutical Wholesale & Distribution
               </p>
+
+              {/* METADATA TABLE: Positioned beneath Pharmacy Name */}
+              <div className="mt-4">
+                <table
+                  className="border-collapse"
+                  cellPadding={0}
+                  cellSpacing={0}
+                >
+                  <tbody>
+                    {/* Row 1: Invoice No */}
+                    <tr>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 w-20">
+                        Invoice No
+                      </td>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                        {invoiceNo}
+                      </td>
+                    </tr>
+
+                    {/* Row 2: S.No (Customer) - moved here per spec (replaces FS No) */}
+                    <tr>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                        FS.No
+                      </td>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                        {customerSNo || "-"}
+                      </td>
+                    </tr>
+
+                    {/* Row 3: Reference - Can be blank/null for manual input */}
+                    <tr>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                        Reference
+                      </td>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                        {reference || ""}
+                      </td>
+                    </tr>
+
+                    {/* Row 4: Date - Dynamic with Vibrant Blue */}
+                    <tr>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                        Date
+                      </td>
+                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono font-bold text-[#2563EB] bg-blue-50">
+                        {invoiceDate}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Right: Invoice Title */}
@@ -291,8 +403,8 @@ export function PrintableInvoice({
                 Contact Information
               </p>
               <p>TIN: 0098248381</p>
-              <p>Phone: 0981798081</p>
-              <p>Email: israelmohamed3@gmail.com</p>
+              <p>Phone: +251981798081</p>
+              <p>Email: epharm38@gmail.com</p>
             </div>
             <div className="text-right">
               <p className="font-semibold text-[#2563EB]">Invoice Details</p>
@@ -313,7 +425,6 @@ export function PrintableInvoice({
             <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Bill To
             </p>
-            <p className="text-sm text-[#64748B]">S.No: {customerSNo || "-"}</p>
             <p className="text-lg font-semibold text-[#334155]">
               {customerName || "N/A"}
             </p>
@@ -449,21 +560,7 @@ export function PrintableInvoice({
           - Fixed width for consistent decimal alignment
         */}
         <div className="invoice-summary mt-8 mb-6">
-          {/* TOP SECTION: Order Summary Stats (Left-aligned for reference) */}
-          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded w-fit">
-            <p className="text-xs font-semibold text-blue-900 uppercase mb-2">
-              Order Summary
-            </p>
-            <div className="space-y-1 text-sm text-blue-900">
-              <p>
-                Total Items: <span className="font-bold">{totalItems}</span>
-              </p>
-              <p>
-                Total Quantity:{" "}
-                <span className="font-bold">{totalQuantity}</span>
-              </p>
-            </div>
-          </div>
+          {/* Order Summary removed per design - only medicine details and financial totals are shown */}
 
           {/* TOTALS BLOCK: Grouped and positioned to RIGHT */}
           <div className="ml-auto w-72 border border-gray-400 rounded p-4">
@@ -473,9 +570,9 @@ export function PrintableInvoice({
                 Order Totals
               </p>
 
-              {/* ROW 1: sub total (lowercase) */}
+              {/* ROW 1: total */}
               <div className="flex justify-between text-sm mb-2">
-                <span className="text-[#64748B] font-normal">sub total</span>
+                <span className="text-[#64748B] font-normal">total</span>
                 <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(subtotal)}
                 </span>
@@ -515,60 +612,67 @@ export function PrintableInvoice({
           - Each column contains: Label and signature line
           - All on one horizontal row with proper spacing
         */}
-        <div className="invoice-footer border-t-2 border-[#2563EB] mt-8 pt-6">
+        <div className="invoice-footer mt-8 pt-6">
           <div
-            className="flex justify-between gap-6"
+            className="flex justify-between items-end gap-6"
             style={{
               display: "flex",
               justifyContent: "space-between",
+              alignItems: "flex-end",
               gap: "1.5rem",
-              alignItems: "flex-start",
               width: "100%",
             }}
           >
             {/* Column 1: Prepared By */}
             <div
-              className="flex-1 text-center"
+              className="flex-1 flex flex-col items-center justify-end text-center"
               style={{ flex: "1 1 0%", minWidth: 0 }}
             >
-              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
+              <div
+                className="w-full max-w-[180px] border-b-2 border-gray-900"
+                style={{ height: "24px" }}
+              />
+              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Prepared By
               </p>
-              <div
-                className="border-b-2 border-gray-900"
-                style={{ height: "30px" }}
-              />
             </div>
 
             {/* Column 2: Received By */}
             <div
-              className="flex-1 text-center"
+              className="flex-1 flex flex-col items-center justify-end text-center"
               style={{ flex: "1 1 0%", minWidth: 0 }}
             >
-              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
+              <div
+                className="w-full max-w-[180px] border-b-2 border-gray-900"
+                style={{ height: "24px" }}
+              />
+              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Received By
               </p>
-              <div
-                className="border-b-2 border-gray-900"
-                style={{ height: "30px" }}
-              />
             </div>
 
             {/* Column 3: Approved By */}
             <div
-              className="flex-1 text-center"
+              className="flex-1 flex flex-col items-center justify-end text-center"
               style={{ flex: "1 1 0%", minWidth: 0 }}
             >
-              <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-2">
+              <div
+                className="w-full max-w-[180px] border-b-2 border-gray-900"
+                style={{ height: "24px" }}
+              />
+              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Approved By
               </p>
-              <div
-                className="border-b-2 border-gray-900"
-                style={{ height: "30px" }}
-              />
             </div>
           </div>
         </div>
+      </div>
+      {/* LEGAL DISCLAIMER - permanent footer centered at bottom */}
+      <div
+        className="invoice-legal absolute inset-x-0 bottom-0 border-t-2 border-[#2563EB] pt-2 text-center font-bold uppercase text-[11px]"
+        style={{ letterSpacing: "0.6px" }}
+      >
+        INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
       </div>
 
       {/* PRINT BUTTON - Only visible on screen, not in print */}

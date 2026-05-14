@@ -402,8 +402,6 @@ exports.getSalesReport = async (req, res) => {
     const intervalExpression = getIntervalByRange(range);
 
     try {
-        await ensureSalesTable();
-
         const [summaryRows] = await db.execute(
             `
                 SELECT
@@ -443,6 +441,33 @@ exports.getSalesReport = async (req, res) => {
     }
 };
 
+exports.resetSalesHistory = async (_req, res) => {
+    try {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+
+            const [deleteResult] = await connection.execute("DELETE FROM sales");
+
+            await connection.commit();
+            connection.release();
+
+            res.status(200).json({
+                message: "Sales history cleared successfully.",
+                deletedRows: Number(deleteResult.affectedRows || 0),
+                totalRevenue: 0,
+                totalItemsSold: 0,
+            });
+        } catch (transactionError) {
+            await connection.rollback();
+            connection.release();
+            throw transactionError;
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 exports.getSalesLog = async (req, res) => {
     const today = new Date();
     const defaultEnd = today.toISOString().split("T")[0];
@@ -462,27 +487,20 @@ exports.getSalesLog = async (req, res) => {
     }
 
     try {
-        await ensureSalesTable();
-        await ensureCategoriesTable();
-        await ensureMedicineCategoryColumn();
-
         const [rows] = await db.execute(
             `
                 SELECT
                     s.id AS id,
                     s.batch_id AS batchId,
                     s.sale_date AS saleDate,
-                    COALESCE(m.name, s.medicine_name, 'Unknown Medicine') AS medicineName,
-                    COALESCE(c.category_name, 'Uncategorized') AS category,
+                    COALESCE(s.medicine_name, 'Unknown Medicine') AS medicineName,
+                    'Uncategorized' AS category,
                     s.quantity_sold AS quantitySold,
                     s.unit_price AS unitPrice,
                     s.total_price AS totalPrice,
                     s.seller_name AS sellerName,
                     s.receiver_name AS receiverName
                 FROM sales s
-                LEFT JOIN batches b ON s.batch_id = b.id
-                LEFT JOIN medicines m ON b.medicine_id = m.id
-                LEFT JOIN categories c ON m.category_id = c.id
                 WHERE s.sale_date >= ?
                   AND s.sale_date < DATE_ADD(?, INTERVAL 1 DAY)
                 ORDER BY s.sale_date DESC
@@ -521,10 +539,6 @@ exports.getInactiveSales = async (req, res) => {
             : 3;
 
     try {
-        await ensureSalesTable();
-        await ensureCategoriesTable();
-        await ensureMedicineCategoryColumn();
-
         const [medicineRows] = await db.execute(
             `
                 SELECT
@@ -543,10 +557,9 @@ exports.getInactiveSales = async (req, res) => {
                 LEFT JOIN batches b ON b.medicine_id = m.id
                 LEFT JOIN sales s ON s.batch_id = b.id
                 GROUP BY m.id, m.name, c.category_name
-                HAVING lastSaleDate IS NULL OR lastSaleDate < NOW() - INTERVAL ? MONTH
-                ORDER BY lastSaleDate IS NULL DESC, lastSaleDate ASC, medicineName ASC
+                HAVING MAX(s.sale_date) IS NULL OR MAX(s.sale_date) < NOW() - INTERVAL ${thresholdMonths} MONTH
+                ORDER BY MAX(s.sale_date) IS NULL DESC, MAX(s.sale_date) ASC, medicineName ASC
             `,
-            [thresholdMonths],
         );
 
         const [categoryRows] = await db.execute(
@@ -567,10 +580,9 @@ exports.getInactiveSales = async (req, res) => {
                 LEFT JOIN batches b ON b.medicine_id = m.id
                 LEFT JOIN sales s ON s.batch_id = b.id
                 GROUP BY c.id, c.category_name
-                HAVING lastSaleDate IS NULL OR lastSaleDate < NOW() - INTERVAL ? MONTH
-                ORDER BY lastSaleDate IS NULL DESC, lastSaleDate ASC, categoryName ASC
+                HAVING MAX(s.sale_date) IS NULL OR MAX(s.sale_date) < NOW() - INTERVAL ${thresholdMonths} MONTH
+                ORDER BY MAX(s.sale_date) IS NULL DESC, MAX(s.sale_date) ASC, c.category_name ASC
             `,
-            [thresholdMonths],
         );
 
         res.status(200).json({
