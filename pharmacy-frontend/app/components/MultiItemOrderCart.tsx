@@ -243,29 +243,140 @@ export function MultiItemOrderCart({
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; padding: 8px; margin: 0; }
-          .receipt-shell { position: relative; min-height: 100vh; display: block; padding-bottom: 28px; }
-          .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #333; padding-bottom: 8px; }
-          .receipt-title { font-size: 24px; font-weight: bold; }
-          .receipt-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
-          .info-box { border: 1px solid #ccc; padding: 8px; }
-          .label { font-weight: bold; color: #333; }
-          .items-section { display: block; }
-          table { width: 100%; border-collapse: collapse; margin: 10px 0 8px; }
-          th { background-color: #f0f0f0; padding: 8px; text-align: left; border-bottom: 2px solid #333; }
-          td { padding: 8px; border-bottom: 1px solid #ddd; }
-          .total { font-weight: bold; font-size: 18px; }
-          .signature-section { margin-top: 6px; border-top: 2px solid #333; padding-top: 4px; }
-          .signature-grid { display: flex; flex-direction: column; gap: 16px; }
-          .signature-box { text-align: left; }
-          .signature-label { font-size: 12px; font-weight: bold; color: #111; }
-          .footer { display: none; }
+          :root {
+            --print-margin: 20mm;
+            --header-space: 78mm;
+            --footer-space: 22mm;
+          }
+
+          html,
+          body {
+            margin: 0;
+            padding: 0;
+          }
+
+          body {
+            font-family: Arial, sans-serif;
+            color: #111;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background: #fff;
+          }
+
+          .receipt-shell {
+            position: relative;
+            box-sizing: border-box;
+            min-height: calc(297mm - (var(--print-margin) * 2));
+            padding-top: var(--header-space);
+            padding-bottom: var(--footer-space);
+          }
+
+          .invoice-fixed-header,
+          .invoice-fixed-footer {
+            position: fixed;
+            left: var(--print-margin);
+            right: var(--print-margin);
+            z-index: 10;
+            background: #fff;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .invoice-fixed-header {
+            top: var(--print-margin);
+          }
+
+          .invoice-fixed-footer {
+            bottom: var(--print-margin);
+          }
+
+          .receipt-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0;
+          }
+
+          .info-box {
+            border: 1px solid #111;
+            padding: 8px;
+          }
+
+          .label {
+            font-weight: bold;
+            color: #222;
+          }
+
+          .items-section {
+            display: block;
+          }
+
+          .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin: 10px 0 8px;
+            border: 1px solid #111;
+          }
+
+          .items-table thead {
+            display: table-header-group;
+          }
+
+          .items-table tfoot {
+            display: table-footer-group;
+          }
+
+          .items-table tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          .items-table th,
+          .items-table td {
+            border: 1px solid #111;
+            padding: 6px 8px;
+            font-size: 12px;
+            vertical-align: top;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            background: #fff;
+            color: #111;
+          }
+
+          .items-table th {
+            background-color: #f3f4f6;
+            font-weight: 700;
+            text-align: left;
+          }
+
+          .signature-section {
+            margin-top: 8px;
+            border-top: 2px solid #111;
+            padding-top: 8px;
+          }
+
+          .signature-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+          }
+
+          .signature-box {
+            text-align: center;
+            border-top: 1px solid #111;
+            padding-top: 6px;
+            min-height: 28px;
+          }
+
+          .signature-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #111;
+          }
+
           .legal-disclaimer {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-top: 2px solid #333;
+            border-top: 2px solid #111;
             text-align: center;
             font-size: 11px;
             font-weight: 700;
@@ -273,15 +384,31 @@ export function MultiItemOrderCart({
             letter-spacing: 0.6px;
             padding-top: 6px;
           }
+
           @media print {
-            @page { margin: 0; }
-            html, body { margin: 0; padding: 0; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .legal-disclaimer {
-              position: fixed;
-              left: 0;
-              right: 0;
-              bottom: 6mm;
+            @page {
+              size: A4;
+              margin: var(--print-margin);
+            }
+
+            html,
+            body {
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0;
+              padding: 0;
+            }
+
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-shadow: none !important;
+              text-shadow: none !important;
+            }
+
+            .invoice-fixed-header,
+            .invoice-fixed-footer {
+              display: block;
             }
           }
         </style>
@@ -292,7 +419,7 @@ export function MultiItemOrderCart({
               elements.forEach((el) => {
                 el.childNodes.forEach((child) => {
                   if (child.nodeType === Node.TEXT_NODE && child.nodeValue && child.nodeValue.indexOf('about:blank') !== -1) {
-                    child.nodeValue = child.nodeValue.replace(/about:blank/gi, '');
+                    child.nodeValue = child.nodeValue.replace(//gi, '');
                   }
                 });
               });
@@ -304,10 +431,10 @@ export function MultiItemOrderCart({
       </head>
       <body>
         <div class="receipt-shell">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div class="invoice-fixed-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
             <div>
-              <div style="font-size:18px;font-weight:700;">EXPRESS PHARMA ONE ME.PLS</div>
+              <div style="font-size:18px;font-weight:700;">EXPRESS PHARMA ONE ME.PLC</div>
               <table style="margin-top:8px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px;">
                 <tr>
                   <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Invoice No</td>
@@ -332,7 +459,7 @@ export function MultiItemOrderCart({
           <div style="text-align:right;">
             <div style="font-size:20px;font-weight:800;">INVOICE</div>
             <div style="font-size:12px;color:#333;margin-top:6px;">
-              <div>Express Pharma One Me. Plc</div>
+              <div>Express Pharma One Me. PLC</div>
               <div>TIN: 0098248381</div>
               <div>Tell: 0981798081</div>
               <div>E-mail: epharm38@gmail.com</div>
@@ -356,7 +483,7 @@ export function MultiItemOrderCart({
         </div>
 
         <div class="items-section">
-        <table>
+        <table class="items-table">
           <thead>
             <tr>
               <th>S.No</th>
@@ -427,7 +554,7 @@ export function MultiItemOrderCart({
           </div>
         </div>
 
-        <div class="legal-disclaimer">
+        <div class="invoice-fixed-footer legal-disclaimer">
           INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
         </div>
 
@@ -867,11 +994,11 @@ export function MultiItemOrderCart({
               <div className="p-4 bg-white rounded-lg border border-slate-200">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center text-left gap-4">
-                    <img
+                    {/* <img
                       src="/Logo.jpg"
                       alt="Logo"
                       className="w-20 h-20 object-contain rounded"
-                    />
+                    /> */}
                     <div>
                       <h2 className="text-xl font-bold text-slate-900">
                         EXPRESS PHARMA ONE ME.PLC
@@ -896,11 +1023,9 @@ export function MultiItemOrderCart({
                           </tr>
                           <tr>
                             <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
-                              Terms (Days)
+                              Reference
                             </td>
-                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
-                              30
-                            </td>
+                            <td className="border border-black px-2 py-1 font-mono text-slate-900"></td>
                           </tr>
                           <tr>
                             <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
@@ -920,7 +1045,7 @@ export function MultiItemOrderCart({
                       INVOICE
                     </h3>
                     <div className="mt-2 text-sm text-slate-700">
-                      <div>Express Pharma One Me. Plc</div>
+                      <div>Express Pharma One Me. PLC</div>
                       <div>TIN: 0098248381</div>
                       <div>Tell: 0981798081</div>
                       <div>E-mail: epharm38@gmail.com</div>
@@ -988,25 +1113,21 @@ export function MultiItemOrderCart({
 
               {/* Receipt Summary */}
               <div className="p-4 bg-white rounded-lg border border-[#E2E8F0]">
-                <div className="mb-3 inline-block rounded border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-2">
-                  <div className="text-[11px] font-bold uppercase tracking-wide text-[#2563EB]">
+                {/* <div className="text-[11px] font-bold uppercase tracking-wide text-[#2563EB]">
                     Order Summary
-                  </div>
-                  <div className="mt-1 space-y-1 text-sm text-[#334155]">
-                    <div className="flex justify-between gap-4">
+                  </div> */}
+                {/* <div className="flex justify-between gap-4">
                       <span>Total Items</span>
                       <span className="font-semibold">
                         {cartTotals.itemCount}
                       </span>
-                    </div>
-                    <div className="flex justify-between gap-4">
+                    </div> */}
+                {/* <div className="flex justify-between gap-4">
                       <span>Total Quantity</span>
                       <span className="font-semibold">
                         {cartTotals.totalQuantity}
                       </span>
-                    </div>
-                  </div>
-                </div>
+                    </div> */}
 
                 <div className="ml-auto w-64">
                   <div className="flex justify-between text-sm mb-2">

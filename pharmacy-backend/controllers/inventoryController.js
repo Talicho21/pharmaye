@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { ensurePriceColumn, ensureSalesTable } = require("../utils/salesSchema");
 
 const hasColumn = async (tableName, columnName) => {
     const [rows] = await db.execute(
@@ -48,21 +49,6 @@ const hasIndex = async (tableName, indexName) => {
     return rows.length > 0;
 };
 
-const hasPriceColumn = async () => {
-    const [rows] = await db.execute(`
-        SELECT 1 FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'batches' AND COLUMN_NAME = 'price_per_unit' LIMIT 1
-    `);
-    return rows.length > 0;
-};
-
-const ensurePriceColumn = async () => {
-    const exists = await hasPriceColumn();
-    if (!exists) {
-        await db.execute(`ALTER TABLE batches ADD COLUMN price_per_unit DECIMAL(10,2) NOT NULL DEFAULT 0`);
-    }
-};
-
 const ensureCategoriesTable = async () => {
     await db.execute(`
         CREATE TABLE IF NOT EXISTS categories (
@@ -86,70 +72,6 @@ const ensureMedicineCategoryColumn = async () => {
             ON UPDATE CASCADE
             ON DELETE SET NULL
         `);
-    }
-};
-
-const ensureSalesTable = async () => {
-    await db.execute(`
-        CREATE TABLE IF NOT EXISTS sales (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            batch_id INT NOT NULL,
-            medicine_name VARCHAR(255) NOT NULL DEFAULT '',
-            quantity_sold INT NOT NULL,
-            unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-            total_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-            seller_name VARCHAR(255) NOT NULL,
-            receiver_name VARCHAR(255) NOT NULL,
-            sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-    `);
-
-    if (!(await hasIndex("sales", "idx_sales_sale_date"))) {
-        await db.execute(`CREATE INDEX idx_sales_sale_date ON sales(sale_date)`);
-    }
-
-    if (!(await hasColumn("sales", "medicine_name"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN medicine_name VARCHAR(255) NOT NULL DEFAULT ''`,
-        );
-    }
-
-    if (!(await hasColumn("sales", "unit_price"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN unit_price DECIMAL(10,2) NOT NULL DEFAULT 0`,
-        );
-    }
-
-    if (!(await hasColumn("sales", "total_price"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN total_price DECIMAL(12,2) NOT NULL DEFAULT 0`,
-        );
-    }
-
-    if (!(await hasColumn("sales", "seller_name"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN seller_name VARCHAR(255) NOT NULL DEFAULT ''`,
-        );
-    }
-
-    if (!(await hasColumn("sales", "receiver_name"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN receiver_name VARCHAR(255) NOT NULL DEFAULT ''`,
-        );
-    }
-
-    if (!(await hasColumn("sales", "sale_date"))) {
-        await db.execute(
-            `ALTER TABLE sales ADD COLUMN sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-        );
-    } else {
-        await db.execute(
-            `ALTER TABLE sales MODIFY COLUMN sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-        );
-    }
-
-    if (await hasConstraint("sales", "sales_ibfk_1")) {
-        await db.execute(`ALTER TABLE sales DROP FOREIGN KEY sales_ibfk_1`);
     }
 };
 
@@ -314,10 +236,30 @@ exports.deleteItem = async (req, res) => {
 };
 
 exports.sellMedicine = async (req, res) => {
-    const { batch_id, quantity_sold, seller_name, receiver_name } = req.body;
+    const {
+        batch_id,
+        quantity_sold,
+        seller_name,
+        receiver_name,
+        invoice_no,
+        reference,
+        customer_name,
+        customer_tin,
+        customer_sno,
+        payment_method,
+    } = req.body;
 
     const safeSellerName = String(seller_name || "").trim();
     const safeReceiverName = String(receiver_name || "").trim();
+    const safeInvoiceNo = String(invoice_no || "").trim();
+    const safeReference = String(reference || "").trim();
+    const safeCustomerName = String(customer_name || "").trim();
+    const safeCustomerTin = String(customer_tin || "").trim();
+    const safeCustomerSNo = String(customer_sno || "").trim();
+    const safePaymentMethod =
+        String(payment_method || "cash").toLowerCase() === "credit"
+            ? "credit"
+            : "cash";
 
     if (!safeSellerName || !safeReceiverName) {
         return res.status(400).json({ message: "Seller name and receiver name are required." });
@@ -370,8 +312,8 @@ exports.sellMedicine = async (req, res) => {
 
             await connection.execute(
                 `
-                    INSERT INTO sales (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO sales (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin, customer_sno, payment_method)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `,
                 [
                     batch_id,
@@ -381,6 +323,12 @@ exports.sellMedicine = async (req, res) => {
                     safeTotalPrice,
                     safeSellerName,
                     safeReceiverName,
+                    safeInvoiceNo,
+                    safeReference,
+                    safeCustomerName,
+                    safeCustomerTin,
+                    safeCustomerSNo,
+                    safePaymentMethod,
                 ],
             );
 

@@ -3,21 +3,17 @@
 -- Adds new columns for invoice management and metadata
 -- ============================================================
 
--- Add invoice_no column
-ALTER TABLE sales ADD COLUMN invoice_no VARCHAR(50) AFTER sale_date;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_no VARCHAR(50) NOT NULL DEFAULT '' AFTER sale_date;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS reference VARCHAR(255) NOT NULL DEFAULT '' AFTER invoice_no;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255) NOT NULL DEFAULT '' AFTER reference;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_tin VARCHAR(50) NOT NULL DEFAULT '' AFTER customer_name;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_sno VARCHAR(50) NOT NULL DEFAULT '' AFTER customer_tin;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method ENUM('cash', 'credit') NOT NULL DEFAULT 'cash' AFTER customer_sno;
 
--- Add reference column (for reference notes)
-ALTER TABLE sales ADD COLUMN reference VARCHAR(255) AFTER invoice_no;
+CREATE INDEX IF NOT EXISTS idx_sales_invoice_no ON sales(invoice_no);
 
--- Add customer-related columns for better tracking
-ALTER TABLE sales ADD COLUMN customer_name VARCHAR(255) AFTER reference;
-ALTER TABLE sales ADD COLUMN customer_tin VARCHAR(50) AFTER customer_name;
-
--- Create index on invoice_no for quick lookups
-CREATE INDEX idx_sales_invoice_no ON sales(invoice_no);
-
--- Create index on customer_tin for reports
-CREATE INDEX idx_sales_customer_tin ON sales(customer_tin);
+CREATE INDEX IF NOT EXISTS idx_sales_customer_tin ON sales(customer_tin);
+CREATE INDEX IF NOT EXISTS idx_sales_customer_sno ON sales(customer_sno);
 
 -- ============================================================
 -- VERIFICATION QUERIES

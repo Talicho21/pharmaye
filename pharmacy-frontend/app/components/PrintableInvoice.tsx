@@ -138,6 +138,120 @@ const calculateGrandTotal = (subtotal: number): number => {
   return subtotal + tax;
 };
 
+const NUMBER_WORDS_ONES = [
+  "Zero",
+  "One",
+  "Two",
+  "Three",
+  "Four",
+  "Five",
+  "Six",
+  "Seven",
+  "Eight",
+  "Nine",
+];
+
+const NUMBER_WORDS_TEENS = [
+  "Ten",
+  "Eleven",
+  "Twelve",
+  "Thirteen",
+  "Fourteen",
+  "Fifteen",
+  "Sixteen",
+  "Seventeen",
+  "Eighteen",
+  "Nineteen",
+];
+
+const NUMBER_WORDS_TENS = [
+  "",
+  "",
+  "Twenty",
+  "Thirty",
+  "Forty",
+  "Fifty",
+  "Sixty",
+  "Seventy",
+  "Eighty",
+  "Ninety",
+];
+
+const convertHundredsToWords = (value: number): string => {
+  if (value === 0) return "";
+
+  const parts: string[] = [];
+  const hundreds = Math.floor(value / 100);
+  const remainder = value % 100;
+
+  if (hundreds > 0) {
+    parts.push(`${NUMBER_WORDS_ONES[hundreds]} Hundred`);
+  }
+
+  if (remainder >= 10 && remainder < 20) {
+    parts.push(NUMBER_WORDS_TEENS[remainder - 10]);
+  } else {
+    const tens = Math.floor(remainder / 10);
+    const ones = remainder % 10;
+
+    if (tens > 1) {
+      parts.push(
+        ones > 0
+          ? `${NUMBER_WORDS_TENS[tens]} ${NUMBER_WORDS_ONES[ones]}`
+          : NUMBER_WORDS_TENS[tens],
+      );
+    } else if (remainder > 0) {
+      parts.push(NUMBER_WORDS_ONES[remainder]);
+    }
+  }
+
+  return parts.join(" ").trim();
+};
+
+const numberToWords = (value: number): string => {
+  if (!Number.isFinite(value)) {
+    return "Zero";
+  }
+
+  const normalizedValue = Math.round(value * 100) / 100;
+  const absoluteValue = Math.abs(normalizedValue);
+  const wholeNumber = Math.floor(absoluteValue);
+  const cents = Math.round((absoluteValue - wholeNumber) * 100);
+
+  if (wholeNumber === 0) {
+    return cents > 0 ? `${convertHundredsToWords(cents)} Cents` : "Zero";
+  }
+
+  const chunkLabels = ["", "Thousand", "Million", "Billion", "Trillion"];
+  const chunks: string[] = [];
+  let remaining = wholeNumber;
+  let chunkIndex = 0;
+
+  while (remaining > 0 && chunkIndex < chunkLabels.length) {
+    const chunk = remaining % 1000;
+
+    if (chunk > 0) {
+      const chunkWords = convertHundredsToWords(chunk);
+      chunks.unshift(
+        chunkLabels[chunkIndex]
+          ? `${chunkWords} ${chunkLabels[chunkIndex]}`
+          : chunkWords,
+      );
+    }
+
+    remaining = Math.floor(remaining / 1000);
+    chunkIndex += 1;
+  }
+
+  const wholeWords = chunks.join(" ").trim();
+
+  if (cents === 0) {
+    return `${wholeWords} ETB Only`;
+  }
+
+  return `${wholeWords} ETB and ${convertHundredsToWords(cents)} Cents Only`;
+};
+
 export function PrintableInvoice({
   cartItems,
   customerName,
@@ -157,6 +271,7 @@ export function PrintableInvoice({
   const nonTaxable = calculateNonTaxable(cartItems);
   const tax = calculateTax(subtotal);
   const grandTotal = calculateGrandTotal(subtotal);
+  const grandTotalInWords = numberToWords(grandTotal);
   const totalItems = cartItems.length;
   const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const paymentDisplay = getPaymentMethodLabel(paymentMethod);
@@ -228,18 +343,19 @@ export function PrintableInvoice({
             position: absolute;
             inset: 0;
             width: 100%;
-            padding: 10mm;
             box-sizing: border-box;
           }
 
           /* Page setup */
           @page {
-            margin: 0;
+            margin: 20mm;
             size: A4;
           }
 
           html,
           body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
             margin: 0 !important;
             padding: 0 !important;
           }
@@ -273,6 +389,32 @@ export function PrintableInvoice({
             print-color-adjust: exact !important;
           }
 
+          .invoice-total-box {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          /* Remove all borders from the invoice areas that were causing persistent lines */
+          .invoice-header,
+          .invoice-header *,
+          .invoice-summary,
+          .invoice-summary *,
+          .invoice-total-box,
+          .invoice-total-box *,
+          #invoice-table,
+          #invoice-table *,
+          .invoice-footer,
+          .invoice-footer *,
+          .amount-in-words-box,
+          .amount-in-words-box * {
+            border: 0 !important;
+          }
+
+          #invoice-table {
+            border: none !important;
+            border-collapse: collapse !important;
+          }
+
           /* CRITICAL: Keep signature footer horizontal in print */
           .invoice-footer > div {
             display: flex !important;
@@ -290,23 +432,21 @@ export function PrintableInvoice({
             min-width: 0 !important;
           }
 
+          .invoice-signoff {
+            margin-top: 28mm !important;
+            padding-top: 8mm !important;
+          }
+
+          .invoice-signoff-lines > div {
+            border-top: 0 !important;
+          }
+
           /* Responsive adjustments for A4 */
           .invoice-container {
             width: 100%;
             max-width: 210mm;
           }
 
-          /* Legal footer: pin to bottom of page when printing */
-          .invoice-legal {
-            position: fixed !important;
-            bottom: 8mm !important;
-            left: 0 !important;
-            right: 0 !important;
-            text-align: center !important;
-            background: transparent !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
         }
 
         @media screen {
@@ -323,7 +463,7 @@ export function PrintableInvoice({
         className="relative w-full bg-white p-0 pb-16"
       >
         {/* ========== HEADER SECTION ========== */}
-        <div className="invoice-header border-b-2 border-[#2563EB] pb-4 mb-6">
+        <div className="invoice-header pb-4 mb-6">
           {/* Company Branding - Simplified without Logo */}
           <div className="flex items-start justify-between mb-4">
             {/* Left: Company Name */}
@@ -397,7 +537,7 @@ export function PrintableInvoice({
           </div>
 
           {/* Company Contact Info */}
-          <div className="grid grid-cols-2 gap-8 text-sm text-[#64748B] border-t pt-2">
+          <div className="grid grid-cols-2 gap-8 text-sm text-[#64748B] pt-2">
             <div>
               <p className="font-semibold text-[#2563EB]">
                 Contact Information
@@ -474,7 +614,8 @@ export function PrintableInvoice({
         */}
         <table
           id="invoice-table"
-          className="w-full border-collapse border border-gray-900"
+          className="w-full"
+          style={{ border: "none", borderCollapse: "collapse" }}
           cellPadding={0}
           cellSpacing={0}
         >
@@ -560,10 +701,8 @@ export function PrintableInvoice({
           - Fixed width for consistent decimal alignment
         */}
         <div className="invoice-summary mt-8 mb-6">
-          {/* Order Summary removed per design - only medicine details and financial totals are shown */}
-
           {/* TOTALS BLOCK: Grouped and positioned to RIGHT */}
-          <div className="ml-auto w-72 border border-gray-400 rounded p-4">
+          <div className="invoice-total-box ml-auto w-72 rounded p-4 bg-white">
             {/* Totals Group Header */}
             <div className="mb-3">
               <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
@@ -586,9 +725,6 @@ export function PrintableInvoice({
                 </span>
               </div>
 
-              {/* SEPARATOR: Single line above Grand Total */}
-              <div className="border-t border-[#2563EB] my-3" />
-
               {/* ROW 3: Grand Total with Double line below */}
               <div className="flex justify-between">
                 <span className="text-[#10B981] font-bold text-sm">
@@ -598,81 +734,39 @@ export function PrintableInvoice({
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
-
-              {/* Double underline below Grand Total (accounting convention) */}
-              <div className="border-b-4 border-[#10B981] mt-1" />
             </div>
           </div>
         </div>
 
-        {/* ========== FOOTER: HORIZONTAL SIGNATURE SECTION (SINGLE LINE) ========== */}
-        {/* 
-          SIGNATURE LAYOUT (Professional Format):
-          - Single row with three equal-width columns using flex and space-between
-          - Each column contains: Label and signature line
-          - All on one horizontal row with proper spacing
-        */}
-        <div className="invoice-footer mt-8 pt-6">
-          <div
-            className="flex justify-between items-end gap-6"
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              gap: "1.5rem",
-              width: "100%",
-            }}
-          >
-            {/* Column 1: Prepared By */}
-            <div
-              className="flex-1 flex flex-col items-center justify-end text-center"
-              style={{ flex: "1 1 0%", minWidth: 0 }}
-            >
-              <div
-                className="w-full max-w-[180px] border-b-2 border-gray-900"
-                style={{ height: "24px" }}
-              />
+        {/* ========== SIGNATURE + FOOTER SECTION ========== */}
+        <div className="invoice-signoff mt-16 pt-8">
+          <div className="invoice-signoff-lines flex flex-row gap-8 items-end justify-between">
+            <div className="flex-1 text-center">
+              <div className="h-px w-full bg-gray-900" />
               <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Prepared By
               </p>
             </div>
 
-            {/* Column 2: Received By */}
-            <div
-              className="flex-1 flex flex-col items-center justify-end text-center"
-              style={{ flex: "1 1 0%", minWidth: 0 }}
-            >
-              <div
-                className="w-full max-w-[180px] border-b-2 border-gray-900"
-                style={{ height: "24px" }}
-              />
+            <div className="flex-1 text-center">
+              <div className="h-px w-full bg-gray-900" />
               <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Received By
               </p>
             </div>
 
-            {/* Column 3: Approved By */}
-            <div
-              className="flex-1 flex flex-col items-center justify-end text-center"
-              style={{ flex: "1 1 0%", minWidth: 0 }}
-            >
-              <div
-                className="w-full max-w-[180px] border-b-2 border-gray-900"
-                style={{ height: "24px" }}
-              />
+            <div className="flex-1 text-center">
+              <div className="h-px w-full bg-gray-900" />
               <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
                 Approved By
               </p>
             </div>
           </div>
+
+          <div className="mt-8 text-center font-bold uppercase text-[11px] text-gray-900">
+            INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
+          </div>
         </div>
-      </div>
-      {/* LEGAL DISCLAIMER - permanent footer centered at bottom */}
-      <div
-        className="invoice-legal absolute inset-x-0 bottom-0 border-t-2 border-[#2563EB] pt-2 text-center font-bold uppercase text-[11px]"
-        style={{ letterSpacing: "0.6px" }}
-      >
-        INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
       </div>
 
       {/* PRINT BUTTON - Only visible on screen, not in print */}

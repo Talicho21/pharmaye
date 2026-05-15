@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { ensurePriceColumn, ensureSalesTable } = require("../utils/salesSchema");
 
 /**
  * DEEP DIVE: Bulk Sale Processing with FEFO (First-Expired, First-Out)
@@ -11,7 +12,17 @@ const db = require("../config/db");
  */
 
 exports.bulkSaleMedicine = async (req, res) => {
-  const { items, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin } = req.body;
+  const {
+    items,
+    seller_name,
+    receiver_name,
+    invoice_no,
+    reference,
+    customer_name,
+    customer_tin,
+    customer_sno,
+    payment_method,
+  } = req.body;
 
   // ========== INPUT VALIDATION ==========
   const safeSellerName = String(seller_name || "").trim();
@@ -20,6 +31,11 @@ exports.bulkSaleMedicine = async (req, res) => {
   const safeReference = String(reference || "").trim();
   const safeCustomerName = String(customer_name || "").trim();
   const safeCustomerTin = String(customer_tin || "").trim();
+  const safeCustomerSNo = String(customer_sno || "").trim();
+  const safePaymentMethod =
+    String(payment_method || "cash").toLowerCase() === "credit"
+      ? "credit"
+      : "cash";
 
   if (!safeReceiverName) {
     return res
@@ -136,8 +152,8 @@ exports.bulkSaleMedicine = async (req, res) => {
         await connection.execute(
           `
             INSERT INTO sales 
-            (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin, customer_sno, payment_method)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             batch.id,
@@ -151,6 +167,8 @@ exports.bulkSaleMedicine = async (req, res) => {
             safeReference,
             safeCustomerName,
             safeCustomerTin,
+            safeCustomerSNo,
+            safePaymentMethod,
           ]
         );
 
@@ -160,6 +178,8 @@ exports.bulkSaleMedicine = async (req, res) => {
           quantity_sold: requestedQuantity,
           unit_price: unitPrice,
           total_price: totalPrice,
+          customer_sno: safeCustomerSNo,
+          payment_method: safePaymentMethod,
         });
 
         totalRevenue += totalPrice;
@@ -245,8 +265,8 @@ exports.bulkSaleMedicine = async (req, res) => {
           await connection.execute(
             `
               INSERT INTO sales 
-              (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              (batch_id, medicine_name, quantity_sold, unit_price, total_price, seller_name, receiver_name, invoice_no, reference, customer_name, customer_tin, customer_sno, payment_method)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             [
               batch.id,
@@ -260,6 +280,8 @@ exports.bulkSaleMedicine = async (req, res) => {
               safeReference,
               safeCustomerName,
               safeCustomerTin,
+              safeCustomerSNo,
+              safePaymentMethod,
             ]
           );
 
@@ -269,6 +291,8 @@ exports.bulkSaleMedicine = async (req, res) => {
             quantity_deducted: deductQty,
             unit_price: unitPrice,
             subtotal: totalPrice,
+              customer_sno: safeCustomerSNo,
+              payment_method: safePaymentMethod,
           });
 
           remainingQty -= deductQty;
@@ -324,56 +348,3 @@ exports.bulkSaleMedicine = async (req, res) => {
   }
 };
 
-/**
- * UTILITY: Ensure required columns exist
- */
-const ensurePriceColumn = async () => {
-  const [rows] = await db.execute(`
-    SELECT 1 FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'batches' 
-      AND COLUMN_NAME = 'price_per_unit' 
-    LIMIT 1
-  `);
-  if (rows.length === 0) {
-    await db.execute(
-      `ALTER TABLE batches ADD COLUMN price_per_unit DECIMAL(10,2) NOT NULL DEFAULT 0`
-    );
-  }
-};
-
-/**
- * UTILITY: Ensure sales table exists
- */
-const ensureSalesTable = async () => {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS sales (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      batch_id INT NOT NULL,
-      medicine_name VARCHAR(255) NOT NULL DEFAULT '',
-      quantity_sold INT NOT NULL,
-      unit_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-      total_price DECIMAL(12,2) NOT NULL DEFAULT 0,
-      seller_name VARCHAR(255) NOT NULL,
-      receiver_name VARCHAR(255) NOT NULL,
-      sale_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      invoice_no VARCHAR(50),
-      reference VARCHAR(255),
-      customer_name VARCHAR(255),
-      customer_tin VARCHAR(50)
-    )
-  `);
-
-  // Ensure index exists
-  const [indexRows] = await db.execute(`
-    SELECT 1 FROM information_schema.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'sales' 
-      AND INDEX_NAME = 'idx_sales_sale_date' 
-    LIMIT 1
-  `);
-
-  if (indexRows.length === 0) {
-    await db.execute(`CREATE INDEX idx_sales_sale_date ON sales(sale_date)`);
-  }
-};
