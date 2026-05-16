@@ -468,11 +468,11 @@ export function PrintableInvoice({
           <div className="flex items-start justify-between mb-4">
             {/* Left: Company Name */}
             <div>
-              <h1 className="text-3xl font-bold text-[#2563EB]">
+              <h1 className="text-4xl font-bold text-[#2563EB]">
                 EXPRESS PHARMA ONE ME. PLC
               </h1>
 
-              <p className="text-sm text-[#64748B] mt-1">
+              <p className="text-base text-[#64748B] mt-1">
                 Pharmaceutical Wholesale & Distribution
               </p>
 
@@ -486,40 +486,40 @@ export function PrintableInvoice({
                   <tbody>
                     {/* Row 1: Invoice No */}
                     <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50 w-20">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50 w-20">
                         Invoice No
                       </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
                         {invoiceNo}
                       </td>
                     </tr>
 
                     {/* Row 2: S.No (Customer) - moved here per spec (replaces FS No) */}
                     <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
                         FS.No
                       </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
                         {customerSNo || "-"}
                       </td>
                     </tr>
 
                     {/* Row 3: Reference - Can be blank/null for manual input */}
                     <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
                         Reference
                       </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono text-gray-900 bg-white">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
                         {reference || ""}
                       </td>
                     </tr>
 
-                    {/* Row 4: Date - Dynamic with Vibrant Blue */}
+                    {/* Row 4: Date - Dynamic */}
                     <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-50">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
                         Date
                       </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-xs font-mono font-bold text-[#2563EB] bg-blue-50">
+                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono font-bold text-gray-900 bg-gray-50">
                         {invoiceDate}
                       </td>
                     </tr>
@@ -530,30 +530,26 @@ export function PrintableInvoice({
 
             {/* Right: Invoice Title */}
             <div className="text-right">
-              <h2 className="text-4xl font-extrabold text-[#2563EB]">
-                INVOICE
-              </h2>
+              <h2 className="text-5xl font-extrabold text-gray-900">INVOICE</h2>
             </div>
           </div>
 
           {/* Company Contact Info */}
-          <div className="grid grid-cols-2 gap-8 text-sm text-[#64748B] pt-2">
+          <div className="grid grid-cols-2 gap-8 text-lg text-[#64748B] pt-2">
             <div>
-              <p className="font-semibold text-[#2563EB]">
-                Contact Information
-              </p>
-              <p>TIN: 0098248381</p>
-              <p>Phone: +251981798081</p>
-              <p>Email: epharm38@gmail.com</p>
+              <p className="font-semibold text-gray-900">Contact Information</p>
+              <p className="text-base">TIN: 0098248381</p>
+              <p className="text-base">Phone: +251981798081</p>
+              <p className="text-base">Email: epharm38@gmail.com</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-[#2563EB]">Invoice Details</p>
-              <p>
+              <p className="font-semibold text-gray-900">Invoice Details</p>
+              <p className="text-base">
                 Invoice No:{" "}
                 <span className="font-mono font-bold">{invoiceNo}</span>
               </p>
-              <p>Date: {invoiceDate}</p>
-              <p>Time: {invoiceTime}</p>
+              <p className="text-base">Date: {invoiceDate}</p>
+              <p className="text-base">Time: {invoiceTime}</p>
             </div>
           </div>
         </div>
@@ -562,22 +558,24 @@ export function PrintableInvoice({
         <div className="grid grid-cols-3 gap-6 mb-6 p-4 bg-white border border-[#E2E8F0] rounded">
           {/* Left: Bill To */}
           <div>
-            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
+            <p className="text-base font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Bill To
             </p>
-            <p className="text-lg font-semibold text-[#334155]">
+            <p className="text-xl font-semibold text-[#334155]">
               {customerName || "N/A"}
             </p>
-            <p className="text-sm text-[#64748B]">TIN: {tinNumber || "N/A"}</p>
+            <p className="text-base text-[#64748B]">
+              TIN: {tinNumber || "N/A"}
+            </p>
           </div>
 
           {/* Center: Payment Method */}
           <div className="text-center">
-            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
+            <p className="text-base font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Payment Method
             </p>
             <p
-              className={`text-lg font-bold text-[#334155] px-3 py-1 rounded inline-block ${paymentDisplay.color}`}
+              className={`text-xl font-bold text-[#334155] px-3 py-1 rounded inline-block ${paymentDisplay.color}`}
             >
               {paymentDisplay.label}
             </p>
@@ -585,13 +583,13 @@ export function PrintableInvoice({
 
           {/* Right: Transaction Details */}
           <div className="text-right">
-            <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide mb-1">
+            <p className="text-base font-semibold text-[#64748B] uppercase tracking-wide mb-1">
               Transaction
             </p>
-            <p className="text-sm text-[#64748B]">
+            <p className="text-base text-[#64748B]">
               <span className="font-semibold">Items:</span> {totalItems}
             </p>
-            <p className="text-sm text-[#64748B]">
+            <p className="text-base text-[#64748B]">
               <span className="font-semibold">Total Qty:</span> {totalQuantity}
             </p>
           </div>
@@ -622,25 +620,25 @@ export function PrintableInvoice({
           {/* TABLE HEADER */}
           <thead>
             <tr className="bg-gray-900 text-white">
-              <th className="border border-gray-900 px-2 py-2 text-center font-semibold text-xs w-8">
+              <th className="border border-gray-900 px-2 py-2 text-center font-semibold text-base w-[6%]">
                 S.No
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-base w-[40%]">
                 Description
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-base">
                 Batch #
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-base">
                 Unit Price (ETB)
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-base">
                 Exp. Date
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-base w-[8%]">
                 Qty
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-xs">
+              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-base">
                 Total (ETB)
               </th>
             </tr>
@@ -657,32 +655,32 @@ export function PrintableInvoice({
               return (
                 <tr key={item.id} className="hover:bg-gray-50">
                   {/* S.No: Auto-generated from array index */}
-                  <td className="border border-gray-900 px-2 py-2 text-center font-semibold text-sm text-gray-900">
+                  <td className="border border-gray-900 px-2 py-2 text-center font-semibold text-base text-gray-900 w-[6%]">
                     {index + 1}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-sm font-medium text-gray-900">
+                  <td className="border border-gray-900 px-3 py-2 text-base font-medium text-gray-900 w-[40%]">
                     {item.medicineName}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-sm text-gray-700">
+                  <td className="border border-gray-900 px-3 py-2 text-base text-gray-700">
                     {item.batchNumber}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-sm text-right text-gray-900 font-semibold">
+                  <td className="border border-gray-900 px-3 py-2 text-base text-right text-gray-900 font-semibold">
                     {formatCurrency(item.pricePerUnit)}
                   </td>
 
                   {/* Expiry Date: Formatted as MM/YYYY */}
-                  <td className="border border-gray-900 px-3 py-2 text-sm text-center text-gray-700 font-medium">
+                  <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-700 font-medium">
                     {formatExpiryDateMonthYear(item.expiryDate)}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-sm text-center text-gray-900 font-medium">
+                  <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-900 font-medium w-[8%]">
                     {item.quantity}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-sm text-right font-bold text-green-600">
+                  <td className="border border-gray-900 px-3 py-2 text-base text-right font-bold text-green-600">
                     {formatCurrency(lineTotal)}
                   </td>
                 </tr>
@@ -705,12 +703,12 @@ export function PrintableInvoice({
           <div className="invoice-total-box ml-auto w-72 rounded p-4 bg-white">
             {/* Totals Group Header */}
             <div className="mb-3">
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+              <p className="text-base font-semibold text-gray-600 uppercase tracking-wide mb-3">
                 Order Totals
               </p>
 
               {/* ROW 1: total */}
-              <div className="flex justify-between text-sm mb-2">
+              <div className="flex justify-between text-base mb-2">
                 <span className="text-[#64748B] font-normal">total</span>
                 <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(subtotal)}
@@ -718,7 +716,7 @@ export function PrintableInvoice({
               </div>
 
               {/* ROW 2: Not Taxable */}
-              <div className="flex justify-between text-sm mb-3">
+              <div className="flex justify-between text-base mb-3">
                 <span className="text-[#64748B] font-normal">Not Taxable</span>
                 <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(nonTaxable)}
@@ -727,10 +725,10 @@ export function PrintableInvoice({
 
               {/* ROW 3: Grand Total with Double line below */}
               <div className="flex justify-between">
-                <span className="text-[#10B981] font-bold text-sm">
+                <span className="text-[#10B981] font-bold text-lg">
                   GRAND TOTAL
                 </span>
-                <span className="text-[#10B981] font-bold text-sm tabular-nums">
+                <span className="text-[#10B981] font-bold text-lg tabular-nums">
                   {formatCurrency(grandTotal)}
                 </span>
               </div>
@@ -739,31 +737,55 @@ export function PrintableInvoice({
         </div>
 
         {/* ========== SIGNATURE + FOOTER SECTION ========== */}
-        <div className="invoice-signoff mt-16 pt-8">
-          <div className="invoice-signoff-lines flex flex-row gap-8 items-end justify-between">
-            <div className="flex-1 text-center">
-              <div className="h-px w-full bg-gray-900" />
-              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
-                Prepared By
-              </p>
+        <div className="invoice-signoff mt-32 pt-24">
+          <div className="invoice-signoff-lines flex flex-row gap-12 items-end justify-between">
+            <div className="flex-1">
+              <div className="text-center">
+                <div
+                  style={{
+                    height: "60px",
+                    borderBottom: "1px solid #111",
+                    marginBottom: "8px",
+                  }}
+                />
+                <p className="mt-3 text-base font-semibold text-gray-900 uppercase tracking-wide">
+                  Prepared By
+                </p>
+              </div>
             </div>
 
-            <div className="flex-1 text-center">
-              <div className="h-px w-full bg-gray-900" />
-              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
-                Received By
-              </p>
+            <div className="flex-1">
+              <div className="text-center">
+                <div
+                  style={{
+                    height: "60px",
+                    borderBottom: "1px solid #111",
+                    marginBottom: "8px",
+                  }}
+                />
+                <p className="mt-3 text-base font-semibold text-gray-900 uppercase tracking-wide">
+                  Received By
+                </p>
+              </div>
             </div>
 
-            <div className="flex-1 text-center">
-              <div className="h-px w-full bg-gray-900" />
-              <p className="mt-2 text-xs font-semibold text-gray-900 uppercase tracking-wide">
-                Approved By
-              </p>
+            <div className="flex-1">
+              <div className="text-center">
+                <div
+                  style={{
+                    height: "60px",
+                    borderBottom: "1px solid #111",
+                    marginBottom: "8px",
+                  }}
+                />
+                <p className="mt-3 text-base font-semibold text-gray-900 uppercase tracking-wide">
+                  Approved By
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-8 text-center font-bold uppercase text-[11px] text-gray-900">
+          <div className="mt-8 text-center font-bold uppercase text-xs text-gray-900">
             INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
           </div>
         </div>

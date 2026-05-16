@@ -294,7 +294,7 @@ export function MultiItemOrderCart({
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 12px;
-            margin: 12px 0;
+            margin: 12px 0 16px;
           }
 
           .info-box {
@@ -305,6 +305,42 @@ export function MultiItemOrderCart({
           .label {
             font-weight: bold;
             color: #222;
+          }
+
+          .company-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111;
+            line-height: 1.2;
+          }
+
+          .invoice-title {
+            font-size: 30px;
+            font-weight: 800;
+            color: #111;
+            line-height: 1.2;
+          }
+
+          .company-contact {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.45;
+          }
+
+          .section-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          .totals-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
           }
 
           .items-section {
@@ -335,8 +371,8 @@ export function MultiItemOrderCart({
           .items-table th,
           .items-table td {
             border: 1px solid #111;
-            padding: 6px 8px;
-            font-size: 12px;
+            padding: 8px 10px;
+            font-size: 14px;
             vertical-align: top;
             white-space: normal;
             overflow-wrap: anywhere;
@@ -348,41 +384,59 @@ export function MultiItemOrderCart({
             background-color: #f3f4f6;
             font-weight: 700;
             text-align: left;
+            font-size: 15px;
+          }
+
+          .items-table tbody td {
+            font-size: 14px;
           }
 
           .signature-section {
-            margin-top: 8px;
-            border-top: 2px solid #111;
-            padding-top: 8px;
+            margin-top: 48px;
+            border-top: 0;
+            padding-top: 40px;
           }
 
           .signature-grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
-            gap: 16px;
+            gap: 24px;
           }
 
           .signature-box {
             text-align: center;
-            border-top: 1px solid #111;
-            padding-top: 6px;
-            min-height: 28px;
+            border-top: 0;
+            padding-top: 0;
+            min-height: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+          }
+
+          .signature-box::before {
+            content: "";
+            display: block;
+            width: 100%;
+            height: 60px;
+            border-bottom: 1px solid #111;
           }
 
           .signature-label {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             color: #111;
           }
 
           .legal-disclaimer {
-            border-top: 2px solid #111;
+            border-top: 0;
             text-align: center;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
-            padding-top: 6px;
+            letter-spacing: 0.7px;
+            padding-top: 4px;
           }
 
           @media print {
@@ -434,31 +488,31 @@ export function MultiItemOrderCart({
         <div class="invoice-fixed-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
             <div>
-              <div style="font-size:18px;font-weight:700;">EXPRESS PHARMA ONE ME.PLC</div>
-              <table style="margin-top:8px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:11px;">
+              <div class="company-title">EXPRESS PHARMA ONE ME. PLC</div>
+              <table style="margin-top:8px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
                 <tr>
-                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Invoice No</td>
-                  <td style="border:1px solid #111;padding:4px 8px;">${printableInvoiceNumber}</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;font-size:12px;">Invoice No</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-size:12px;">${printableInvoiceNumber}</td>
                 </tr>
                 <tr>
-                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">FS No</td>
-                  <td style="border:1px solid #111;padding:4px 8px;">${customerSNo || "-"}</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;font-size:12px;">FS No</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-size:12px;">${customerSNo || "-"}</td>
                 </tr>
                 <tr>
-                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Reference</td>
-                  <td style="border:1px solid #111;padding:4px 8px;">${reference || ""}</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;font-size:12px;">Reference</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-size:12px;">${reference || ""}</td>
                 </tr>
                 <tr>
-                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;">Date</td>
-                  <td style="border:1px solid #111;padding:4px 8px;color:#2563EB;font-weight:700;">${printableSoldOutDate}</td>
+                  <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;font-size:12px;">Date</td>
+                  <td style="border:1px solid #111;padding:4px 8px;color:#111;font-weight:700;font-size:14px;">${printableSoldOutDate}</td>
                 </tr>
               </table>
             </div>
           </div>
 
           <div style="text-align:right;">
-            <div style="font-size:20px;font-weight:800;">INVOICE</div>
-            <div style="font-size:12px;color:#333;margin-top:6px;">
+            <div class="invoice-title">INVOICE</div>
+            <div class="company-contact" style="margin-top:6px;">
               <div>Express Pharma One Me. PLC</div>
               <div>TIN: 0098248381</div>
               <div>Tell: 0981798081</div>
@@ -469,21 +523,30 @@ export function MultiItemOrderCart({
 
         <div class="receipt-info">
           <div class="info-box">
-            <div class="label">Customer Name:</div>
-            <div>${customerName || "N/A"}</div>
+            <div class="section-label">Customer Name</div>
+            <div style="font-size:15px; color:#111827;">${customerName || "N/A"}</div>
           </div>
           <div class="info-box">
-            <div class="label">TIN Number:</div>
-            <div>${tinNumber || "N/A"}</div>
+            <div class="section-label">TIN Number</div>
+            <div style="font-size:15px; color:#111827;">${tinNumber || "N/A"}</div>
           </div>
           <div class="info-box">
-            <div class="label">Payment Method:</div>
-            <div>${paymentMethod === "cash" ? "Cash" : "Credit"}</div>
+            <div class="section-label">Payment Method</div>
+            <div style="font-size:15px; color:#111827;">${paymentMethod === "cash" ? "Cash" : "Credit"}</div>
           </div>
         </div>
 
         <div class="items-section">
         <table class="items-table">
+          <colgroup>
+            <col style="width: 6%;" />
+            <col style="width: 38%;" />
+            <col style="width: 14%;" />
+            <col style="width: 12%;" />
+            <col style="width: 8%;" />
+            <col style="width: 11%;" />
+            <col style="width: 11%;" />
+          </colgroup>
           <thead>
             <tr>
               <th>S.No</th>
@@ -521,20 +584,20 @@ export function MultiItemOrderCart({
         </table>
         </div>
 
-        <div style="margin-top: 8px; padding-top: 10px; border-top: 2px solid #111;">
+        <div style="margin-top: 10px; padding-top: 12px; border-top: 2px solid #111;">
           <div style="width: 260px; margin-left: auto;">
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px;">
               <span style="color: #374151;">total</span>
               <span style="font-weight: 700; color: #111827;">ETB ${cartTotals.totalPrice.toFixed(2)}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px;">
               <span style="color: #374151;">Not Taxable</span>
               <span style="font-weight: 700; color: #111827;">ETB 0.00</span>
             </div>
             <div style="border-top: 1px solid #111; margin: 4px 0 6px;"></div>
-            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 800;">
-              <span style="color: #111827;">GRAND TOTAL</span>
-              <span style="color: #111827;">ETB ${cartTotals.totalPrice.toFixed(2)}</span>
+            <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800;">
+              <span style="color: #10B981;">GRAND TOTAL</span>
+              <span style="color: #10B981;">ETB ${cartTotals.totalPrice.toFixed(2)}</span>
             </div>
             <div style="border-bottom: 3px solid #111; margin-top: 3px;"></div>
           </div>
@@ -1000,38 +1063,38 @@ export function MultiItemOrderCart({
                       className="w-20 h-20 object-contain rounded"
                     /> */}
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900">
-                        EXPRESS PHARMA ONE ME.PLC
+                      <h2 className="text-3xl font-bold text-[#2563EB] leading-tight">
+                        EXPRESS PHARMA ONE ME. PLC
                       </h2>
-                      <table className="mt-2 border-collapse font-[Arial] text-[11px]">
+                      <table className="mt-3 border-collapse font-[Arial] text-sm">
                         <tbody>
                           <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
                               Invoice No
                             </td>
-                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
+                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900">
                               {invoiceNumber || `INV-${Date.now()}`}
                             </td>
                           </tr>
                           <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
                               FS No
                             </td>
-                            <td className="border border-black px-2 py-1 font-mono text-slate-900">
+                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900">
                               000000010
                             </td>
                           </tr>
                           <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
                               Reference
                             </td>
-                            <td className="border border-black px-2 py-1 font-mono text-slate-900"></td>
+                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900"></td>
                           </tr>
                           <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1 font-bold">
+                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
                               Date
                             </td>
-                            <td className="border border-black bg-blue-50 px-2 py-1 font-mono font-bold text-[#2563EB]">
+                            <td className="border border-black bg-blue-50 px-2 py-1.5 font-mono font-bold text-[#2563EB]">
                               {formattedSoldOutDate}
                             </td>
                           </tr>
@@ -1041,10 +1104,10 @@ export function MultiItemOrderCart({
                   </div>
 
                   <div className="text-right">
-                    <h3 className="text-2xl font-extrabold text-slate-900">
+                    <h3 className="text-4xl font-extrabold text-[#2563EB] leading-none">
                       INVOICE
                     </h3>
-                    <div className="mt-2 text-sm text-slate-700">
+                    <div className="mt-2 text-base text-[#64748B] leading-relaxed">
                       <div>Express Pharma One Me. PLC</div>
                       <div>TIN: 0098248381</div>
                       <div>Tell: 0981798081</div>
@@ -1055,23 +1118,27 @@ export function MultiItemOrderCart({
 
                 <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-600 font-semibold">
+                    <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wide mb-1">
                       Customer Name:
                     </p>
-                    <p className="text-gray-900 font-semibold">
+                    <p className="text-lg font-semibold text-[#334155]">
                       {customerName}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600 font-semibold">TIN Number:</p>
-                    <p className="text-gray-900 font-semibold">{tinNumber}</p>
+                    <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wide mb-1">
+                      TIN Number:
+                    </p>
+                    <p className="text-lg font-semibold text-[#334155]">
+                      {tinNumber}
+                    </p>
                   </div>
                 </div>
               </div>
 
               {/* Receipt Items */}
               <div className="border border-[#E2E8F0] rounded-lg overflow-hidden bg-white">
-                <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-xs font-bold text-[#64748B]">
+                <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-sm font-bold text-[#64748B]">
                   <div className="col-span-4">Description</div>
                   <div className="col-span-2">Batch #</div>
                   <div className="col-span-2">Expiry Date</div>
@@ -1144,8 +1211,8 @@ export function MultiItemOrderCart({
                   </div>
                   <div className="border-t border-[#2563EB] my-2" />
                   <div className="flex justify-between text-base font-bold">
-                    <span className="text-[#10B981]">GRAND TOTAL</span>
-                    <span className="tabular-nums text-[#10B981]">
+                    <span className="text-[#10B981] text-lg">GRAND TOTAL</span>
+                    <span className="tabular-nums text-[#10B981] text-lg">
                       ETB {cartTotals.totalPrice.toFixed(2)}
                     </span>
                   </div>
