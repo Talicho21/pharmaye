@@ -1998,9 +1998,9 @@ export default function PharmacyDashboard() {
                         onClick={() =>
                           setSelectedReportRange(rangeOption.value)
                         }
-                        className={`rounded-lg border px-4 py-2 text-sm font-black shadow-none transition-all duration-200 ${
+                        className={`rounded-lg border px-4 py-2 text-sm font-black shadow-none hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
                           isActive
-                            ? "border-slate-900 bg-black text-white"
+                            ? "border-slate-900 bg-[#1d7cf2] text-white"
                             : "border-slate-300 bg-white text-slate-700"
                         }`}
                       >
