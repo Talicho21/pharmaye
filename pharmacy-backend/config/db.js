@@ -16,4 +16,6 @@ const pool = mysql.createPool({
   }
 });
 
-module.exports = pool.promise();
+// Use pool.promise() explicitly to handle asynchronous serverless cycles smoothly
+const promisePool = pool.promise();
+module.exports = promisePool;
