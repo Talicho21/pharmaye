@@ -1,8 +1,10 @@
 const db = require("../config/db");
 const { createAuthToken } = require("../utils/authToken");
 
+// Helper function to check table schema structure
 const hasColumn = async (tableName, columnName) => {
-  const [rows] = await db.execute(
+  // CRITICAL FIX: Changed from db.execute to db.query to allow information_schema reads on Aiven
+  const [rows] = await db.query(
     `
       SELECT 1
       FROM information_schema.COLUMNS
@@ -17,6 +19,7 @@ const hasColumn = async (tableName, columnName) => {
   return rows.length > 0;
 };
 
+// Ensures the database table and structural constraints are initialized
 const ensureUsersTable = async () => {
   await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
@@ -38,6 +41,7 @@ const ensureUsersTable = async () => {
     );
   }
 
+  // Uses SHA2 encryption matching your local schema standard hashing architecture
   await db.execute(
     `
       INSERT IGNORE INTO users (username, password_hash, role)
@@ -58,6 +62,7 @@ const ensureUsersTable = async () => {
   );
 };
 
+// Main Authentication Controller Function
 exports.login = async (req, res) => {
   const username = String(req.body?.username || "").trim();
   const password = String(req.body?.password || "");
@@ -69,6 +74,7 @@ exports.login = async (req, res) => {
   }
 
   try {
+    // Run structural integrity check against Aiven MySQL instance
     await ensureUsersTable();
 
     const passwordChecks = [];
@@ -88,6 +94,7 @@ exports.login = async (req, res) => {
       return res.status(500).json({ message: "No supported password column found." });
     }
 
+    // Dynamic query matching existing users rows securely
     const [rows] = await db.execute(
       `
         SELECT id, username, role
@@ -106,6 +113,7 @@ exports.login = async (req, res) => {
     const user = rows[0];
     const role = user.role === "admin" ? "admin" : "staff";
 
+    // Build signed JWT authentication token
     const token = createAuthToken({
       userId: Number(user.id),
       username: user.username,
@@ -121,6 +129,7 @@ exports.login = async (req, res) => {
       },
     });
   } catch (error) {
+    // Gracefully handles serverless function routing catches
     return res.status(500).json({ error: error.message });
   }
 };
