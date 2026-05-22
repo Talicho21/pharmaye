@@ -4,16 +4,18 @@ require('dotenv').config();
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
-  // Changed from DB_PASS to DB_PASSWORD to match standard environment configurations
-  password: process.env.DB_PASSWORD || process.env.DB_PASS, 
+  // Support both DB_PASSWORD and DB_PASS for local and hosted setups.
+  password: process.env.DB_PASSWORD || process.env.DB_PASS,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 18354, // Ensures your backend hits Aiven's specific port
+  port: Number(process.env.DB_PORT || 3306),
   waitForConnections: true,
   connectionLimit: 10,
-  //  REQUIRED FOR AIVEN CLOUD DATABASES:
-  ssl: {
-    rejectUnauthorized: false
-  }
+  ssl:
+    process.env.DB_SSL === "true"
+      ? {
+          rejectUnauthorized: false,
+        }
+      : undefined,
 });
 
 // Use pool.promise() explicitly to handle asynchronous serverless cycles smoothly

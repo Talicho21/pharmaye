@@ -13,7 +13,7 @@ app.use(express.json()); // Allows reading req.body
 app.use("/api/auth", authRoutes);
 app.use("/api", inventoryRoutes);
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT || 5000);
 app.listen(PORT, () => {
   console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
 });

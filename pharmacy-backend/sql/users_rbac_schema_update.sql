@@ -14,11 +14,6 @@ ALTER TABLE users
 
 INSERT IGNORE INTO users (username, password_hash, role)
 VALUES
-  ('owner', SHA2('admin123', 256), 'admin'),
-  ('staff', SHA2('staff123', 256), 'staff'),
-  ('staff_member', SHA2('staff123', 256), 'staff');
-
-UPDATE users
-SET password_hash = SHA2('staff123', 256), role = 'staff'
-WHERE username IN ('staff', 'staff_member')
-  AND (password_hash = '' OR password_hash IS NULL);
+  ('eseruadmin', SHA2('eseru16', 256), 'admin'),
+  ('expresstaff1', SHA2('express16', 256), 'staff'),
+  ('testers12', SHA2('testersdev1', 256), 'admin');

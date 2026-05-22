@@ -743,7 +743,7 @@ export default function PharmacyDashboard() {
     }
 
     let response: Response;
-    let payload: LoginResponse | { message?: string };
+    let payload: LoginResponse | { message?: string; error?: string };
 
     try {
       response = await fetch("/api/auth/login", {
@@ -757,7 +757,9 @@ export default function PharmacyDashboard() {
         }),
       });
 
-      payload = (await response.json()) as LoginResponse | { message?: string };
+      payload = (await response.json()) as
+        | LoginResponse
+        | { message?: string; error?: string };
     } catch (_error) {
       setLoginErrorMessage("Unable to login right now. Please try again.");
       showToast(
@@ -769,33 +771,39 @@ export default function PharmacyDashboard() {
     }
 
     if (!response.ok) {
-      setLoginAttemptsLeft((previousAttempts) => {
-        const nextAttempts = previousAttempts - 1;
+      const message =
+        payload.message ||
+        payload.error ||
+        "Unable to login right now. Please try again.";
 
-        if (nextAttempts <= 0) {
-          setLoginLockUntil(Date.now() + 30000);
-          setCurrentTime(Date.now());
-          setLoginErrorMessage(
-            "Incorrect password please try again. Too many attempts. Please try again in 30 seconds.",
-          );
-          showToast(
-            "Incorrect password",
-            "Incorrect password please try again. Too many attempts. Please try again in 30 seconds.",
-            "error",
-          );
-          return 3;
-        }
+      if (response.status === 401) {
+        setLoginAttemptsLeft((previousAttempts) => {
+          const nextAttempts = previousAttempts - 1;
 
-        const message =
-          (payload as { message?: string })?.message ||
-          "Incorrect username or password please try again.";
+          if (nextAttempts <= 0) {
+            setLoginLockUntil(Date.now() + 30000);
+            setCurrentTime(Date.now());
+            setLoginErrorMessage(
+              "Incorrect username or password. Too many attempts. Please try again in 30 seconds.",
+            );
+            showToast(
+              "Incorrect password",
+              "Incorrect username or password. Too many attempts. Please try again in 30 seconds.",
+              "error",
+            );
+            return 3;
+          }
 
-        setLoginErrorMessage(message);
+          setLoginErrorMessage(message);
+          showToast("Login failed", message, "error");
 
-        showToast("Login failed", message, "error");
+          return nextAttempts;
+        });
+        return;
+      }
 
-        return nextAttempts;
-      });
+      setLoginErrorMessage(message);
+      showToast("Login failed", message, "error");
       return;
     }
 

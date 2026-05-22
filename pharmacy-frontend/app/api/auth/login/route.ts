@@ -16,8 +16,11 @@ export async function POST(request: Request) {
     return NextResponse.json(payload, { status: response.status });
   } catch (_error) {
     return NextResponse.json(
-      { message: "Unable to login right now." },
-      { status: 500 },
+      {
+        message:
+          "Unable to reach the backend login service. Check that the backend is running and the database env vars are set.",
+      },
+      { status: 503 },
     );
   }
 }

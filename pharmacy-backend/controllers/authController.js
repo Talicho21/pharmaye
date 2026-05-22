@@ -46,20 +46,12 @@ const ensureUsersTable = async () => {
     `
       INSERT IGNORE INTO users (username, password_hash, role)
       VALUES
-        ('owner', SHA2('admin123', 256), 'admin'),
-        ('staff', SHA2('staff123', 256), 'staff'),
-        ('staff_member', SHA2('staff123', 256), 'staff')
+        ('eseruadmin', SHA2('eseru16', 256), 'admin'),
+        ('expresstaff1', SHA2('express16', 256), 'staff'),
+        ('testers12', SHA2('testersdev1', 256), 'admin')
     `,
   );
-
-  await db.execute(
-    `
-      UPDATE users
-      SET password_hash = SHA2('staff123', 256), role = 'staff'
-      WHERE username IN ('staff', 'staff_member')
-        AND (password_hash = '' OR password_hash IS NULL)
-    `,
-  );
+  // No legacy password updates required; seeding only the three requested users above.
 };
 
 // Main Authentication Controller Function
