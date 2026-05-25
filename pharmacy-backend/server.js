@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const inventoryRoutes = require("./routes/inventoryRoutes");
@@ -8,6 +9,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json()); // Allows reading req.body
+
 
 // Routes
 app.use("/api/auth", authRoutes);

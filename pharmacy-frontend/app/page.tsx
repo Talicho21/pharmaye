@@ -772,8 +772,10 @@ export default function PharmacyDashboard() {
 
     if (!response.ok) {
       const message =
-        payload.message ||
-        payload.error ||
+        (typeof (payload as any).message === "string" &&
+          (payload as any).message) ||
+        (typeof (payload as any).error === "string" &&
+          (payload as any).error) ||
         "Unable to login right now. Please try again.";
 
       if (response.status === 401) {
@@ -1440,7 +1442,7 @@ export default function PharmacyDashboard() {
 
   if (!isLoggedIn) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 text-black">
+      <div className="relative flex min-h-[100dvh] items-center justify-center overflow-x-hidden px-4 py-6 text-black sm:px-6 sm:py-10">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/image.png')" }}
@@ -1449,32 +1451,32 @@ export default function PharmacyDashboard() {
         <div className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-blue-400/20 blur-3xl" />
 
-        <div className="relative w-full max-w-md overflow-hidden rounded-lg border border-white/30 bg-white/92 p-8 shadow-[0_30px_90px_-30px_rgba(15,23,42,0.85)] backdrop-blur-xl transition-all duration-200 sm:p-10">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-slate-900/80 bg-slate-100/90 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
+        <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/30 bg-white/92 p-5 shadow-[0_30px_90px_-30px_rgba(15,23,42,0.85)] backdrop-blur-xl transition-all duration-200 sm:max-w-md sm:p-8">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-900/80 bg-slate-100/90 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-[3px_3px_0_0_#0f172a] sm:text-[11px]">
             <span aria-hidden="true">🔐</span>
             Secure Role Login
           </div>
 
-          <div className="mb-6">
-            <h1 className="group relative inline-block text-4xl font-black leading-tight sm:text-[1.6rem] cursor-default transition-all duration-300">
+          <div className="mb-5 sm:mb-6">
+            <h1 className="group relative flex flex-col gap-0.5 text-2xl font-black leading-tight cursor-default transition-all duration-300 sm:block sm:text-3xl md:text-4xl">
               {/* The "Primary" Color (Blue side) */}
-              <span className="bg-gradient-to-r from-[#2563EB] to-[#3B82F6] bg-clip-text text-transparent group-hover:from-[#10B981] group-hover:to-[#34D399] transition-all duration-500">
+              <span className="bg-gradient-to-r from-[#2563EB] to-[#3B82F6] bg-clip-text text-transparent transition-all duration-500 group-hover:from-[#10B981] group-hover:to-[#34D399]">
                 Express Pharmaceutical
               </span>
 
               {/* The "Secondary" Color (Green side) */}
-              <span className="ml-2 bg-linear-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent group-hover:from-[#2563EB] group-hover:to-[#60A5FA] transition-all duration-500">
+              <span className="bg-linear-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent transition-all duration-500 group-hover:from-[#2563EB] group-hover:to-[#60A5FA] sm:ml-2">
                 Wholesale
               </span>
 
               {/* Underline Hover Movement */}
-              <span className="absolute -bottom-1 left-0 h-0.75 w-0 bg-linear-to-r from-[#3B82F6] to-[#10B981] transition-all duration-500 group-hover:w-full"></span>
+              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-linear-to-r from-[#3B82F6] to-[#10B981] transition-all duration-500 group-hover:w-full"></span>
             </h1>
             {/* <p className="mt-3 max-w-sm text-sm font-semibold leading-6 text-slate-600">
  Secure access for Admin and Staff workflows in one dashboard.
  </p> */}
           </div>
-          <label className="mb-2 block text-[11px] font-black uppercase tracking-wide text-slate-600">
+          <label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-600 sm:text-[11px]">
             Username
           </label>
           <div className="relative mb-5">
@@ -1483,12 +1485,12 @@ export default function PharmacyDashboard() {
               value={username}
               placeholder="Enter username"
               disabled={isLoginLocked}
-              className="w-full rounded-lg border border-transparent bg-slate-100 p-4 text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600"
+              className="w-full rounded-xl border border-transparent bg-slate-100 px-4 py-3 text-base text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 sm:py-4 sm:text-[1rem]"
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
           </div>
-          <label className="mb-2 block text-[11px] font-black uppercase tracking-wide text-slate-600">
+          <label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-600 sm:text-[11px]">
             Password
           </label>
           <div className="relative mb-5">
@@ -1497,7 +1499,7 @@ export default function PharmacyDashboard() {
               value={password}
               placeholder="Enter password"
               disabled={isLoginLocked}
-              className="w-full rounded-lg border border-transparent bg-slate-100 p-4 pr-14 text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600"
+              className="w-full rounded-xl border border-transparent bg-slate-100 px-4 py-3 pr-14 text-base text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 sm:py-4 sm:text-[1rem]"
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLogin()}
             />
@@ -1506,7 +1508,7 @@ export default function PharmacyDashboard() {
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword((previous) => !previous)}
               disabled={isLoginLocked}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition-all duration-200 hover:-translate-y-[52%] hover:border-slate-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600 transition-all duration-200 hover:-translate-y-[52%] hover:border-slate-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-50 sm:p-3"
             >
               {showPassword ? (
                 <svg
@@ -1545,7 +1547,7 @@ export default function PharmacyDashboard() {
 
           {loginErrorMessage && (
             <p
-              className={`-mt-1 mb-4 text-sm font-bold ${
+              className={`-mt-1 mb-4 text-sm font-bold leading-5 ${
                 isLoginLocked ? "text-amber-600" : "text-rose-600"
               }`}
             >
@@ -1556,7 +1558,7 @@ export default function PharmacyDashboard() {
           <button
             onClick={handleLogin}
             disabled={isLoginLocked}
-            className="w-full rounded-lg bg-blue-400 py-4 text-lg font-black text-white shadow-none transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none "
+            className="w-full min-h-12 rounded-xl bg-blue-400 px-4 py-3.5 text-base font-black text-white shadow-none transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none sm:py-4 sm:text-lg"
           >
             {isLoginLocked
               ? `Try again in ${loginLockRemainingSeconds}s`
@@ -1564,7 +1566,7 @@ export default function PharmacyDashboard() {
           </button>
 
           {isLoginLocked && (
-            <p className="mt-4 text-center text-xs font-semibold text-slate-600">
+            <p className="mt-4 text-center text-[11px] font-semibold leading-5 text-slate-600 sm:text-xs">
               Access temporarily locked. Please try again in{" "}
               {loginLockRemainingSeconds} seconds.
             </p>
@@ -1662,10 +1664,10 @@ export default function PharmacyDashboard() {
 
   return (
     <div
-      className={`min-h-screen font-sans print:bg-white print:p-0 ${pageTheme}`}
+      className={`min-h-screen overflow-x-hidden font-sans print:bg-white print:p-0 ${pageTheme}`}
     >
       {/* Toast Notifications */}
-      <div className="fixed top-6 right-6 z-50 flex w-full max-w-sm flex-col gap-3 print:hidden">
+      <div className="fixed left-4 right-4 top-4 z-50 flex w-auto max-w-none flex-col gap-3 print:hidden sm:left-auto sm:right-6 sm:top-6 sm:w-full sm:max-w-sm">
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -1821,27 +1823,27 @@ export default function PharmacyDashboard() {
         </div>
       )}
 
-      <div className="flex min-h-screen flex-col gap-6 p-4 lg:flex-row lg:p-8 print:p-0">
-        <aside className="sticky top-3 w-full lg:w-64 xl:w-60 print:hidden self-start">
+      <div className="flex min-h-screen flex-col gap-4 p-4 sm:gap-6 sm:p-6 lg:flex-row lg:p-8 print:p-0">
+        <aside className="relative w-full print:hidden self-start lg:sticky lg:top-3 lg:w-64 xl:w-60">
           <div
-            className={`flex min-h-[calc(100vh-1.5rem)] flex-col rounded-lg border border-white/40 p-2.5 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl ${cardTheme}`}
+            className={`flex min-h-0 flex-col rounded-xl border border-white/40 p-3 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:min-h-[calc(100vh-1.5rem)] ${cardTheme}`}
           >
-            <div className="group rounded-lg bg-white p-3.5 text-slate-800 shadow-none">
+            <div className="group rounded-xl bg-white p-4 text-slate-800 shadow-none">
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-transparent bg-gradient-to-r from-[#23f13b] via-[#d5dfdb] to-[#2563EB] bg-clip-text transition-all duration-300 group-hover:from-[#1D4ED8] group-hover:via-[#059669] group-hover:to-[#1D4ED8]">
                 Pharmacy Dashboard
               </p>
-              <h2 className="mt-1.5 text-lg font-black leading-tight text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-300 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8]">
+              <h2 className="mt-1.5 text-base font-black leading-tight text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-300 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8] sm:text-lg">
                 Express Pharmaceutical Wholesale
               </h2>
             </div>
 
-            <div className="mt-3 rounded-lg border border-slate-300 bg-white p-2.5 shadow-none">
+            <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 shadow-none">
               <p className="text-[10px] font-black uppercase tracking-wide text-transparent bg-gradient-to-r from-[#16A34A] via-[#EAB308] to-[#22C55E] bg-clip-text transition-all duration-300 hover:from-[#15803D] hover:via-[#F59E0B] hover:to-[#16A34A]">
                 Signed in as
               </p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm font-black text-[#16A34A] transition-colors duration-300 hover:text-[#15803D]">
+                  <p className="text-sm font-black text-[#16A34A] transition-colors duration-300 hover:text-[#15803D] sm:text-base">
                     {loggedInUser?.username || "User"}
                   </p>
                   <p className="text-[11px] font-medium text-slate-600">
@@ -1866,7 +1868,7 @@ export default function PharmacyDashboard() {
               </p>
               <a
                 href="#dashboard"
-                className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
+                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
               >
                 Dashboard
                 <span
@@ -1878,7 +1880,7 @@ export default function PharmacyDashboard() {
               </a>
               <a
                 href="#sales-report"
-                className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
+                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
               >
                 Reports
                 <span
@@ -1890,7 +1892,7 @@ export default function PharmacyDashboard() {
               </a>
               <a
                 href="#quick-import"
-                className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
+                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
               >
                 Quick Import
                 <span
@@ -1902,7 +1904,7 @@ export default function PharmacyDashboard() {
               </a>
               <a
                 href="#live-inventory"
-                className="group flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
+                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
               >
                 Live Inventory
                 <span
@@ -1918,14 +1920,14 @@ export default function PharmacyDashboard() {
               <button
                 type="button"
                 onClick={() => setIsDarkMode((prev) => !prev)}
-                className="w-full rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-50 to-white px-3 py-1.5 text-sm font-black text-indigo-700 shadow-[0_12px_26px_-16px_rgba(99,102,241,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-400 hover:from-indigo-100 hover:to-indigo-50 hover:text-indigo-800 hover:shadow-[0_16px_30px_-18px_rgba(99,102,241,0.55)]"
+                className="w-full min-h-11 rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-50 to-white px-3 py-2 text-sm font-black text-indigo-700 shadow-[0_12px_26px_-16px_rgba(99,102,241,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-400 hover:from-indigo-100 hover:to-indigo-50 hover:text-indigo-800 hover:shadow-[0_16px_30px_-18px_rgba(99,102,241,0.55)]"
               >
                 {isDarkMode ? "🌙 Light Mode" : "☀️ Dark Mode"}
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-sm font-black text-rose-500 shadow-[0_12px_26px_-16px_rgba(244,63,94,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-gradient-to-r hover:from-rose-50 hover:via-white hover:to-red-50 hover:text-rose-700 hover:shadow-[0_16px_30px_-18px_rgba(244,63,94,0.5)]"
+                className="w-full min-h-11 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-black text-rose-500 shadow-[0_12px_26px_-16px_rgba(244,63,94,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-gradient-to-r hover:from-rose-50 hover:via-white hover:to-red-50 hover:text-rose-700 hover:shadow-[0_16px_30px_-18px_rgba(244,63,94,0.5)]"
               >
                 Logout
               </button>
@@ -1934,20 +1936,20 @@ export default function PharmacyDashboard() {
         </aside>
 
         <main id="dashboard" className="min-w-0 flex-1 space-y-8">
-          <header className="flex justify-between items-end mb-10 gap-4 print:hidden rounded-lg border border-white/40 p-6 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl bg-gradient-to-br from-[#2563EB]/10 via-[#10B981]/10 to-[#8B5CF6]/10">
+          <header className="mb-8 flex flex-col gap-4 rounded-xl border border-white/40 bg-gradient-to-br from-[#2563EB]/10 via-[#10B981]/10 to-[#8B5CF6]/10 p-4 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl print:hidden sm:p-5 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
             <div>
-              <h1 className="inline-block text-2xl font-black tracking-tight transition-all duration-200 text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8]">
+              <h1 className="inline-block text-xl font-black tracking-tight text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-200 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8] sm:text-2xl lg:text-3xl">
                 Express Pharmaceutical Wholesale
               </h1>
-              <p className="font-medium text-slate-600 mt-1">
+              <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
                 Managing Wholesale Pharmacy Stock
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
               {isLoggedIn && (
                 <button
                   onClick={() => setIsGeneralSaleOpen(true)}
-                  className="rounded-lg border border-emerald-300 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 text-sm font-black text-emerald-700 shadow-[0_12px_26px_-16px_rgba(16,185,129,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400 hover:from-emerald-100 hover:to-emerald-50 hover:text-emerald-800 hover:shadow-[0_16px_30px_-18px_rgba(16,185,129,0.55)]"
+                  className="min-h-11 w-full rounded-lg border border-emerald-300 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 text-sm font-black text-emerald-700 shadow-[0_12px_26px_-16px_rgba(16,185,129,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400 hover:from-emerald-100 hover:to-emerald-50 hover:text-emerald-800 hover:shadow-[0_16px_30px_-18px_rgba(16,185,129,0.55)] sm:w-auto"
                 >
                   🛒 Sell Out Items
                 </button>
@@ -1955,7 +1957,7 @@ export default function PharmacyDashboard() {
               <button
                 type="button"
                 onClick={handleRefresh}
-                className="rounded-lg border border-blue-300 bg-gradient-to-r from-blue-50 to-white px-4 py-3 text-sm font-black text-blue-700 shadow-[0_12px_26px_-16px_rgba(37,99,235,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400 hover:from-blue-100 hover:to-blue-50 hover:text-blue-800 hover:shadow-[0_16px_30px_-18px_rgba(37,99,235,0.55)] disabled:cursor-not-allowed disabled:opacity-70"
+                className="min-h-11 w-full rounded-lg border border-blue-300 bg-gradient-to-r from-blue-50 to-white px-4 py-3 text-sm font-black text-blue-700 shadow-[0_12px_26px_-16px_rgba(37,99,235,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400 hover:from-blue-100 hover:to-blue-50 hover:text-blue-800 hover:shadow-[0_16px_30px_-18px_rgba(37,99,235,0.55)] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                 disabled={isRefreshing}
               >
                 {isRefreshing ? "Refreshing..." : "Refresh"}
@@ -1969,7 +1971,7 @@ export default function PharmacyDashboard() {
               className="mb-10 border-t border-t-slate-300 pt-8 print:mb-0 print:border-0 print:pt-0"
             >
               <div
-                className={`rounded-lg border border-slate-300/70 p-6 transition-all duration-200 ${cardTheme}`}
+                className={`rounded-xl border border-slate-300/70 p-4 transition-all duration-200 sm:p-6 ${cardTheme}`}
               >
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <h2 className={`text-2xl font-black ${titleTheme}`}>
@@ -2095,7 +2097,7 @@ export default function PharmacyDashboard() {
                   </div>
                 )}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200 ">
+                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200">
                     <p className="text-xs font-black uppercase text-emerald-700">
                       Total Revenue
                     </p>
@@ -2103,7 +2105,7 @@ export default function PharmacyDashboard() {
                       ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200 ">
+                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200">
                     <p className="text-xs font-black uppercase text-emerald-700">
                       Total Items Sold
                     </p>
@@ -2111,7 +2113,7 @@ export default function PharmacyDashboard() {
                       {Math.round(Number(reportData?.totalItemsSold || 0))}
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-300 bg-linear-to-br from-slate-50 to-white p-4 shadow-none transition-all duration-200 ">
+                  <div className="rounded-lg border border-slate-300 bg-linear-to-br from-slate-50 to-white p-4 shadow-none transition-all duration-200">
                     <p className="text-xs font-black uppercase text-slate-600">
                       Report Window
                     </p>
@@ -2125,7 +2127,7 @@ export default function PharmacyDashboard() {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200 ">
+                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200">
                   <h3 className="text-lg font-black text-black">
                     Top Selling Medicines
                   </h3>
@@ -2175,7 +2177,7 @@ export default function PharmacyDashboard() {
                   )}
                 </div>
 
-                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200 ">
+                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h3 className="text-lg font-black text-black">
                       Detailed Sales Log
@@ -2231,9 +2233,9 @@ export default function PharmacyDashboard() {
 
                   <div
                     ref={salesLogScrollRef}
-                    className="mt-4 max-h-125 overflow-auto rounded-lg border border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 [6px_6px_0_0_#0f172a]"
+                    className="mt-4 max-h-125 overflow-x-auto overflow-y-auto rounded-lg border border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 [6px_6px_0_0_#0f172a]"
                   >
-                    <table className="w-full min-w-280 text-left">
+                    <table className="w-full min-w-[900px] text-left">
                       <thead
                         className={`sticky top-0 z-20 bg-white text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
                           salesLogHasScrolled
@@ -2555,7 +2557,7 @@ export default function PharmacyDashboard() {
           >
             {isAdmin && (
               <div
-                className={`w-full rounded-lg border p-8 shadow-none transition-all duration-200 min-h-[34rem] ${cardTheme}`}
+                className={`w-full rounded-xl border p-4 shadow-none transition-all duration-200 min-h-[24rem] sm:p-6 lg:min-h-[34rem] ${cardTheme}`}
               >
                 <div className="mb-6 flex items-center justify-between gap-3">
                   <div>
@@ -2595,7 +2597,7 @@ export default function PharmacyDashboard() {
                     ))}
                   </select>
                 </div>
-                <div className="h-[26rem]">
+                <div className="h-[18rem] sm:h-[22rem] md:h-[26rem]">
                   <ResponsiveContainer width="100%" height="100%">
                     {selectedCategoryMetric === "allMetricsCombined" ? (
                       <BarChart data={categoryAnalyticsData}>
