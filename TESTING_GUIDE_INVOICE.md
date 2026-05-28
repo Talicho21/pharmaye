@@ -268,14 +268,14 @@ console.log("\n✅ All tests passed!");
 
 ## Troubleshooting Quick Fixes
 
-| Issue                                   | Quick Fix                                                                    |
-| --------------------------------------- | ---------------------------------------------------------------------------- |
-| Invoice number shows timestamp          | Check `generateInvoiceNumber()` is imported and called in MultiItemOrderCart |
-| Reference row still says "Terms (Days)" | Refresh page to clear browser cache                                          |
-| Signature lines are vertical            | Check browser supports flexbox (use Chrome/Firefox)                          |
-| Print shows "about:blank"               | Clear browser cache, try different browser                                   |
-| New fields not in database              | Run migration: `mysql pharmacy_db < sales_schema_update.sql`                 |
-| Backend rejects invoice_no field        | Verify bulkSaleController.js has new fields in INSERT statement              |
+| Issue                                   | Quick Fix                                                                                      |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Invoice number shows timestamp          | Check `generateInvoiceNumber()` is imported and called in MultiItemOrderCart                   |
+| Reference row still says "Terms (Days)" | Refresh page to clear browser cache                                                            |
+| Signature lines are vertical            | Check browser supports flexbox (use Chrome/Firefox)                                            |
+| Print shows "about:blank"               | Clear browser cache, try different browser                                                     |
+| New fields not in database              | Run migration: `psql -U <user> -d pharmacy_db -f pharmacy-backend/sql/sales_schema_update.sql` |
+| Backend rejects invoice_no field        | Verify bulkSaleController.js has new fields in INSERT statement                                |
 
 ---
 
@@ -297,5 +297,5 @@ console.log("\n✅ All tests passed!");
 ---
 
 **Test Date:** May 14, 2026  
-**Tester Name:** ****\_\_\_****  
+**Tester Name:** \***\*\_\_\_\*\***  
 **Status:** ⏳ Ready for Testing

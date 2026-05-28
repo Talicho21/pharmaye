@@ -1,131 +1,85 @@
-const mysql = require("mysql2");
-require("dotenv").config();
+// backend/config/db.js
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const createPool = (config) => mysql.createPool(config).promise();
+const databaseUrl = process.env.DATABASE_URL?.trim();
+const databasePoolerUrl = process.env.DATABASE_POOLER_URL?.trim();
+const effectiveDatabaseUrl = databasePoolerUrl || databaseUrl;
+const usingPoolerUrl = Boolean(databasePoolerUrl);
+const hasSupabaseUrl = Boolean(
+  effectiveDatabaseUrl && /supabase\.(com|co)/i.test(effectiveDatabaseUrl)
+);
+const requireSsl = hasSupabaseUrl || process.env.PGSSLMODE === 'require';
+let databaseUrlUsername = '';
 
-const basePoolConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port: Number(process.env.DB_PORT || 3306),
-  waitForConnections: true,
-  connectionLimit: 10,
-  ssl:
-    process.env.DB_SSL === "true"
-      ? {
-          rejectUnauthorized: false,
-        }
-      : undefined,
-};
-
-const fallbackPoolConfig = {
-  host: process.env.DB_FALLBACK_HOST || "127.0.0.1",
-  user: process.env.DB_FALLBACK_USER || "root",
-  password: process.env.DB_FALLBACK_PASSWORD || process.env.DB_PASS || "",
-  database: process.env.DB_FALLBACK_NAME || "pharmacy_db",
-  port: Number(process.env.DB_FALLBACK_PORT || 3306),
-  waitForConnections: true,
-  connectionLimit: 10,
-};
-
-const localFallbackConfigs = [
-  fallbackPoolConfig,
-  {
-    host: "127.0.0.1",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "pharmacy_db",
-    port: Number(process.env.DB_PORT || 3306),
-    waitForConnections: true,
-    connectionLimit: 10,
-  },
-  {
-    host: "127.0.0.1",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: "pharmacy_db",
-    port: Number(process.env.DB_PORT || 3306),
-    waitForConnections: true,
-    connectionLimit: 10,
-  },
-  {
-    host: "127.0.0.1",
-    user: "root",
-    password: process.env.DB_PASSWORD || process.env.DB_PASS || "",
-    database: "pharmacy_db",
-    port: Number(process.env.DB_PORT || 3306),
-    waitForConnections: true,
-    connectionLimit: 10,
-  },
-  {
-    host: "127.0.0.1",
-    user: "root",
-    password: "",
-    database: "pharmacy_db",
-    port: Number(process.env.DB_PORT || 3306),
-    waitForConnections: true,
-    connectionLimit: 10,
-  },
-];
-
-let activePool = createPool(basePoolConfig);
-let activePoolLabel = "primary";
-
-const testConnection = async (candidatePool, label) => {
-  const connection = await candidatePool.getConnection();
-  connection.release();
-  console.log(`MySQL Connected Successfully (${label})`);
-};
-
-const activateFallbackPool = () => {
-  activePoolLabel = "fallback";
-};
-
-const tryLocalFallbacks = async () => {
-  for (const [index, config] of localFallbackConfigs.entries()) {
-    const candidatePool = createPool(config);
-
-    try {
-      await testConnection(candidatePool, `fallback-${index + 1}`);
-      activePool = candidatePool;
-      return true;
-    } catch (fallbackErr) {
-      console.log(`Fallback database connection failed (${index + 1})`);
-      console.log(fallbackErr);
-    }
+if (effectiveDatabaseUrl) {
+  try {
+    databaseUrlUsername = new URL(effectiveDatabaseUrl).username;
+  } catch (_) {
+    databaseUrlUsername = '';
   }
+}
 
-  return false;
-};
+// Prefer DATABASE_URL for hosted PostgreSQL (Supabase), with PG* fallback for local/dev.
+const pool = new Pool(
+  effectiveDatabaseUrl
+    ? {
+        connectionString: effectiveDatabaseUrl,
+        ssl: requireSsl ? { rejectUnauthorized: false } : false,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      }
+    : {
+        host: process.env.PGHOST || 'localhost',
+        user: process.env.PGUSER || 'postgres',
+        password: process.env.PGPASSWORD,
+        database: process.env.PGDATABASE,
+        port: parseInt(process.env.PGPORT || '5432', 10),
+        ssl: requireSsl ? { rejectUnauthorized: false } : false,
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
+      }
+);
 
-const promisePool = {
-  query: (...args) => activePool.query(...args),
-  execute: (...args) => activePool.execute(...args),
-  getConnection: (...args) => activePool.getConnection(...args),
-  end: (...args) => activePool.end(...args),
-};
+  pool.on('error', (err) => {
+    console.error('❌ PostgreSQL pool error:', err);
+  });
 
+// Immediately verify connection health on server spin-up
 (async () => {
   try {
-    await testConnection(activePool, activePoolLabel);
+    await pool.query('SELECT 1');
+    console.log('✅ Connected to PostgreSQL Database successfully.');
   } catch (err) {
-    console.log("Primary database connection failed");
-    console.log(err);
+    const details = {
+      hasDatabaseUrl: Boolean(databaseUrl),
+      hasDatabasePoolerUrl: Boolean(databasePoolerUrl),
+      usingPoolerUrl,
+      usingSupabaseUrl: hasSupabaseUrl,
+      sslEnabled: requireSsl,
+      pgHostFallback: process.env.PGHOST || 'localhost',
+      pgPortFallback: process.env.PGPORT || '5432',
+    };
 
-    try {
-      activateFallbackPool();
+    console.error('❌ Error connecting to PostgreSQL Engine instance:', err);
+    console.error('ℹ️ PostgreSQL connection config summary:', details);
 
-      const fallbackConnected = await tryLocalFallbacks();
-      if (fallbackConnected) {
-        activePoolLabel = "fallback";
-        console.log("Using fallback local MySQL configuration");
-      }
-    } catch (fallbackErr) {
-      console.log("Fallback database connection failed");
-      console.log(fallbackErr);
+    if (
+      hasSupabaseUrl &&
+      (err?.message || '').toLowerCase().includes('tenant or user not found')
+    ) {
+      console.error(
+        '⚠️ Supabase pooler hint: for port 6543, username is usually "postgres.<project-ref>" (not plain "postgres"). Update DATABASE_POOLER_URL from Supabase Dashboard > Connect.'
+      );
+      console.error('⚠️ Current URL username (decoded):', databaseUrlUsername || '(empty)');
     }
   }
 })();
 
-module.exports = promisePool;
+// Export clean query wrappers
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+  pool // Export raw pool instance if you need transaction utilities
+};

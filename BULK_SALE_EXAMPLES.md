@@ -323,7 +323,7 @@ ORDER BY b.expiry_date ASC;
 
 - Ensure database indexes on `batches.medicine_id` and `batches.expiry_date`
 - Increase connection pool in `db.js`: `connectionLimit: 20`
-- Check MySQL slow query log
+- Check PostgreSQL slow query settings (enable `pg_stat_statements` or check `log_min_duration_statement`)
 
 ---
 

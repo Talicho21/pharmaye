@@ -46,7 +46,7 @@ export function MultiItemOrderCart({
       batch_number: string;
       quantity: number;
       price_per_unit: number;
-      expiry_date: string;
+      expiry_date?: string | null;
       category_name?: string | null;
     }>
   >([]);
@@ -69,6 +69,7 @@ export function MultiItemOrderCart({
   );
   const [viewMode, setViewMode] = useState<"cart" | "receipt">("cart");
   const [stockValidationError, setStockValidationError] = useState("");
+  const [formValidationError, setFormValidationError] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [itemSoldOutDate, setItemSoldOutDate] = useState("");
 
@@ -93,17 +94,36 @@ export function MultiItemOrderCart({
     let isActive = true;
     setIsSearching(true);
 
+    const API_BASE = "/api/backend";
+
     const timeoutId = window.setTimeout(async () => {
       try {
         const response = await fetch(
-          `http://localhost:5000/api/inventory/search?query=${encodeURIComponent(trimmedQuery)}`,
+          `${API_BASE}/inventory/search?query=${encodeURIComponent(trimmedQuery)}`,
         );
         const data = await response.json();
 
         if (!isActive) return;
 
-        if (response.ok && data.success) {
-          setSearchResults(Array.isArray(data.results) ? data.results : []);
+        if (response.ok) {
+          const rawResults = Array.isArray(data)
+            ? data
+            : Array.isArray(data.results)
+              ? data.results
+              : [];
+
+          const normalizedResults = rawResults.map((raw: any) => ({
+            batch_id: Number(raw.batch_id ?? raw.id ?? raw.batchId ?? 0),
+            medicine_id: Number(raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0),
+            medicine_name: String(raw.medicine_name ?? raw.name ?? ""),
+            batch_number: String(raw.batch_number ?? raw.batchNumber ?? ""),
+            quantity: Number(raw.quantity ?? 0),
+            price_per_unit: Number(raw.price_per_unit ?? raw.pricePerUnit ?? 0),
+            expiry_date: raw.expiry_date ?? raw.expiryDate ?? "",
+            category_name: raw.category_name ?? raw.categoryName ?? null,
+          }));
+
+          setSearchResults(normalizedResults);
         } else {
           setSearchResults([]);
         }
@@ -135,6 +155,8 @@ export function MultiItemOrderCart({
   }, [cartItems]);
 
   const addItemToCart = () => {
+    setFormValidationError("");
+
     // Validation
     if (
       !newMedicineId.trim() ||
@@ -143,25 +165,25 @@ export function MultiItemOrderCart({
       !newPricePerUnit.trim() ||
       !newExpiryDate.trim()
     ) {
-      alert("Please fill in all fields");
+      setFormValidationError("Please fill in all required medicine fields before adding to cart.");
       return;
     }
 
     const quantity = Number(newQuantity);
     if (!Number.isInteger(quantity) || quantity <= 0) {
-      alert("Quantity must be a positive whole number");
+      setFormValidationError("Quantity must be a positive whole number.");
       return;
     }
 
     const price = Number(newPricePerUnit);
     if (!Number.isFinite(price) || price < 0) {
-      alert("Price must be a valid non-negative number");
+      setFormValidationError("Price must be a valid non-negative number.");
       return;
     }
     // Validate against available stock (if known)
     if (newAvailableStock !== null && quantity > newAvailableStock) {
-      alert(
-        `Cannot add ${quantity} units — only ${newAvailableStock} units available in stock for ${newMedicineName}.`,
+      setFormValidationError(
+        `Cannot add ${quantity} units. Only ${newAvailableStock} units are available for ${newMedicineName}.`,
       );
       return;
     }
@@ -189,6 +211,7 @@ export function MultiItemOrderCart({
     setNewPricePerUnit("");
     setNewExpiryDate("");
     setNewAvailableStock(null);
+    setFormValidationError("");
   };
 
   const handleSelectSearchResult = (item: {
@@ -198,17 +221,18 @@ export function MultiItemOrderCart({
     batch_number: string;
     quantity: number;
     price_per_unit: number;
-    expiry_date: string;
+    expiry_date?: string | null;
   }) => {
-    setNewMedicineId(String(item.medicine_id));
-    setNewMedicineName(item.medicine_name);
-    setNewBatchNumber(item.batch_number);
-    setNewPricePerUnit(String(item.price_per_unit));
-    setNewExpiryDate(item.expiry_date);
+    setNewMedicineId(String(item.medicine_id ?? item.batch_id ?? ""));
+    setNewMedicineName(item.medicine_name ?? "");
+    setNewBatchNumber(item.batch_number ?? "");
+    setNewPricePerUnit(String(item.price_per_unit ?? ""));
+    setNewExpiryDate(item.expiry_date ?? "");
     setNewQuantity("1");
     setMedicineSearch("");
     setSearchResults([]);
     setStockValidationError("");
+    setFormValidationError("");
     setNewAvailableStock(Number(item.quantity ?? 0));
   };
 
@@ -669,18 +693,20 @@ export function MultiItemOrderCart({
   };
 
   const handleSubmit = async () => {
+    setFormValidationError("");
+
     if (cartItems.length === 0) {
-      alert("Please add at least one item to the order");
+      setFormValidationError("Please add at least one item to the order.");
       return;
     }
 
     if (!customerName.trim()) {
-      alert("Please enter the customer name");
+      setFormValidationError("Please enter the customer name.");
       return;
     }
 
     if (!tinNumber.trim()) {
-      alert("Please enter the TIN number");
+      setFormValidationError("Please enter the TIN number.");
       return;
     }
 
@@ -757,6 +783,12 @@ export function MultiItemOrderCart({
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {viewMode === "cart" ? (
             <>
+              {formValidationError && (
+                <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+                  <p className="text-sm font-medium text-amber-800">{formValidationError}</p>
+                </div>
+              )}
+
               {/* Stock Validation Error */}
               {stockValidationError && (
                 <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg">

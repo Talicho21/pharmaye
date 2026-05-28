@@ -1,121 +1,13 @@
 "use client";
-import { useState, useRef, useEffect, useMemo } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
-import {
-  MultiItemOrderCart,
-  type CartItem,
-} from "@/app/components/MultiItemOrderCart";
 
-type InventoryItem = {
-  id: number;
-  name: string;
-  category_id?: number | null;
-  category_name?: string | null;
-  batch_number: string;
-  quantity: number;
-  expiry_date: string;
-  price_per_unit: number;
-  initial_batch_quantity?: number;
-  initial_quantity?: number;
-};
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { AppShell } from "@/app/components/AppShell";
+import { MultiItemOrderCart, type CartItem } from "@/app/components/MultiItemOrderCart";
+import { clearSessionCookie, readSessionCookie, setSessionCookie } from "@/app/utils/session";
 
-type CategoryItem = {
-  id: number;
-  category_name: string;
-};
-
-type CategoryAnalyticsPoint = {
-  category: string;
-  totalQuantity: number;
-  medicineCount: number;
-  totalValue: number;
-};
-
-type ReportRange = "24h" | "monthly" | "6months" | "yearly";
-
-type TopSellingMedicine = {
-  medicineName: string;
-  quantitySold: number;
-  totalRevenue: number;
-};
-
-type SalesReportData = {
-  range: ReportRange;
-  totalRevenue: number;
-  totalItemsSold: number;
-  topSellingMedicines: TopSellingMedicine[];
-};
-
-type SalesLogRecord = {
-  id: number;
-  batchId: number;
-  saleDate: string;
-  medicineName: string;
-  category: string;
-  quantitySold: number;
-  unitPrice: number;
-  totalPrice: number;
-  sellerName: string;
-  receiverName: string;
-};
-
-type SalesLogData = {
-  startDate: string;
-  endDate: string;
-  totalRecords: number;
-  records: SalesLogRecord[];
-};
-
-type InactiveMedicineRecord = {
-  medicineId: number;
-  medicineName: string;
-  categoryName: string;
-  lastSaleDate: string | null;
-  daysSinceLastSale: number | null;
-  totalSales: number;
-  totalQuantitySold: number;
-};
-
-type InactiveCategoryRecord = {
-  categoryId: number;
-  categoryName: string;
-  medicineCount: number;
-  lastSaleDate: string | null;
-  daysSinceLastSale: number | null;
-  totalSales: number;
-  totalQuantitySold: number;
-};
-
-type InactivityReportData = {
-  thresholdMonths: number;
-  medicines: InactiveMedicineRecord[];
-  categories: InactiveCategoryRecord[];
-};
-
-const createEmptySalesReportData = (range: ReportRange): SalesReportData => ({
-  range,
-  totalRevenue: 0,
-  totalItemsSold: 0,
-  topSellingMedicines: [],
-});
-
-const createEmptySalesLogData = (
-  startDate: string,
-  endDate: string,
-): SalesLogData => ({
-  startDate,
-  endDate,
-  totalRecords: 0,
-  records: [],
-});
+const SESSION_KEY = "pharmacy_auth_session_v1";
+const API_BASE = "/api/backend";
 
 type UserRole = "admin" | "staff";
 
@@ -131,1050 +23,260 @@ type LoginResponse = {
   message?: string;
 };
 
-type RowStatusStyles = {
-  isLowStock: boolean;
-  isExpired: boolean;
-  isNearExpiry: boolean;
-  stockPercentage: number;
-  isPulseAnimation: boolean;
-  stockBadgeClass: string;
-  stockBadgeStyle: React.CSSProperties;
-  stockDisplayText: string;
-  stockWarningClass: string;
-  stockWarningText: string;
-  expiryTextClass: string;
-  expiryWarningClass: string;
-  expiryWarningText: string;
-  expiryIcon: string;
-};
-
-export const getStatusStyles = (
-  stock: number,
-  expiryDate: string,
-  initialBatchQuantity?: number,
-): RowStatusStyles => {
-  const today = new Date();
-  const now = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-
-  const expiryRaw = new Date(expiryDate);
-  const expiry = new Date(
-    expiryRaw.getFullYear(),
-    expiryRaw.getMonth(),
-    expiryRaw.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-
-  const sixMonthsFromNow = new Date(
-    now.getFullYear(),
-    now.getMonth() + 6,
-    now.getDate(),
-    0,
-    0,
-    0,
-    0,
-  );
-
-  const hasInitialBatch =
-    typeof initialBatchQuantity === "number" &&
-    Number.isFinite(initialBatchQuantity) &&
-    initialBatchQuantity > 0;
-
-  // Calculate percentage: 20% threshold
-  const stockPercentage = hasInitialBatch
-    ? Math.round((stock / initialBatchQuantity) * 100)
-    : 100;
-
-  // Dynamic 20% threshold without hard minimum
-  const lowStockThreshold = hasInitialBatch ? initialBatchQuantity * 0.2 : 0;
-
-  const isOutOfStock = stock <= 0;
-  const isLowStock = !isOutOfStock && stock <= lowStockThreshold;
-  const isCriticalLow = !isOutOfStock && stock < lowStockThreshold * 0.5; // Critical if below 10%
-  const isExpired = now > expiry;
-  const isNearExpiry = !isExpired && expiry <= sixMonthsFromNow;
-
-  // Vibrant colors: #10B981 (Emerald), #722F37 (Wine-Red)
-  const EMERALD_GREEN = "#10B981";
-  const WINE_RED = "#722F37";
-
-  if (isOutOfStock) {
-    return {
-      isLowStock: false,
-      isExpired,
-      isNearExpiry,
-      stockPercentage: 0,
-      isPulseAnimation: false,
-      stockBadgeClass:
-        "inline-flex items-center gap-2 rounded-lg border px-3 py-1 text-xs font-black",
-      stockBadgeStyle: {
-        borderColor: WINE_RED,
-        backgroundColor: "rgba(114, 47, 55, 0.15)",
-        color: WINE_RED,
-      },
-      stockDisplayText: "Out of Stock",
-      stockWarningClass: "mt-1 text-[10px] font-black",
-      stockWarningText: "Out of Stock: Restocking required before dispensing.",
-      expiryTextClass: isExpired
-        ? "text-sm font-black text-red-700"
-        : isNearExpiry
-          ? "text-sm font-black text-amber-700"
-          : "text-sm font-bold text-blue-700",
-      expiryWarningClass: isExpired
-        ? "mt-1 text-[10px] font-black text-red-700"
-        : isNearExpiry
-          ? "mt-1 text-[10px] font-black text-amber-700"
-          : "mt-1 text-[10px] font-bold text-blue-700",
-      expiryWarningText: isExpired
-        ? "EXPIRED: Discard immediately and remove from shelves."
-        : isNearExpiry
-          ? "Notice: Product expires in less than 6 months."
-          : "Healthy: Expiry is more than 6 months away.",
-      expiryIcon: isExpired ? "🚩" : isNearExpiry ? "⚠️" : "✅",
-    };
-  }
-
-  return {
-    isLowStock,
-    isExpired,
-    isNearExpiry,
-    stockPercentage,
-    isPulseAnimation: isCriticalLow,
-    stockBadgeClass: `inline-flex items-center gap-2 rounded-lg border px-3 py-1 text-xs font-black ${
-      isLowStock ? "animate-pulse" : ""
-    }`,
-    stockBadgeStyle: {
-      borderColor: isLowStock ? WINE_RED : EMERALD_GREEN,
-      backgroundColor: isLowStock
-        ? "rgba(114, 47, 55, 0.15)"
-        : "rgba(16, 185, 129, 0.15)",
-      color: isLowStock ? WINE_RED : EMERALD_GREEN,
-    },
-    stockDisplayText: `${stock} Units - ${stockPercentage}% remaining`,
-    stockWarningClass: `mt-1 text-[10px] font-black ${isLowStock ? "animate-pulse" : ""}`,
-    stockWarningText: isLowStock
-      ? "⚠️ Low Stock: Restock Immediately"
-      : "✅ Stock Level Healthy",
-    expiryTextClass: isExpired
-      ? "text-sm font-black text-red-700"
-      : isNearExpiry
-        ? "text-sm font-black text-amber-700"
-        : "text-sm font-bold text-blue-700",
-    expiryWarningClass: isExpired
-      ? "mt-1 text-[10px] font-black text-red-700"
-      : isNearExpiry
-        ? "mt-1 text-[10px] font-black text-amber-700"
-        : "mt-1 text-[10px] font-bold text-blue-700",
-    expiryWarningText: isExpired
-      ? "EXPIRED: Discard immediately and remove from shelves."
-      : isNearExpiry
-        ? "Notice: Product expires in less than 6 months."
-        : "Healthy: Expiry is more than 6 months away.",
-    expiryIcon: isExpired ? "🚩" : isNearExpiry ? "⚠️" : "✅",
-  };
-};
-
-type ToastType = "success" | "error";
-
-type ToastMessage = {
+type InventoryItem = {
   id: number;
+  name: string;
+  category_name?: string | null;
+  batch_number: string;
+  quantity: number;
+  expiry_date: string | null;
+  price_per_unit: number | null;
+};
+
+type CategoryOption = {
+  id: string;
+  label: string;
+};
+
+type Toast = {
   title: string;
   description: string;
-  type: ToastType;
+  tone: "success" | "error" | "info";
 };
 
-const CATEGORY_ANALYTICS_METRICS = {
-  totalQuantity: {
-    label: "Total Units",
-    color: "#eab308",
-    formatValue: (value: number) => `${Math.round(value)} units`,
-  },
-  medicineCount: {
-    label: "Medicine Count",
-    color: "#dc2626",
-    formatValue: (value: number) => `${Math.round(value)} medicines`,
-  },
-  totalValue: {
-    label: "Total Stock Value",
-    color: "#16a34a",
-    formatValue: (value: number) => `ETB ${value.toFixed(2)}`,
-  },
-} as const;
-
-type CategoryMetricKey = keyof typeof CATEGORY_ANALYTICS_METRICS;
-type CategoryAnalyticsViewKey =
-  | CategoryMetricKey
-  | "medicineCountAndStockValue"
-  | "allMetricsCombined";
-
-const REPORT_RANGE_OPTIONS: Array<{ value: ReportRange; label: string }> = [
-  { value: "24h", label: "Last 24 Hours" },
-  { value: "monthly", label: "Monthly" },
-  { value: "6months", label: "6 Months" },
-  { value: "yearly", label: "Yearly" },
-];
-
-type SalesLogRowsPerPageOption = number | "all";
-
-const SALES_LOG_ROWS_PER_PAGE_OPTIONS: SalesLogRowsPerPageOption[] = [
-  10,
-  20,
-  50,
-  100,
-  250,
-  500,
-  1000,
-  "all",
-];
-
-const INACTIVE_THRESHOLD_MONTHS = 3;
-const REPORT_LIVE_REFRESH_INTERVAL_MS = 10000;
-const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
-
-export default function PharmacyDashboard() {
-  const todayDate = new Date();
-  const defaultSalesLogEndDate = todayDate.toISOString().split("T")[0];
-  const startDateBase = new Date(todayDate);
-  startDateBase.setDate(startDateBase.getDate() - 6);
-  const defaultSalesLogStartDate = startDateBase.toISOString().split("T")[0];
-
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [categories, setCategories] = useState<CategoryItem[]>([]);
-  const [selectedCategoryMetric, setSelectedCategoryMetric] =
-    useState<CategoryAnalyticsViewKey>("allMetricsCombined");
-  const [selectedReportRange, setSelectedReportRange] =
-    useState<ReportRange>("24h");
-  const [reportData, setReportData] = useState<SalesReportData | null>(null);
-  const [isLoadingReport, setIsLoadingReport] = useState(false);
-  const [salesLogData, setSalesLogData] = useState<SalesLogData | null>(null);
-  const [isLoadingSalesLog, setIsLoadingSalesLog] = useState(false);
-  const [inactiveHistoryData, setInactiveHistoryData] =
-    useState<InactivityReportData | null>(null);
-  const [isLoadingInactiveHistory, setIsLoadingInactiveHistory] =
-    useState(false);
-  const [salesLogStartDate, setSalesLogStartDate] = useState(
-    defaultSalesLogStartDate,
-  );
-  const [salesLogEndDate, setSalesLogEndDate] = useState(
-    defaultSalesLogEndDate,
-  );
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [categorySearchTerm, setCategorySearchTerm] = useState("");
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [formData, setFormData] = useState({
-    categoryId: "",
-    medId: "",
-    name: "",
-    batch: "",
-    qty: "",
-    expiry: "",
-    price: "",
-  });
-  const [customCategoryName, setCustomCategoryName] = useState("");
-  const [authToken, setAuthToken] = useState<string | null>(null);
-  const [loggedInUser, setLoggedInUser] = useState<AuthUser | null>(null);
+export default function HomePage() {
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginAttemptsLeft, setLoginAttemptsLeft] = useState(3);
-  const [loginLockUntil, setLoginLockUntil] = useState<number | null>(null);
-  const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const [loginErrorMessage, setLoginErrorMessage] = useState("");
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [sellModalItem, setSellModalItem] = useState<InventoryItem | null>(
-    null,
-  );
-  const [deleteModalItem, setDeleteModalItem] = useState<InventoryItem | null>(
-    null,
-  );
-  const [activeActionMenuId, setActiveActionMenuId] = useState<number | null>(
-    null,
-  );
-  const [sellQtyInput, setSellQtyInput] = useState("1");
-  const [sellDateInput, setSellDateInput] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [sellerNameInput, setSellerNameInput] = useState("");
-  const [receiverNameInput, setReceiverNameInput] = useState("");
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [inventoryQuery, setInventoryQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [isSellOutOpen, setIsSellOutOpen] = useState(false);
+  const [isProcessingSale, setIsProcessingSale] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // ========== NEW: Multi-Item Order (Bulk Sale) State ==========
-  const [isGeneralSaleOpen, setIsGeneralSaleOpen] = useState(false);
-  const [isProcessingBulkSale, setIsProcessingBulkSale] = useState(false);
-  const [bulkSaleSellerName, setBulkSaleSellerName] = useState("");
-  const [bulkSaleReceiverName, setBulkSaleReceiverName] = useState("");
-  // ========== END: Multi-Item Order State ===========
-  const toastIdRef = useRef(0);
-  const salesLogScrollRef = useRef<HTMLDivElement | null>(null);
-  const [salesLogRowsPerPage, setSalesLogRowsPerPage] =
-    useState<SalesLogRowsPerPageOption>(10);
-  const [salesLogPage, setSalesLogPage] = useState(1);
-  const [salesLogHasScrolled, setSalesLogHasScrolled] = useState(false);
-  const [isResettingSalesData, setIsResettingSalesData] = useState(false);
-  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const pageClassName =
+    theme === "dark"
+      ? "min-h-screen bg-[radial-gradient(circle_at_top,#020617,#0f172a_45%,#111827_100%)] px-4 py-8 text-slate-100 sm:px-6 lg:px-8"
+      : "min-h-screen bg-[radial-gradient(circle_at_top,#eef6ff,#f8fafc_40%,#e9eefb_100%)] px-4 py-8 text-slate-900 sm:px-6 lg:px-8";
 
-  const isLoggedIn = Boolean(authToken && loggedInUser);
-  const isAdmin = loggedInUser?.role === "admin";
+  const dashboardFrameClassName =
+    theme === "dark"
+      ? "mx-auto max-w-7xl space-y-8 rounded-[2rem] border border-slate-800/70 bg-slate-950/70 p-4 shadow-[0_30px_90px_rgba(15,23,42,0.35)] backdrop-blur-md sm:p-6 lg:p-8"
+      : "mx-auto max-w-7xl space-y-8 rounded-[2rem] border border-white/80 bg-slate-50/60 p-4 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md sm:p-6 lg:p-8";
 
-  // --- Core Functions ---
+  const sectionTitleClassName =
+    "group inline-flex items-center gap-2 text-xl font-bold text-slate-950 transition-colors duration-300 hover:text-emerald-600";
 
-  const fetchJsonWithFallback = async <T,>(
-    primaryUrl: string,
-    fallbackUrl: string,
-    init?: RequestInit,
-  ): Promise<T> => {
-    const requestUrls = [primaryUrl, fallbackUrl];
-    let lastError: Error | null = null;
+  const titleLineClassName =
+    "relative inline-flex pb-1 after:absolute after:left-0 after:-bottom-0.5 after:h-0.5 after:w-full after:origin-left after:scale-x-0 after:rounded-full after:bg-emerald-500 after:transition-transform after:duration-300 group-hover:after:scale-x-100";
 
-    for (const requestUrl of requestUrls) {
-      try {
-        const response = await fetch(requestUrl, {
-          ...init,
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          lastError = new Error(
-            `Request failed with status ${response.status}`,
-          );
-          continue;
-        }
+  const metricCardClassName =
+    "group rounded-4xl border border-emerald-100/80 bg-linear-to-br from-white to-emerald-50/60 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_26px_80px_rgba(15,23,42,0.14)]";
 
-        const payload = (await response.json()) as T;
-        return payload;
-      } catch (error) {
-        lastError =
-          error instanceof Error ? error : new Error("Failed to fetch data");
-      }
-    }
+  const headerButtonClassName =
+    "inline-flex items-center justify-center rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:text-white hover:shadow-[0_12px_30px_rgba(255,255,255,0.16)] active:translate-y-0";
 
-    throw lastError || new Error("Failed to fetch data");
-  };
+  const actionTileTitleClassName =
+    "mt-3 text-2xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8";
 
-  const getAuthHeaders = (): Headers => {
-    const headers = new Headers();
+  const actionTileCaptionClassName =
+    "mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700";
 
-    if (authToken) {
-      headers.set("Authorization", `Bearer ${authToken}`);
-    }
+  const headerClassName =
+    theme === "dark"
+      ? "rounded-4xl border border-slate-800 bg-linear-to-r from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-[0_30px_90px_rgba(15,23,42,0.3)] sm:p-8"
+      : "rounded-4xl border border-white/80 bg-linear-to-r from-[#0f172a] via-[#1d4ed8] to-[#0ea5e9] p-6 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)] sm:p-8";
 
-    return headers;
-  };
-
-  const fetchData = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/inventory");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      setInventory(data);
-    } catch (err) {
-      console.error("Fetch error:", err);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch("/api/categories");
-      if (!res.ok) {
-        setCategories([]);
+  const loadInventory = useCallback(
+    async (quiet = false) => {
+      if (!token || !user) {
         return;
       }
-      const data = await res.json();
-      setCategories(data);
-    } catch (err) {
-      setCategories([]);
-    }
-  };
 
-  const fetchReportData = async (range: ReportRange) => {
-    if (!isAdmin) {
-      setReportData(null);
-      return;
-    }
+      setIsLoadingInventory(true);
+      try {
+        const response = await fetch(`${API_BASE}/inventory`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-    setIsLoadingReport(true);
-    try {
-      const query = `range=${encodeURIComponent(range)}`;
-      const data = await fetchJsonWithFallback<SalesReportData>(
-        `/api/reports?${query}`,
-        `http://localhost:5000/api/reports?${query}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
-      setReportData(data);
-    } catch (err) {
-      console.error("Report fetch error:", err);
-      setReportData(createEmptySalesReportData(range));
-    } finally {
-      setIsLoadingReport(false);
-    }
-  };
+        if (!response.ok) {
+          throw new Error("Failed to load inventory");
+        }
 
-  const fetchSalesLogData = async (startDate: string, endDate: string) => {
-    if (!isAdmin) {
-      setSalesLogData(null);
-      return;
-    }
+        const data = await response.json();
+        setInventory(Array.isArray(data) ? data : []);
+      } catch {
+        if (!quiet) {
+          setToast({
+            title: "Inventory unavailable",
+            description: "The backend did not return inventory data.",
+            tone: "info",
+          });
+        }
+      } finally {
+        setIsLoadingInventory(false);
+      }
+    },
+    [token, user],
+  );
 
-    setIsLoadingSalesLog(true);
-    try {
-      const query = `startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-      const data = await fetchJsonWithFallback<SalesLogData>(
-        `/api/reports/sales-log?${query}`,
-        `http://localhost:5000/api/reports/sales-log?${query}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
-      setSalesLogData(data);
-    } catch (err) {
-      console.error("Sales log fetch error:", err);
-      setSalesLogData(createEmptySalesLogData(startDate, endDate));
-    } finally {
-      setIsLoadingSalesLog(false);
-    }
-  };
+  const handleRefreshInventory = useCallback(() => {
+    void loadInventory(false);
+  }, [loadInventory]);
 
-  const fetchInactiveHistoryData = async () => {
-    if (!isAdmin) {
-      setInactiveHistoryData(null);
-      return;
-    }
-
-    setIsLoadingInactiveHistory(true);
-    try {
-      const query = `thresholdMonths=${encodeURIComponent(String(INACTIVE_THRESHOLD_MONTHS))}`;
-      const data = await fetchJsonWithFallback<InactivityReportData>(
-        `/api/reports/inactive?${query}`,
-        `http://localhost:5000/api/reports/inactive?${query}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
-      setInactiveHistoryData(data);
-    } catch (err) {
-      console.error("Inactive history fetch error:", err);
-      setInactiveHistoryData(null);
-      // Silent fail - don't show error toast
-    } finally {
-      setIsLoadingInactiveHistory(false);
-    }
-  };
-
-  const refreshAdminData = async () => {
-    if (!isLoggedIn || !isAdmin) {
-      return;
-    }
-
-    await Promise.all([
-      fetchReportData(selectedReportRange),
-      fetchSalesLogData(salesLogStartDate, salesLogEndDate),
-      fetchInactiveHistoryData(),
-    ]);
-  };
-
-  // NOTE: Do not auto-restore a saved session on first load.
-  // This ensures opening the site (e.g. clicking the localhost link)
-  // always directs users to the login UI instead of silently showing
-  // the dashboard when a previous session exists.
-  useEffect(() => {
-    // Clear any saved session on initial load so the login page is shown.
-    try {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (_e) {
-      // ignore
-    }
+  const toggleTheme = useCallback(() => {
+    setTheme((previous) => (previous === "dark" ? "light" : "dark"));
   }, []);
 
   useEffect(() => {
-    if (authToken && loggedInUser) {
-      window.localStorage.setItem(
-        SESSION_STORAGE_KEY,
-        JSON.stringify({ token: authToken, user: loggedInUser }),
-      );
-      return;
-    }
-
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-  }, [authToken, loggedInUser]);
-
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchData();
-      fetchCategories();
-    }
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (isLoggedIn && isAdmin) {
-      fetchReportData(selectedReportRange);
-      return;
-    }
-
-    setReportData(null);
-  }, [selectedReportRange, isLoggedIn, isAdmin]);
-
-  useEffect(() => {
-    if (isLoggedIn && isAdmin && salesLogStartDate && salesLogEndDate) {
-      fetchSalesLogData(salesLogStartDate, salesLogEndDate);
-      return;
-    }
-
-    setSalesLogData(null);
-  }, [salesLogStartDate, salesLogEndDate, isLoggedIn, isAdmin]);
-
-  useEffect(() => {
-    if (isLoggedIn && isAdmin) {
-      fetchInactiveHistoryData();
-      return;
-    }
-
-    setInactiveHistoryData(null);
-  }, [isLoggedIn, isAdmin]);
-
-  useEffect(() => {
-    const totalRecords = salesLogData?.records?.length ?? 0;
-    const rowsPerPageForPagination =
-      salesLogRowsPerPage === "all"
-        ? Math.max(1, totalRecords)
-        : salesLogRowsPerPage;
-    const totalPages = Math.max(
-      1,
-      Math.ceil(totalRecords / rowsPerPageForPagination),
-    );
-    setSalesLogPage((previousPage) => Math.min(previousPage, totalPages));
-  }, [salesLogData, salesLogRowsPerPage]);
-
-  useEffect(() => {
-    setSalesLogPage(1);
-  }, [salesLogStartDate, salesLogEndDate, salesLogRowsPerPage]);
-
-  useEffect(() => {
-    const scrollContainer = salesLogScrollRef.current;
-    if (!scrollContainer) return;
-
-    const onScroll = () => {
-      setSalesLogHasScrolled(scrollContainer.scrollTop > 0);
-    };
-
-    onScroll();
-    scrollContainer.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      scrollContainer.removeEventListener("scroll", onScroll);
-    };
-  }, [salesLogData, salesLogRowsPerPage, salesLogPage, isLoadingSalesLog]);
-
-  useEffect(() => {
-    if (!isLoggedIn || !isAdmin) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      void refreshAdminData();
-    }, REPORT_LIVE_REFRESH_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [
-    isLoggedIn,
-    isAdmin,
-    selectedReportRange,
-    salesLogStartDate,
-    salesLogEndDate,
-  ]);
-
-  useEffect(() => {
-    if (!loginLockUntil) return;
-
-    const timer = window.setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [loginLockUntil]);
-
-  const showToast = (title: string, description: string, type: ToastType) => {
-    toastIdRef.current += 1;
-    const id = toastIdRef.current;
-    setToasts((prev) => [...prev, { id, title, description, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 3200);
-  };
-
-  const handleLogin = async () => {
-    if (loginLockUntil && Date.now() < loginLockUntil) {
-      setLoginErrorMessage(
-        `Locked for ${Math.max(1, loginLockRemainingSeconds)} seconds. Please try again.`,
-      );
-      showToast(
-        "Login locked",
-        "Too many attempts. Please try again in 30 seconds.",
-        "error",
-      );
-      return;
-    }
-
-    const safeUsername = username.trim();
-
-    if (!safeUsername || !password) {
-      setLoginErrorMessage("Username and password are required.");
-      showToast(
-        "Missing credentials",
-        "Please enter both username and password.",
-        "error",
-      );
-      return;
-    }
-
-    let response: Response;
-    let payload: LoginResponse | { message?: string; error?: string };
-
-    try {
-      response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: safeUsername,
-          password,
-        }),
-      });
-
-      payload = (await response.json()) as
-        | LoginResponse
-        | { message?: string; error?: string };
-    } catch (_error) {
-      setLoginErrorMessage("Unable to login right now. Please try again.");
-      showToast(
-        "Login failed",
-        "Unable to reach the server. Please try again.",
-        "error",
-      );
-      return;
-    }
-
-    if (!response.ok) {
-      const message =
-        (typeof (payload as any).message === "string" &&
-          (payload as any).message) ||
-        (typeof (payload as any).error === "string" &&
-          (payload as any).error) ||
-        "Unable to login right now. Please try again.";
-
-      if (response.status === 401) {
-        setLoginAttemptsLeft((previousAttempts) => {
-          const nextAttempts = previousAttempts - 1;
-
-          if (nextAttempts <= 0) {
-            setLoginLockUntil(Date.now() + 30000);
-            setCurrentTime(Date.now());
-            setLoginErrorMessage(
-              "Incorrect username or password. Too many attempts. Please try again in 30 seconds.",
-            );
-            showToast(
-              "Incorrect password",
-              "Incorrect username or password. Too many attempts. Please try again in 30 seconds.",
-              "error",
-            );
-            return 3;
-          }
-
-          setLoginErrorMessage(message);
-          showToast("Login failed", message, "error");
-
-          return nextAttempts;
-        });
-        return;
-      }
-
-      setLoginErrorMessage(message);
-      showToast("Login failed", message, "error");
-      return;
-    }
-
-    const typedPayload = payload as LoginResponse;
-    const role = typedPayload.user?.role;
-    if (!typedPayload?.token || !typedPayload?.user || !role) {
-      setLoginErrorMessage("Login response is invalid.");
-      showToast("Login failed", "Unexpected login response payload.", "error");
-      return;
-    }
-
-    setAuthToken(typedPayload.token);
-    setLoggedInUser(typedPayload.user);
-    setLoginAttemptsLeft(3);
-    setLoginLockUntil(null);
-    setLoginErrorMessage("");
-    setUsername("");
-    setPassword("");
-    setShowPassword(false);
-    showToast(
-      "Login successful",
-      `Welcome back, ${typedPayload.user.username}.`,
-      "success",
-    );
-  };
-
-  const handleLogout = () => {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    setAuthToken(null);
-    setLoggedInUser(null);
-    setPassword("");
-    setUsername("");
-    setLoginErrorMessage("");
-    setActiveActionMenuId(null);
-    setDeleteModalItem(null);
-    setSellModalItem(null);
-  };
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-
-    const refreshTasks: Array<Promise<void>> = [fetchData(), fetchCategories()];
-
-    if (isAdmin) {
-      refreshTasks.push(refreshAdminData());
-    }
-
-    await Promise.all(refreshTasks);
-    setIsRefreshing(false);
-    showToast(
-      "Inventory refreshed",
-      isAdmin
-        ? "Latest stock and report data loaded."
-        : "Latest stock data loaded.",
-      "success",
-    );
-  };
-
-  const handleResetSalesHistory = async () => {
-    if (!isAdmin) {
-      showToast(
-        "Forbidden",
-        "Staff users cannot reset sales history.",
-        "error",
-      );
-      return;
-    }
-
-    setIsResettingSalesData(true);
-    setIsResetConfirmOpen(false);
-
-    try {
-      const response = await fetchJsonWithFallback<{
-        deletedRows?: number;
-      }>("/api/reports/reset", "http://localhost:5000/api/reports/reset", {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      });
-
-      setReportData(createEmptySalesReportData(selectedReportRange));
-      setSalesLogData(
-        createEmptySalesLogData(salesLogStartDate, salesLogEndDate),
-      );
-
-      await refreshAdminData();
-
-      showToast(
-        "Sales history cleared",
-        `Removed ${response.deletedRows || 0} transaction${
-          response.deletedRows === 1 ? "" : "s"
-        }.`,
-        "success",
-      );
-    } catch (error) {
-      console.error("Sales reset error:", error);
-      showToast(
-        "Reset failed",
-        "Unable to clear sales history right now.",
-        "error",
-      );
-    } finally {
-      setIsResettingSalesData(false);
-    }
-  };
-
-  const handleRowsPerPageChange = (value: string) => {
-    if (value === "all") {
-      setSalesLogRowsPerPage("all");
-      return;
-    }
-
-    const parsedValue = Number(value);
-
-    if (!Number.isFinite(parsedValue)) {
-      setSalesLogRowsPerPage(10);
-      return;
-    }
-
-    const clampedValue = Math.max(10, Math.min(1000, Math.floor(parsedValue)));
-    setSalesLogRowsPerPage(clampedValue);
-  };
-
-  const handleExportReport = () => {
-    if (!isAdmin) {
-      showToast("Forbidden", "Staff users cannot export reports.", "error");
-      return;
-    }
-
-    try {
-      const allSalesRecords = salesLogData?.records ?? [];
-
-      if (allSalesRecords.length === 0) {
-        showToast(
-          "No records to export",
-          "There are no detailed sales records in the selected date range.",
-          "error",
-        );
-        return;
-      }
-
-      const escapeHtml = (value: unknown) =>
-        String(value ?? "")
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/\"/g, "&quot;")
-          .replace(/'/g, "&#39;");
-
-      const rows = allSalesRecords
-        .map(
-          (record) => `
- <tr>
- <td>${record.id}</td>
- <td>${record.batchId}</td>
- <td>${escapeHtml(new Date(record.saleDate).toLocaleString("en-GB"))}</td>
- <td>${escapeHtml(record.medicineName)}</td>
- <td>${escapeHtml(record.category)}</td>
- <td style="text-align:right;">${record.quantitySold}</td>
- <td style="text-align:right;">ETB ${Number(record.unitPrice || 0).toFixed(2)}</td>
- <td style="text-align:right;">ETB ${Number(record.totalPrice || 0).toFixed(2)}</td>
- <td>${escapeHtml(record.sellerName)}</td>
- <td>${escapeHtml(record.receiverName)}</td>
- </tr>`,
-        )
-        .join("");
-
-      const reportTitle = "Detailed Sales Log";
-      const generatedAt = new Date().toLocaleString("en-GB");
-
-      const htmlContent = `
- <!doctype html>
- <html>
- <head>
- <meta charset="utf-8" />
- <title>${reportTitle}</title>
- <style>
- body { font-family: Inter, Arial, sans-serif; margin: 24px; color: #0f172a; }
- h1 { margin: 0 0 6px 0; font-size: 24px; }
- p { margin: 0 0 16px 0; font-size: 12px; color: #475569; }
- table { width: 100%; border-collapse: collapse; font-size: 12px; }
- th, td { border: 1px solid #0f172a; padding: 8px; vertical-align: top; }
- th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; }
- @media print {
- @page { size: A4 landscape; margin: 12mm; }
- body { margin: 0; }
- }
- </style>
- </head>
- <body>
- <h1>${reportTitle}</h1>
- <p>Range: ${escapeHtml(salesLogStartDate)} to ${escapeHtml(salesLogEndDate)} • Total records: ${allSalesRecords.length} • Generated: ${escapeHtml(generatedAt)}</p>
- <table>
- <thead>
- <tr>
- <th>Sale ID</th>
- <th>Batch ID</th>
- <th>Date & Time</th>
- <th>Medicine</th>
- <th>Category</th>
- <th>Qty</th>
- <th>Unit Price</th>
- <th>Total</th>
- <th>Seller</th>
- <th>Receiver</th>
- </tr>
- </thead>
- <tbody>
- ${rows}
- </tbody>
- </table>
- </body>
- </html>
- `;
-
-      const printWindow = window.open("", "_blank", "width=1200,height=900");
-
-      if (!printWindow) {
-        showToast(
-          "Export blocked",
-          "Please allow pop-ups to export and print the full report.",
-          "error",
-        );
-        return;
-      }
-
-      printWindow.document.open();
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-
-      const triggerPrint = () => {
-        printWindow.focus();
-        printWindow.print();
-      };
-
-      if (printWindow.document.readyState === "complete") {
-        triggerPrint();
-      } else {
-        printWindow.onload = triggerPrint;
-      }
-    } catch (error) {
-      console.error("Export error:", error);
-      showToast(
-        "Export failed",
-        "Unable to generate the report. Please try again.",
-        "error",
-      );
-    }
-  };
-
-  const handleDelete = async (item: InventoryItem) => {
-    if (!isAdmin || !authToken) {
-      showToast("Forbidden", "Staff users cannot delete stock items.", "error");
-      return;
-    }
-
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/inventory/delete/${item.id}`,
-        {
-          method: "DELETE",
+    setMounted(true);
+    const hydrateSession = async () => {
+      try {
+      const savedTheme = localStorage.getItem("pharmacy_theme_v1") as "light" | "dark" | null;
+      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+      const initialTheme = savedTheme ?? (prefersDark ? "dark" : "light");
+      setTheme(initialTheme);
+      document.documentElement.dataset.theme = initialTheme;
+      document.documentElement.classList.toggle("dark", initialTheme === "dark");
+
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) {
+        const cookieToken = readSessionCookie();
+        if (!cookieToken) {
+          window.location.replace("/login");
+          return;
+        }
+
+        const response = await fetch(`${API_BASE}/auth/me`, {
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${cookieToken}`,
           },
-        },
-      );
+        });
 
-      if (res.ok) {
-        await fetchData();
-        setDeleteModalItem(null);
-        setActiveActionMenuId(null);
-        showToast(
-          "Item deleted",
-          `${item.name} batch ${item.batch_number} was removed successfully.`,
-          "success",
-        );
-      } else {
-        const contentType = res.headers.get("content-type") || "";
-        let errorMessage = "Unable to delete this item right now.";
-
-        if (contentType.includes("application/json")) {
-          const errData = await res.json();
-          errorMessage = errData.message || errData.error || errorMessage;
-        } else {
-          const text = await res.text();
-          errorMessage = text?.trim() || errorMessage;
+        if (!response.ok) {
+          clearSessionCookie();
+          localStorage.removeItem(SESSION_KEY);
+          window.location.replace("/login");
+          return;
         }
 
-        showToast("Delete failed", errorMessage, "error");
-      }
-    } catch (_err) {
-      console.error("Delete error:", _err);
-      showToast(
-        "Connection issue",
-        "Unable to reach the server. Please try again.",
-        "error",
-      );
-    }
-  };
-
-  const handleSell = async (
-    item: InventoryItem,
-    quantityToSell: number,
-    dateSold: string,
-    sellerName: string,
-    receiverName: string,
-  ) => {
-    if (item.quantity <= 0) {
-      showToast("Stock unavailable", `${item.name} is out of stock.`, "error");
-      return;
-    }
-
-    if (!Number.isInteger(quantityToSell) || quantityToSell <= 0) {
-      showToast("Invalid quantity", "Enter a valid whole number.", "error");
-      return;
-    }
-
-    if (quantityToSell > item.quantity) {
-      showToast(
-        "Quantity too high",
-        `Only ${item.quantity} available.`,
-        "error",
-      );
-      return;
-    }
-
-    try {
-      const res = await fetch("http://localhost:5000/api/inventory/sell", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          batch_id: item.id,
-          quantity_sold: quantityToSell,
-          date_sold: dateSold,
-          seller_name: sellerName.trim(),
-          receiver_name: receiverName.trim(),
-        }),
-      });
-
-      if (res.ok) {
-        await fetchData();
-        if (isAdmin) {
-          await refreshAdminData();
+        const payload = (await response.json()) as { user?: AuthUser };
+        if (payload?.user) {
+          setToken(cookieToken);
+          setUser(payload.user);
+          localStorage.setItem(SESSION_KEY, JSON.stringify({ token: cookieToken, user: payload.user }));
+          setSessionCookie(cookieToken);
         }
-        setSellModalItem(null);
-        setSellQtyInput("1");
-        setSellerNameInput("");
-        setReceiverNameInput("");
-        showToast(
-          "Sale recorded",
-          `Sold ${quantityToSell} units of ${item.name}.`,
-          "success",
-        );
-      } else {
-        const errData = await res.json();
-        showToast("Sale failed", errData.message || "Server error.", "error");
+        return;
       }
-    } catch (_err) {
-      showToast("Connection issue", "Server unreachable.", "error");
-    }
-  };
 
-  // ========== NEW: Bulk Sale Handler ==========
-  /**
-   * Handle Multi-Item Order (Wholesale)
-   * Called when user clicks "Process Sale" in the cart modal
-   * Sends MULTIPLE items to backend in ONE transaction
-   */
-  const handleBulkSaleSubmit = async (
-    cartItems: CartItem[],
+      const parsed = JSON.parse(raw) as { token?: string; user?: AuthUser };
+      if (parsed?.token && parsed?.user) {
+        setToken(parsed.token);
+        setUser(parsed.user);
+        setSessionCookie(parsed.token);
+      }
+      } catch {
+        localStorage.removeItem(SESSION_KEY);
+        window.location.replace("/login");
+      } finally {
+        setAuthChecked(true);
+      }
+    };
+
+    void hydrateSession();
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("pharmacy_theme_v1", theme);
+  }, [mounted, theme]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToast(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!token || !user) {
+      setInventory([]);
+      return;
+    }
+
+    void loadInventory(true);
+  }, [loadInventory, token, user]);
+
+  const lowStockCount = useMemo(
+    () => inventory.filter((item) => item.quantity <= 10).length,
+    [inventory],
+  );
+
+  const categoryOptions = useMemo<CategoryOption[]>(() => {
+    const options = new Map<string, CategoryOption>();
+    options.set("all", { id: "all", label: "All categories" });
+
+    for (const item of inventory) {
+      const label = item.category_name?.trim() || "Uncategorized";
+      const key = label.toLowerCase();
+      if (!options.has(key)) {
+        options.set(key, { id: key, label });
+      }
+    }
+
+    return Array.from(options.values()).sort((left, right) => left.label.localeCompare(right.label));
+  }, [inventory]);
+
+  const visibleInventory = useMemo(() => {
+    const query = inventoryQuery.trim().toLowerCase();
+
+    return inventory.filter((item) => {
+      const categoryLabel = item.category_name?.trim() || "Uncategorized";
+      const matchesCategory =
+        selectedCategory === "all" || categoryLabel.toLowerCase() === selectedCategory;
+      const matchesQuery =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        item.batch_number.toLowerCase().includes(query);
+
+      return matchesCategory && matchesQuery;
+    });
+  }, [inventory, inventoryQuery, selectedCategory]);
+
+  const expiredCount = useMemo(
+    () =>
+      inventory.filter((item) => {
+        if (!item.expiry_date) {
+          return false;
+        }
+
+        return new Date(item.expiry_date).getTime() < Date.now();
+      }).length,
+    [inventory],
+  );
+
+  const handleSellOutSubmit = async (
+    items: CartItem[],
     customerName: string,
     tinNumber: string,
     sellerName?: string,
@@ -1183,1952 +285,460 @@ export default function PharmacyDashboard() {
     invoiceNo?: string,
     reference?: string,
   ) => {
-    // ========== INPUT VALIDATION ==========
-    if (!cartItems || cartItems.length === 0) {
-      showToast(
-        "Empty Cart",
-        "Please add at least one item to the order.",
-        "error",
-      );
-      return;
+    if (!token) {
+      throw new Error("Missing auth token");
     }
 
-    const safeSellerName = sellerName?.trim() || "";
-    const safeReceiverName = customerName.trim();
-
-    // ========== TRANSFORM CART INTO API FORMAT ==========
-    const items = cartItems.map((item) => ({
-      medicine_id: item.medicineId,
-      batch_number: item.batchNumber,
-      medicine_name: item.medicineName,
-      quantity: item.quantity,
-      price_per_unit: item.pricePerUnit,
-    }));
-
-    // ========== BUILD PAYLOAD ==========
-    const payload = {
-      items: items,
-      seller_name: safeSellerName,
-      receiver_name: safeReceiverName,
-      customer_name: customerName,
-      customer_tin: tinNumber,
-      customer_sno: customerSNo || null,
-      payment_method: paymentMethod || "cash",
-      invoice_no: invoiceNo || undefined,
-      reference: reference || undefined,
-    };
-
-    // ========== SEND TO BACKEND ==========
-    setIsProcessingBulkSale(true);
+    setIsProcessingSale(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/inventory/bulk-sell",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify(payload),
-        },
-      );
+      const salesPayload = items.map((item) => ({
+        batch_id: item.medicineId,
+        quantity_sold: item.quantity,
+        medicine_name: item.medicineName,
+      }));
 
-      const result = await response.json();
-
-      // ========== ERROR HANDLING ==========
-      if (!response.ok) {
-        showToast(
-          "Order Processing Failed ❌",
-          result.message ||
-            "Could not process bulk sale. Please check your order and try again.",
-          "error",
-        );
-        console.error("Bulk sale error response:", {
-          status: response.status,
-          message: result.message,
-          error: result.error,
-        });
-        return;
-      }
-
-      // ========== SUCCESS HANDLING ==========
-      const {
-        data: { total_items_processed, total_revenue, items: processedItems },
-      } = result;
-
-      const itemsSummary = processedItems
-        .slice(0, 3)
-        .map(
-          (item: {
-            medicine_name: string;
-            quantity_deducted?: number;
-            quantity_sold?: number;
-          }) =>
-            `${item.medicine_name} (${item.quantity_deducted || item.quantity_sold} units)`,
-        )
-        .join(", ");
-
-      const summary =
-        processedItems.length > 3
-          ? `${itemsSummary}, +${processedItems.length - 3} more`
-          : itemsSummary;
-
-      showToast(
-        "✅ Order Processed Successfully!",
-        `${total_items_processed} items | ${summary} | Total: ETB ${total_revenue}`,
-        "success",
-      );
-
-      // ========== UPDATE UI ==========
-      setIsGeneralSaleOpen(false);
-      setBulkSaleSellerName("");
-
-      // ✅ REFRESH INVENTORY
-      await fetchData();
-      if (isAdmin) {
-        await refreshAdminData();
-      }
-    } catch (error) {
-      showToast(
-        "🌐 Network Error",
-        "Failed to submit order. Please check your connection and try again.",
-        "error",
-      );
-      console.error("Bulk sale network error:", error);
-    } finally {
-      setIsProcessingBulkSale(false);
-    }
-  };
-  // ========== END: Bulk Sale Handler ==========
-
-  const handleAddStock = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // Allow either existing category ID or custom category name
-    let categoryIdToUse = formData.categoryId;
-    let categoryNameToUse = "";
-
-    // If user selected "Other", use custom category name
-    if (formData.categoryId === "other") {
-      if (!customCategoryName.trim()) {
-        showToast(
-          "Custom category required",
-          "Please enter a category name.",
-          "error",
-        );
-        return;
-      }
-      categoryNameToUse = customCategoryName.trim();
-      categoryIdToUse = "";
-    }
-
-    try {
-      const res = await fetch("http://localhost:5000/api/inventory/stock-in", {
+      const response = await fetch(`${API_BASE}/inventory/bulk-sell`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          category_id: categoryIdToUse ? Number(categoryIdToUse) : null,
-          category_name: categoryNameToUse || undefined,
-          medicine_id: formData.medId,
-          medicine_name: formData.name,
-          batch_number: formData.batch,
-          quantity: formData.qty,
-          expiry_date: formData.expiry,
-          price_per_unit: formData.price,
+          sales: salesPayload,
+          items: items.map((item) => ({
+            medicine_id: item.medicineId,
+            batch_number: item.batchNumber,
+            medicine_name: item.medicineName,
+            quantity: item.quantity,
+            price_per_unit: item.pricePerUnit,
+          })),
+          seller_name: sellerName?.trim() || undefined,
+          receiver_name: customerName.trim(),
+          customer_name: customerName.trim(),
+          customer_tin: tinNumber.trim(),
+          tin_number: tinNumber.trim(),
+          customer_sno: customerSNo?.trim() || null,
+          payment_method: paymentMethod || "cash",
+          invoice_no: invoiceNo || undefined,
+          reference: reference || undefined,
         }),
       });
 
-      if (res.ok) {
-        setFormData({
-          categoryId: "",
-          medId: "",
-          name: "",
-          batch: "",
-          qty: "",
-          expiry: "",
-          price: "",
-        });
-        setCustomCategoryName("");
-        setCategorySearchTerm("");
-        fetchData();
-        showToast("Stock Updated", "New batch added successfully.", "success");
-      } else {
-        const contentType = res.headers.get("content-type") || "";
-        let errorMessage = "Could not add stock.";
+      const payload = await response.json();
 
-        if (contentType.includes("application/json")) {
-          const errData = await res.json();
-          errorMessage = errData.message || errData.error || errorMessage;
-        } else {
-          const text = await res.text();
-          errorMessage = text?.trim() || errorMessage;
-        }
-
-        showToast("Stock add failed", errorMessage, "error");
+      if (!response.ok) {
+        throw new Error(payload?.message || "Could not process bulk sale");
       }
-    } catch (_err) {
-      showToast("Error", "Could not add stock.", "error");
+
+      setToast({
+        title: "Sale recorded",
+        description: `Processed ${payload?.data?.total_items_processed ?? items.length} item(s).`,
+        tone: "success",
+      });
+
+      // Reflect stock updates immediately in UI, then sync from server.
+      const soldById = new Map<number, number>();
+      for (const item of items) {
+        soldById.set(item.medicineId, (soldById.get(item.medicineId) || 0) + item.quantity);
+      }
+
+      setInventory((previous) =>
+        previous.map((row) => {
+          const sold = soldById.get(row.id) || 0;
+          return sold > 0
+            ? {
+                ...row,
+                quantity: Math.max(0, row.quantity - sold),
+              }
+            : row;
+        }),
+      );
+
+      setIsSellOutOpen(false);
+      await fetch(`${API_BASE}/inventory`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => setInventory(Array.isArray(data) ? data : []));
+    } catch (error) {
+      setToast({
+        title: "Sale failed",
+        description: error instanceof Error ? error.message : "Unable to process sale.",
+        tone: "error",
+      });
+      throw error;
+    } finally {
+      setIsProcessingSale(false);
     }
   };
 
-  const startSellInput = (item: InventoryItem) => {
-    const status = getStatusStyles(
-      item.quantity,
-      item.expiry_date,
-      item.initial_batch_quantity ?? item.initial_quantity,
-    );
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoggingIn(true);
+    setToast(null);
 
-    if (item.quantity <= 0 || status.isExpired) {
-      if (status.isExpired) {
-        showToast(
-          "Sale blocked",
-          "Expired medicine cannot be sold. Remove from shelves immediately.",
-          "error",
-        );
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = (await response.json()) as LoginResponse & { error?: string };
+
+      if (!response.ok || !data.token || !data.user) {
+        throw new Error(data.error ?? data.message ?? "Login failed");
       }
-      return;
-    }
 
-    setSellModalItem(item);
-    setSellQtyInput("1");
-    setSellDateInput(new Date().toISOString().split("T")[0]);
+      setToken(data.token);
+      setUser(data.user);
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ token: data.token, user: data.user }));
+      setSessionCookie(data.token);
+      setPassword("");
+      setToast({
+        title: "Signed in",
+        description: `Welcome back, ${data.user.username}.`,
+        tone: "success",
+      });
+    } catch (error) {
+      setToast({
+        title: "Login failed",
+        description: error instanceof Error ? error.message : "Unable to authenticate.",
+        tone: "error",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
-  const categoryAnalyticsData = useMemo(() => {
-    const categoryMap = new Map<string, CategoryAnalyticsPoint>();
-
-    inventory.forEach((item) => {
-      const categoryName = item.category_name?.trim() || "Uncategorized";
-      const categoryKey = String(item.category_id ?? categoryName);
-
-      if (!categoryMap.has(categoryKey)) {
-        categoryMap.set(categoryKey, {
-          category: categoryName,
-          totalQuantity: 0,
-          medicineCount: 0,
-          totalValue: 0,
-        });
-      }
-
-      const point = categoryMap.get(categoryKey);
-      if (!point) return;
-
-      const quantity = Number(item.quantity) || 0;
-      const pricePerUnit = Number(item.price_per_unit) || 0;
-
-      point.totalQuantity += quantity;
-      point.medicineCount += 1;
-      point.totalValue += quantity * pricePerUnit;
+  const handleLogout = () => {
+    setToken(null);
+    setUser(null);
+    setInventory([]);
+    localStorage.removeItem(SESSION_KEY);
+    clearSessionCookie();
+    setToast({
+      title: "Signed out",
+      description: "Your session was cleared.",
+      tone: "info",
     });
+  };
 
-    const categorySortMetric: CategoryMetricKey =
-      selectedCategoryMetric === "medicineCountAndStockValue" ||
-      selectedCategoryMetric === "allMetricsCombined"
-        ? "totalValue"
-        : selectedCategoryMetric;
-
-    return Array.from(categoryMap.values()).sort(
-      (a, b) => b[categorySortMetric] - a[categorySortMetric],
-    );
-  }, [inventory, selectedCategoryMetric]);
-
-  const loginLockRemainingSeconds = loginLockUntil
-    ? Math.max(0, Math.ceil((loginLockUntil - currentTime) / 1000))
-    : 0;
-  const isLoginLocked = loginLockRemainingSeconds > 0;
-
-  // --- Conditional Rendering for Login ---
-
-  if (!isLoggedIn) {
+  if (!mounted || !authChecked) {
     return (
-      <div className="relative flex min-h-[100dvh] items-center justify-center overflow-x-hidden px-4 py-6 text-black sm:px-6 sm:py-10">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/image.png')" }}
-        />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent_30%),linear-gradient(135deg,rgba(2,6,23,0.82),rgba(15,23,42,0.72),rgba(8,47,73,0.76))]" />
-        <div className="pointer-events-none absolute -top-20 -left-20 h-56 w-56 rounded-full bg-cyan-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-blue-400/20 blur-3xl" />
-
-        <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-white/30 bg-white/92 p-5 shadow-[0_30px_90px_-30px_rgba(15,23,42,0.85)] backdrop-blur-xl transition-all duration-200 sm:max-w-md sm:p-8">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-900/80 bg-slate-100/90 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-[3px_3px_0_0_#0f172a] sm:text-[11px]">
-            <span aria-hidden="true">🔐</span>
-            Secure Role Login
+      <main className={pageClassName}>
+        <div className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center">
+          <div className="rounded-4xl border border-white/80 bg-white/90 px-8 py-10 text-sm font-semibold text-slate-500 shadow-[0_25px_80px_rgba(15,23,42,0.12)] backdrop-blur">
+            Loading pharmacy dashboard...
           </div>
-
-          <div className="mb-5 sm:mb-6">
-            <h1 className="group relative flex flex-col gap-0.5 text-2xl font-black leading-tight cursor-default transition-all duration-300 sm:block sm:text-3xl md:text-4xl">
-              {/* The "Primary" Color (Blue side) */}
-              <span className="bg-gradient-to-r from-[#2563EB] to-[#3B82F6] bg-clip-text text-transparent transition-all duration-500 group-hover:from-[#10B981] group-hover:to-[#34D399]">
-                Express Pharmaceutical
-              </span>
-
-              {/* The "Secondary" Color (Green side) */}
-              <span className="bg-linear-to-r from-[#10B981] to-[#059669] bg-clip-text text-transparent transition-all duration-500 group-hover:from-[#2563EB] group-hover:to-[#60A5FA] sm:ml-2">
-                Wholesale
-              </span>
-
-              {/* Underline Hover Movement */}
-              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-linear-to-r from-[#3B82F6] to-[#10B981] transition-all duration-500 group-hover:w-full"></span>
-            </h1>
-            {/* <p className="mt-3 max-w-sm text-sm font-semibold leading-6 text-slate-600">
- Secure access for Admin and Staff workflows in one dashboard.
- </p> */}
-          </div>
-          <label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-600 sm:text-[11px]">
-            Username
-          </label>
-          <div className="relative mb-5">
-            <input
-              type="text"
-              value={username}
-              placeholder="Enter username"
-              disabled={isLoginLocked}
-              className="w-full rounded-xl border border-transparent bg-slate-100 px-4 py-3 text-base text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 sm:py-4 sm:text-[1rem]"
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
-          </div>
-          <label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-slate-600 sm:text-[11px]">
-            Password
-          </label>
-          <div className="relative mb-5">
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              placeholder="Enter password"
-              disabled={isLoginLocked}
-              className="w-full rounded-xl border border-transparent bg-slate-100 px-4 py-3 pr-14 text-base text-black outline-none transition-all duration-200 hover:border-blue-300 hover:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 sm:py-4 sm:text-[1rem]"
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            />
-            <button
-              type="button"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              onClick={() => setShowPassword((previous) => !previous)}
-              disabled={isLoginLocked}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600 transition-all duration-200 hover:-translate-y-[52%] hover:border-slate-300 hover:text-black disabled:cursor-not-allowed disabled:opacity-50 sm:p-3"
-            >
-              {showPassword ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3 3l18 18M10.584 10.587A2 2 0 0013.41 13.41M9.88 5.09A9.77 9.77 0 0112 4.8c4.465 0 8.268 2.943 9.542 7.059a.999.999 0 010 .282 11.05 11.05 0 01-4.132 5.923M6.228 6.228A11.03 11.03 0 002.458 11.86a1 1 0 000 .282A11.04 11.04 0 007.5 18.118"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.458 12C3.732 7.884 7.535 4.94 12 4.94S20.268 7.884 21.542 12c-1.274 4.116-5.077 7.06-9.542 7.06S3.732 16.116 2.458 12z"
-                  />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              )}
-            </button>
-          </div>
-
-          {loginErrorMessage && (
-            <p
-              className={`-mt-1 mb-4 text-sm font-bold leading-5 ${
-                isLoginLocked ? "text-amber-600" : "text-rose-600"
-              }`}
-            >
-              {loginErrorMessage}
-            </p>
-          )}
-
-          <button
-            onClick={handleLogin}
-            disabled={isLoginLocked}
-            className="w-full min-h-12 rounded-xl bg-blue-400 px-4 py-3.5 text-base font-black text-white shadow-none transition-all duration-200 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-400 disabled:shadow-none sm:py-4 sm:text-lg"
-          >
-            {isLoginLocked
-              ? `Try again in ${loginLockRemainingSeconds}s`
-              : "Login"}
-          </button>
-
-          {isLoginLocked && (
-            <p className="mt-4 text-center text-[11px] font-semibold leading-5 text-slate-600 sm:text-xs">
-              Access temporarily locked. Please try again in{" "}
-              {loginLockRemainingSeconds} seconds.
-            </p>
-          )}
         </div>
-      </div>
+      </main>
     );
   }
 
-  // --- Main Dashboard UI ---
+  if (!user) {
+    return (
+      <main className={pageClassName}>
+        <div className="mx-auto grid min-h-[85vh] max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="space-y-6">
+            <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-sky-700">
+              Pharmacy system
+            </span>
+            <div className="space-y-4">
+              <h1 className="max-w-2xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+                Faster stock entry, cleaner analytics, and a simpler dashboard.
+              </h1>
+              <p className="max-w-2xl text-lg leading-8 text-slate-600">
+                Stock entry now lives on its own page, analytics live separately, and the main dashboard stays focused on login, status, and shortcuts.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { label: "Dedicated stock page", value: "/stock-entry" },
+                { label: "Analytics page", value: "/analytics" },
+                { label: "PostgreSQL auth", value: "Active" },
+              ].map((item) => (
+                <div key={item.label} className="rounded-4xl border border-white/80 bg-white/85 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+                  <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{item.label}</div>
+                  <div className="mt-2 text-lg font-bold text-slate-950">{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-  const pageTheme = isDarkMode
-    ? "bg-slate-950 text-slate-100"
-    : "bg-white text-blue";
-  const cardTheme = isDarkMode
-    ? "bg-slate-900 border-slate-700"
-    : "bg-white border-slate-300";
-  const titleTheme = isDarkMode ? "text-slate-50" : "text-black";
-  const mutedTheme = isDarkMode ? "text-slate-300" : "text-slate-600";
-  const searchTheme = isDarkMode
-    ? "bg-slate-800/70 text-slate-100"
-    : "bg-white text-black";
-  const quickImportFieldClass =
-    "w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-black placeholder:text-slate-400 outline-none shadow-none transition-all duration-200 hover:border-slate-300 hover:bg-white focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200";
+          <section className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_30px_90px_rgba(15,23,42,0.14)] backdrop-blur sm:p-8">
+            <div className="mb-6 space-y-2">
+              <h2 className="text-2xl font-bold text-slate-950">Sign in</h2>
+              <p className="text-sm leading-6 text-slate-500">Use your pharmacy account to access the dashboard.</p>
+            </div>
 
-  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
-  const filteredCategories = categories.filter((category) =>
-    category.category_name
-      .toLowerCase()
-      .includes(categorySearchTerm.trim().toLowerCase()),
-  );
+            <form className="space-y-4" onSubmit={handleLogin}>
+              <label className="block space-y-2 text-sm font-semibold text-slate-700">
+                <span>Username</span>
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-sky-400 focus:bg-white"
+                  placeholder="Enter username"
+                  autoComplete="username"
+                />
+              </label>
+              <label className="block space-y-2 text-sm font-semibold text-slate-700">
+                <span>Password</span>
+                <input
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type="password"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-sky-400 focus:bg-white"
+                  placeholder="Enter password"
+                  autoComplete="current-password"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoggingIn ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
 
-  const filteredInventory = inventory.filter((item) => {
-    const matchesCategory =
-      categoryFilter === "all" ||
-      String(item.category_id ?? "") === categoryFilter;
-
-    if (!normalizedSearchTerm) return matchesCategory;
-
-    const medicineName = item.name.toLowerCase();
-    const medicineId = String(item.id).toLowerCase();
-
-    const matchesSearch =
-      medicineName.includes(normalizedSearchTerm) ||
-      medicineId.includes(normalizedSearchTerm);
-
-    return matchesCategory && matchesSearch;
-  });
-
-  const currentCategoryMetric =
-    selectedCategoryMetric === "medicineCountAndStockValue" ||
-    selectedCategoryMetric === "allMetricsCombined"
-      ? CATEGORY_ANALYTICS_METRICS.medicineCount
-      : CATEGORY_ANALYTICS_METRICS[selectedCategoryMetric];
-
-  const maxSoldQty =
-    reportData?.topSellingMedicines.reduce(
-      (max, item) => Math.max(max, item.quantitySold),
-      0,
-    ) || 1;
-
-  const detailedSalesRecords = salesLogData?.records || [];
-  const detailedSalesQuantity = detailedSalesRecords.reduce(
-    (sum, record) => sum + Number(record.quantitySold || 0),
-    0,
-  );
-  const detailedSalesValue = detailedSalesRecords.reduce(
-    (sum, record) => sum + Number(record.totalPrice || 0),
-    0,
-  );
-  const totalSalesLogRecords = detailedSalesRecords.length;
-  const salesLogRowsPerPageForPagination =
-    salesLogRowsPerPage === "all"
-      ? Math.max(1, totalSalesLogRecords)
-      : salesLogRowsPerPage;
-  const totalSalesLogPages = Math.max(
-    1,
-    Math.ceil(totalSalesLogRecords / salesLogRowsPerPageForPagination),
-  );
-  const salesLogStartIndex =
-    (salesLogPage - 1) * salesLogRowsPerPageForPagination;
-  const salesLogEndIndex = Math.min(
-    salesLogStartIndex + salesLogRowsPerPageForPagination,
-    totalSalesLogRecords,
-  );
-  const paginatedSalesRecords = detailedSalesRecords.slice(
-    salesLogStartIndex,
-    salesLogEndIndex,
-  );
-  const visibleSalesLogStart =
-    totalSalesLogRecords === 0 ? 0 : salesLogStartIndex + 1;
-  const visibleSalesLogEnd = totalSalesLogRecords === 0 ? 0 : salesLogEndIndex;
-  const inactiveMedicineRecords = inactiveHistoryData?.medicines || [];
-  const inactiveCategoryRecords = inactiveHistoryData?.categories || [];
+            {toast ? (
+              <div
+                className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
+                  toast.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : toast.tone === "error"
+                      ? "border-rose-200 bg-rose-50 text-rose-800"
+                      : "border-sky-200 bg-sky-50 text-sky-800"
+                }`}
+              >
+                <div className="font-semibold">{toast.title}</div>
+                <div className="mt-1">{toast.description}</div>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <div
-      className={`min-h-screen overflow-x-hidden font-sans print:bg-white print:p-0 ${pageTheme}`}
+    <AppShell
+      profileName={user.username}
+      profileEmail={`${user.username}@expresspharma.local`}
+      onSignOut={handleLogout}
     >
-      {/* Toast Notifications */}
-      <div className="fixed left-4 right-4 top-4 z-50 flex w-auto max-w-none flex-col gap-3 print:hidden sm:left-auto sm:right-6 sm:top-6 sm:w-full sm:max-w-sm">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`rounded-lg border p-4 shadow-none backdrop-blur-sm ${
-              toast.type === "error"
-                ? "border-red-200 bg-red-50 text-red-900"
-                : "border-emerald-200 bg-emerald-50 text-emerald-900"
-            }`}
-          >
-            <p className="text-sm font-black uppercase tracking-wide">
-              {toast.title}
-            </p>
-            <p className="mt-1 text-sm font-medium">{toast.description}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Sale Modal */}
-      {sellModalItem && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 print:hidden">
-          <div
-            className={`w-full max-w-sm rounded-lg border p-6 shadow-none ${cardTheme}`}
-          >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSell(
-                  sellModalItem,
-                  Number(sellQtyInput),
-                  sellDateInput,
-                  sellerNameInput,
-                  receiverNameInput,
-                );
-              }}
-            >
-              <h3 className={`text-lg font-black ${titleTheme}`}>
-                Confirm Sale
-              </h3>
-              <p className={`mt-1 text-xs font-medium ${mutedTheme}`}>
-                {sellModalItem.name} • Available: {sellModalItem.quantity} units
-              </p>
-              <div className="mt-4 space-y-3">
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={sellModalItem.quantity}
-                    value={sellQtyInput}
-                    onChange={(e) => setSellQtyInput(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-black outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                    Seller Name
-                  </label>
-                  <input
-                    type="text"
-                    value={sellerNameInput}
-                    onChange={(e) => setSellerNameInput(e.target.value)}
-                    placeholder="Enter seller name"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-black outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                    Receiver Name
-                  </label>
-                  <input
-                    type="text"
-                    value={receiverNameInput}
-                    onChange={(e) => setReceiverNameInput(e.target.value)}
-                    placeholder="Enter receiver name"
-                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-black outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                    Transaction Date
-                  </label>
-                  <input
-                    type="text"
-                    value={new Date(sellDateInput).toLocaleDateString("en-GB")}
-                    readOnly
-                    className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm font-black text-slate-700 outline-none"
-                  />
-                </div>
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center shadow-none">
-                  <p className="text-lg font-black text-blue-700">
-                    ETB{" "}
-                    {(
-                      Number(sellQtyInput) * sellModalItem.price_per_unit
-                    ).toFixed(2)}
-                  </p>
-                </div>
+      <div className={dashboardFrameClassName}>
+        <header className={headerClassName}>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-white/85">
+                Pharmacy dashboard
               </div>
-              <div className="mt-5 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSellModalItem(null);
-                    setSellerNameInput("");
-                    setReceiverNameInput("");
-                  }}
-                  className="rounded-lg bg-slate-200 px-4 py-2 text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg border border-blue-700 bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow-none"
-                >
-                  Confirm Sale
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Modal */}
-      {isAdmin && deleteModalItem && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 p-4 print:hidden">
-          <div
-            className={`w-full max-w-sm rounded-lg border p-6 shadow-none ${cardTheme}`}
-          >
-            <h3 className={`text-lg font-black ${titleTheme}`}>Delete Item</h3>
-            <p className={`mt-2 text-sm ${mutedTheme}`}>
-              Permanently delete{" "}
-              <span className="font-black">{deleteModalItem.name}</span>?
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteModalItem(null)}
-                className="rounded-lg bg-slate-200 px-4 py-2 text-xs font-bold text-slate-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDelete(deleteModalItem)}
-                className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex min-h-screen flex-col gap-4 p-4 sm:gap-6 sm:p-6 lg:flex-row lg:p-8 print:p-0">
-        <aside className="relative w-full print:hidden self-start lg:sticky lg:top-3 lg:w-64 xl:w-60">
-          <div
-            className={`flex min-h-0 flex-col rounded-xl border border-white/40 p-3 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:min-h-[calc(100vh-1.5rem)] ${cardTheme}`}
-          >
-            <div className="group rounded-xl bg-white p-4 text-slate-800 shadow-none">
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-transparent bg-gradient-to-r from-[#23f13b] via-[#d5dfdb] to-[#2563EB] bg-clip-text transition-all duration-300 group-hover:from-[#1D4ED8] group-hover:via-[#059669] group-hover:to-[#1D4ED8]">
-                Pharmacy Dashboard
-              </p>
-              <h2 className="mt-1.5 text-base font-black leading-tight text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-300 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8] sm:text-lg">
-                Express Pharmaceutical Wholesale
-              </h2>
-            </div>
-
-            <div className="mt-3 rounded-xl border border-slate-300 bg-white p-3 shadow-none">
-              <p className="text-[10px] font-black uppercase tracking-wide text-transparent bg-gradient-to-r from-[#16A34A] via-[#EAB308] to-[#22C55E] bg-clip-text transition-all duration-300 hover:from-[#15803D] hover:via-[#F59E0B] hover:to-[#16A34A]">
-                Signed in as
-              </p>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-sm font-black text-[#16A34A] transition-colors duration-300 hover:text-[#15803D] sm:text-base">
-                    {loggedInUser?.username || "User"}
-                  </p>
-                  <p className="text-[11px] font-medium text-slate-600">
-                    {isAdmin ? "Administrator access" : "Staff access"}
-                  </p>
-                </div>
-                <span
-                  className={`inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide shadow-[2px_2px_0_0_#0f172a] ${
-                    isAdmin
-                      ? "border-blue-300 bg-blue-100 text-blue-700"
-                      : "border-slate-300 bg-slate-200 text-slate-700"
-                  }`}
-                >
-                  {isAdmin ? "ADMIN" : "STAFF"}
-                </span>
-              </div>
-            </div>
-
-            <nav className="mt-3 space-y-1.5">
-              <p className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-300 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8]">
-                Quick navigation
-              </p>
-              <a
-                href="#dashboard"
-                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
-              >
-                Dashboard
-                <span
-                  aria-hidden="true"
-                  className="text-[#2563EB] transition-all duration-300 group-hover:text-[#10B981]"
-                >
-                  ↗
-                </span>
-              </a>
-              <a
-                href="#sales-report"
-                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
-              >
-                Reports
-                <span
-                  aria-hidden="true"
-                  className="text-[#2563EB] transition-all duration-300 group-hover:text-[#10B981]"
-                >
-                  ↗
-                </span>
-              </a>
-              <a
-                href="#quick-import"
-                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
-              >
-                Quick Import
-                <span
-                  aria-hidden="true"
-                  className="text-[#2563EB] transition-all duration-300 group-hover:text-[#10B981]"
-                >
-                  ↗
-                </span>
-              </a>
-              <a
-                href="#live-inventory"
-                className="group flex min-h-11 items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[#2563EB]/30 hover:bg-gradient-to-r hover:from-[#2563EB]/10 hover:via-white hover:to-[#10B981]/10 hover:text-slate-900 hover:shadow-[0_12px_24px_-16px_rgba(37,99,235,0.55)]"
-              >
-                Live Inventory
-                <span
-                  aria-hidden="true"
-                  className="text-[#2563EB] transition-all duration-300 group-hover:text-[#10B981]"
-                >
-                  ↗
-                </span>
-              </a>
-            </nav>
-
-            <div className="mt-auto space-y-1.5 pt-3">
-              <button
-                type="button"
-                onClick={() => setIsDarkMode((prev) => !prev)}
-                className="w-full min-h-11 rounded-lg border border-indigo-300 bg-gradient-to-r from-indigo-50 to-white px-3 py-2 text-sm font-black text-indigo-700 shadow-[0_12px_26px_-16px_rgba(99,102,241,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-indigo-400 hover:from-indigo-100 hover:to-indigo-50 hover:text-indigo-800 hover:shadow-[0_16px_30px_-18px_rgba(99,102,241,0.55)]"
-              >
-                {isDarkMode ? "🌙 Light Mode" : "☀️ Dark Mode"}
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="w-full min-h-11 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-black text-rose-500 shadow-[0_12px_26px_-16px_rgba(244,63,94,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-gradient-to-r hover:from-rose-50 hover:via-white hover:to-red-50 hover:text-rose-700 hover:shadow-[0_16px_30px_-18px_rgba(244,63,94,0.5)]"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        <main id="dashboard" className="min-w-0 flex-1 space-y-8">
-          <header className="mb-8 flex flex-col gap-4 rounded-xl border border-white/40 bg-gradient-to-br from-[#2563EB]/10 via-[#10B981]/10 to-[#8B5CF6]/10 p-4 shadow-[0_24px_80px_-35px_rgba(15,23,42,0.45)] backdrop-blur-xl print:hidden sm:p-5 lg:flex-row lg:items-end lg:justify-between lg:gap-6">
-            <div>
-              <h1 className="inline-block text-xl font-black tracking-tight text-transparent bg-gradient-to-r from-[#2563EB] via-[#10B981] to-[#2563EB] bg-clip-text transition-all duration-200 hover:from-[#1D4ED8] hover:via-[#059669] hover:to-[#1D4ED8] sm:text-2xl lg:text-3xl">
-                Express Pharmaceutical Wholesale
+              <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
+                Welcome back, {user.username}.
               </h1>
-              <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                Managing Wholesale Pharmacy Stock
+              <p className="max-w-3xl text-sm leading-7 text-sky-50/90 sm:text-base">
+                Stock entry and analytics now live on separate pages so the dashboard stays open and readable.
               </p>
             </div>
-            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-center">
-              {isLoggedIn && (
-                <button
-                  onClick={() => setIsGeneralSaleOpen(true)}
-                  className="min-h-11 w-full rounded-lg border border-emerald-300 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 text-sm font-black text-emerald-700 shadow-[0_12px_26px_-16px_rgba(16,185,129,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400 hover:from-emerald-100 hover:to-emerald-50 hover:text-emerald-800 hover:shadow-[0_16px_30px_-18px_rgba(16,185,129,0.55)] sm:w-auto"
-                >
-                  🛒 Sell Out Items
-                </button>
-              )}
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={handleRefresh}
-                className="min-h-11 w-full rounded-lg border border-blue-300 bg-gradient-to-r from-blue-50 to-white px-4 py-3 text-sm font-black text-blue-700 shadow-[0_12px_26px_-16px_rgba(37,99,235,0.45)] transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-400 hover:from-blue-100 hover:to-blue-50 hover:text-blue-800 hover:shadow-[0_16px_30px_-18px_rgba(37,99,235,0.55)] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-                disabled={isRefreshing}
+                onClick={handleRefreshInventory}
+                disabled={isLoadingInventory}
+                className={headerButtonClassName + " disabled:cursor-not-allowed disabled:opacity-70"}
               >
-                {isRefreshing ? "Refreshing..." : "Refresh"}
+                {isLoadingInventory ? "Refreshing..." : "Refresh"}
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={headerButtonClassName}
+              >
+                {theme === "dark" ? "Light mode" : "Night mode"}
               </button>
             </div>
-          </header>
+          </div>
+        </header>
 
-          {isAdmin && (
-            <section
-              id="sales-report"
-              className="mb-10 border-t border-t-slate-300 pt-8 print:mb-0 print:border-0 print:pt-0"
-            >
-              <div
-                className={`rounded-xl border border-slate-300/70 p-4 transition-all duration-200 sm:p-6 ${cardTheme}`}
-              >
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className={`text-2xl font-black ${titleTheme}`}>
-                    Reports Overview
-                  </h2>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsResetConfirmOpen(true)}
-                      disabled={isResettingSalesData}
-                      className="rounded-xl border border-emerald-300 bg-linear-to-r from-emerald-50 via-white to-blue-50 px-4 py-2.5 text-sm font-black text-emerald-700 shadow-[0_12px_26px_-18px_rgba(16,185,129,0.55)] transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-400 hover:text-emerald-800 hover:shadow-[0_16px_30px_-20px_rgba(16,185,129,0.65)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {isResettingSalesData
-                        ? "Resetting..."
-                        : "Reset Sales History"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleExportReport}
-                      className="rounded-lg border border-slate-900 bg-white px-4 py-2 text-sm font-black text-black shadow-none transition-all duration-200 "
-                    >
-                      Export to PDF / Print
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-4 flex flex-wrap gap-2">
-                  {REPORT_RANGE_OPTIONS.map((rangeOption) => {
-                    const isActive = selectedReportRange === rangeOption.value;
-                    return (
-                      <button
-                        key={rangeOption.value}
-                        type="button"
-                        onClick={() =>
-                          setSelectedReportRange(rangeOption.value)
-                        }
-                        className={`rounded-lg border px-4 py-2 text-sm font-black shadow-none hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${
-                          isActive
-                            ? "border-slate-900 bg-[#1d7cf2] text-white"
-                            : "border-slate-300 bg-white text-slate-700"
-                        }`}
-                      >
-                        {rangeOption.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {isAdmin && isResetConfirmOpen && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 print:hidden">
-                    <button
-                      type="button"
-                      aria-label="Close reset confirmation"
-                      className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
-                      onClick={() => setIsResetConfirmOpen(false)}
-                    />
-                    <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-emerald-200 bg-white shadow-[0_28px_80px_-28px_rgba(15,23,42,0.55)]">
-                      <div className="h-2 bg-linear-to-r from-emerald-400 via-blue-400 to-emerald-400" />
-                      <div className="p-6 md:p-8">
-                        <div className="flex items-start gap-4">
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-2xl">
-                            ♻️
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-600">
-                              Reset Sales History
-                            </p>
-                            <h3 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
-                              Clear the report history and start fresh
-                            </h3>
-                            <p className="mt-3 text-sm font-medium leading-6 text-slate-600">
-                              This will remove all sales transactions from the
-                              report log. Inventory, categories, and medicine
-                              stock will stay intact so new sales can start
-                              immediately.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-6 grid gap-3 rounded-2xl border border-slate-200 bg-linear-to-br from-slate-50 to-white p-4 md:grid-cols-2">
-                          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
-                            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">
-                              Will be reset
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              Revenue, items sold, top sellers, and detailed
-                              sales log.
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-4">
-                            <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">
-                              Will remain
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-700">
-                              Stock quantities, categories, analytics, and
-                              medicines.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setIsResetConfirmOpen(false)}
-                            disabled={isResettingSalesData}
-                            className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-black text-slate-700 transition-all duration-200 hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleResetSalesHistory}
-                            disabled={isResettingSalesData}
-                            className="rounded-xl border border-emerald-300 bg-linear-to-r from-emerald-600 via-emerald-500 to-blue-600 px-5 py-2.5 text-sm font-black text-white shadow-[0_16px_30px_-18px_rgba(16,185,129,0.65)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-18px_rgba(16,185,129,0.75)] disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isResettingSalesData
-                              ? "Clearing..."
-                              : "Confirm Reset"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200">
-                    <p className="text-xs font-black uppercase text-emerald-700">
-                      Total Revenue
-                    </p>
-                    <p className="mt-1 text-2xl font-black text-emerald-700">
-                      ETB {Number(reportData?.totalRevenue || 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-emerald-200 bg-linear-to-br from-emerald-50 to-white p-4 shadow-none transition-all duration-200">
-                    <p className="text-xs font-black uppercase text-emerald-700">
-                      Total Items Sold
-                    </p>
-                    <p className="mt-1 text-2xl font-black text-emerald-700">
-                      {Math.round(Number(reportData?.totalItemsSold || 0))}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-slate-300 bg-linear-to-br from-slate-50 to-white p-4 shadow-none transition-all duration-200">
-                    <p className="text-xs font-black uppercase text-slate-600">
-                      Report Window
-                    </p>
-                    <p className="mt-1 text-xl font-black text-black">
-                      {
-                        REPORT_RANGE_OPTIONS.find(
-                          (option) => option.value === selectedReportRange,
-                        )?.label
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200">
-                  <h3 className="text-lg font-black text-black">
-                    Top Selling Medicines
-                  </h3>
-
-                  {isLoadingReport ? (
-                    <p className="mt-3 text-sm font-bold text-slate-600">
-                      Loading report data...
-                    </p>
-                  ) : (reportData?.topSellingMedicines?.length || 0) === 0 ? (
-                    <div className="mt-4 rounded-2xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-blue-50 p-5 shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)]">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
-                        Ready for new sales data
-                      </p>
-                      <p className="mt-2 text-sm font-bold text-slate-700">
-                        No transactions recorded for this period.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="mt-4 space-y-3">
-                      {reportData?.topSellingMedicines.map(
-                        (medicine, index) => (
-                          <div key={medicine.medicineName}>
-                            <div className="mb-1 flex items-center justify-between text-xs font-black text-slate-700">
-                              <span>
-                                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">
-                                  {index + 1}
-                                </span>
-                                {medicine.medicineName}
-                              </span>
-                              <span>
-                                {medicine.quantitySold} sold • ETB{" "}
-                                {medicine.totalRevenue.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="h-4 overflow-hidden rounded-full border border-slate-300 bg-slate-100">
-                              <div
-                                className="h-full bg-black"
-                                style={{
-                                  width: `${Math.max(8, (medicine.quantitySold / maxSoldQty) * 100)}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 rounded-lg border border-slate-300 bg-white p-4 shadow-none transition-all duration-200">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h3 className="text-lg font-black text-black">
-                      Detailed Sales Log
-                    </h3>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="text-xs font-black uppercase text-slate-600">
-                        From
-                      </label>
-                      <input
-                        type="date"
-                        value={salesLogStartDate}
-                        onChange={(e) => setSalesLogStartDate(e.target.value)}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                      />
-                      <label className="text-xs font-black uppercase text-slate-600">
-                        To
-                      </label>
-                      <input
-                        type="date"
-                        value={salesLogEndDate}
-                        onChange={(e) => setSalesLogEndDate(e.target.value)}
-                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-600">
-                        Transactions
-                      </p>
-                      <p className="mt-1 text-xl font-black text-black">
-                        {salesLogData?.totalRecords ?? 0}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-600">
-                        Units Sold
-                      </p>
-                      <p className="mt-1 text-xl font-black text-black">
-                        {Math.round(detailedSalesQuantity)}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-slate-300 bg-white p-3">
-                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-600">
-                        Sales Value
-                      </p>
-                      <p className="mt-1 text-xl font-black text-black">
-                        ETB {detailedSalesValue.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    ref={salesLogScrollRef}
-                    className="mt-4 max-h-125 overflow-x-auto overflow-y-auto rounded-lg border border-slate-900 bg-white shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 [6px_6px_0_0_#0f172a]"
-                  >
-                    <table className="w-full min-w-[900px] text-left">
-                      <thead
-                        className={`sticky top-0 z-20 bg-white text-[11px] font-black uppercase tracking-wider text-slate-700 transition-shadow ${
-                          salesLogHasScrolled
-                            ? "shadow-[0_4px_0_0_#0f172a]"
-                            : ""
-                        }`}
-                      >
-                        <tr>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Sale ID
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Batch ID
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Date & Time
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Medicine
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Category
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3 text-right">
-                            Qty
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3 text-right">
-                            Unit Price
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3 text-right">
-                            Total
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Seller
-                          </th>
-                          <th className="border-b-2 border-slate-900 bg-white px-4 py-3">
-                            Receiver
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {isLoadingSalesLog ? (
-                          <tr>
-                            <td
-                              colSpan={10}
-                              className="px-4 py-6 text-center text-sm font-bold text-slate-600"
-                            >
-                              Loading detailed sales records...
-                            </td>
-                          </tr>
-                        ) : detailedSalesRecords.length === 0 ? (
-                          <tr>
-                            <td colSpan={10} className="px-4 py-6">
-                              <div className="rounded-2xl border border-emerald-200 bg-linear-to-br from-emerald-50 via-white to-blue-50 px-4 py-6 text-center shadow-[0_12px_30px_-20px_rgba(16,185,129,0.55)]">
-                                <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">
-                                  No transactions recorded for this period
-                                </p>
-                                <p className="mt-2 text-sm font-bold text-slate-700">
-                                  The sales log is clear and ready for fresh
-                                  history.
-                                </p>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedSalesRecords.map((record) => (
-                            <tr key={`${record.id}-${record.saleDate}`}>
-                              <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                                {record.id}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-bold text-slate-700">
-                                {record.batchId}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                                {new Date(record.saleDate).toLocaleString(
-                                  "en-GB",
-                                )}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-bold text-black">
-                                {record.medicineName}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                                {record.category}
-                              </td>
-                              <td className="px-4 py-3 text-right text-sm font-black text-black">
-                                {record.quantitySold}
-                              </td>
-                              <td className="px-4 py-3 text-right text-sm font-semibold text-slate-700">
-                                ETB {Number(record.unitPrice || 0).toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 text-right text-sm font-black text-black">
-                                ETB {Number(record.totalPrice || 0).toFixed(2)}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                                {record.sellerName}
-                              </td>
-                              <td className="px-4 py-3 text-sm font-semibold text-slate-700">
-                                {record.receiverName}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                    <p className="text-sm font-black text-slate-700">
-                      Showing {visibleSalesLogStart}-{visibleSalesLogEnd} of{" "}
-                      {totalSalesLogRecords} records
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label className="text-xs font-black uppercase tracking-wide text-slate-600">
-                        Rows per page
-                      </label>
-                      <select
-                        value={salesLogRowsPerPage}
-                        onChange={(e) =>
-                          handleRowsPerPageChange(e.target.value)
-                        }
-                        className="rounded-lg border border-slate-900 bg-white px-3 py-2 text-sm font-black text-black shadow-[3px_3px_0_0_#0f172a] outline-none"
-                      >
-                        {SALES_LOG_ROWS_PER_PAGE_OPTIONS.map((optionValue) => (
-                          <option key={optionValue} value={optionValue}>
-                            {optionValue === "all" ? "All" : optionValue}
-                          </option>
-                        ))}
-                      </select>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSalesLogPage((previousPage) =>
-                            Math.max(1, previousPage - 1),
-                          )
-                        }
-                        disabled={salesLogPage <= 1}
-                        className="rounded-lg border border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-black shadow-[4px_4px_0_0_#0f172a] transition-transform disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                      >
-                        Previous
-                      </button>
-
-                      <span className="rounded-lg border border-slate-900 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-[3px_3px_0_0_#0f172a]">
-                        Page {Math.min(salesLogPage, totalSalesLogPages)} of{" "}
-                        {totalSalesLogPages}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSalesLogPage((previousPage) =>
-                            Math.min(totalSalesLogPages, previousPage + 1),
-                          )
-                        }
-                        disabled={salesLogPage >= totalSalesLogPages}
-                        className="rounded-lg border border-slate-900 bg-slate-100 px-4 py-2 text-sm font-black text-black shadow-[4px_4px_0_0_#0f172a] transition-transform disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 rounded-lg border border-amber-200 bg-linear-to-br from-amber-50 to-white p-5 shadow-none print:hidden">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                      <div>
-                        <h3 className={`text-lg font-black ${titleTheme}`}>
-                          Inactive Sales History
-                        </h3>
-                        <p
-                          className={`mt-1 text-xs font-semibold ${mutedTheme}`}
-                        >
-                          Medicines and categories with no sales for 3 months or
-                          more.
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-amber-700 shadow-[3px_3px_0_0_#78350f]">
-                        3+ months
-                      </span>
-                    </div>
-
-                    {isLoadingInactiveHistory ? (
-                      <div className="mt-5 rounded-lg border border-amber-200 bg-white p-4 text-sm font-bold text-slate-600 shadow-none">
-                        Loading inactivity history...
-                      </div>
-                    ) : !inactiveHistoryData ? (
-                      <div className="mt-5 rounded-lg border border-amber-200 bg-white p-4 text-sm font-bold text-slate-600 shadow-none">
-                        Unable to load inactivity history right now.
-                      </div>
-                    ) : (
-                      <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                        <div className="rounded-lg border border-amber-200 bg-white p-4 shadow-none">
-                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="text-sm font-black text-black">
-                              Inactive Medicines
-                            </h4>
-                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                              {inactiveMedicineRecords.length} records
-                            </span>
-                          </div>
-
-                          {inactiveMedicineRecords.length === 0 ? (
-                            <p className="text-sm font-semibold text-slate-600">
-                              No medicines are inactive for the selected
-                              threshold.
-                            </p>
-                          ) : (
-                            <div className="max-h-72 overflow-auto rounded-lg border border-slate-300">
-                              <table className="min-w-full text-left text-xs">
-                                <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wider text-slate-600">
-                                  <tr>
-                                    <th className="px-3 py-2">Medicine</th>
-                                    <th className="px-3 py-2">Category</th>
-                                    <th className="px-3 py-2">Last Sale</th>
-                                    <th className="px-3 py-2 text-right">
-                                      Days
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                  {inactiveMedicineRecords.map((record) => (
-                                    <tr key={record.medicineId}>
-                                      <td className="px-3 py-2 font-bold text-black">
-                                        {record.medicineName}
-                                      </td>
-                                      <td className="px-3 py-2 font-semibold text-slate-700">
-                                        {record.categoryName}
-                                      </td>
-                                      <td className="px-3 py-2 font-semibold text-slate-700">
-                                        {record.lastSaleDate
-                                          ? new Date(
-                                              record.lastSaleDate,
-                                            ).toLocaleDateString("en-GB")
-                                          : "Never sold"}
-                                      </td>
-                                      <td className="px-3 py-2 text-right font-black text-amber-700">
-                                        {record.daysSinceLastSale === null
-                                          ? "—"
-                                          : `${record.daysSinceLastSale}d`}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="rounded-lg border border-amber-200 bg-white p-4 shadow-none">
-                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="text-sm font-black text-black">
-                              Inactive Categories
-                            </h4>
-                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-black text-amber-700">
-                              {inactiveCategoryRecords.length} records
-                            </span>
-                          </div>
-
-                          {inactiveCategoryRecords.length === 0 ? (
-                            <p className="text-sm font-semibold text-slate-600">
-                              No categories are inactive for the selected
-                              threshold.
-                            </p>
-                          ) : (
-                            <div className="max-h-72 overflow-auto rounded-lg border border-slate-300">
-                              <table className="min-w-full text-left text-xs">
-                                <thead className="sticky top-0 bg-white text-[10px] uppercase tracking-wider text-slate-600">
-                                  <tr>
-                                    <th className="px-3 py-2">Category</th>
-                                    <th className="px-3 py-2 text-right">
-                                      Medicines
-                                    </th>
-                                    <th className="px-3 py-2">Last Sale</th>
-                                    <th className="px-3 py-2 text-right">
-                                      Days
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                  {inactiveCategoryRecords.map((record) => (
-                                    <tr key={record.categoryId}>
-                                      <td className="px-3 py-2 font-bold text-black">
-                                        {record.categoryName}
-                                      </td>
-                                      <td className="px-3 py-2 text-right font-black text-slate-700">
-                                        {record.medicineCount}
-                                      </td>
-                                      <td className="px-3 py-2 font-semibold text-slate-700">
-                                        {record.lastSaleDate
-                                          ? new Date(
-                                              record.lastSaleDate,
-                                            ).toLocaleDateString("en-GB")
-                                          : "Never sold"}
-                                      </td>
-                                      <td className="px-3 py-2 text-right font-black text-amber-700">
-                                        {record.daysSinceLastSale === null
-                                          ? "—"
-                                          : `${record.daysSinceLastSale}d`}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
+        {toast ? (
           <div
-            className={`mb-10 flex flex-col space-y-8 print:hidden ${
-              isAdmin ? "" : "mx-auto max-w-5xl"
+            className={`rounded-4xl border px-5 py-4 text-sm shadow-[0_20px_50px_rgba(15,23,42,0.08)] ${
+              toast.tone === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : toast.tone === "error"
+                  ? "border-rose-200 bg-rose-50 text-rose-800"
+                  : "border-sky-200 bg-sky-50 text-sky-800"
             }`}
           >
-            {isAdmin && (
-              <div
-                className={`w-full rounded-xl border p-4 shadow-none transition-all duration-200 min-h-[24rem] sm:p-6 lg:min-h-[34rem] ${cardTheme}`}
-              >
-                <div className="mb-6 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className={`text-xl font-bold ${titleTheme}`}>
-                      Stock Analytics by Category
-                    </h2>
-                    <p className={`mt-1 text-xs font-semibold ${mutedTheme}`}>
-                      Real-time distribution of inventory across categories.
-                    </p>
-                  </div>
-                  <select
-                    value={selectedCategoryMetric}
-                    onChange={(e) =>
-                      setSelectedCategoryMetric(
-                        e.target.value as CategoryAnalyticsViewKey,
-                      )
-                    }
-                    className={`rounded-lg border border-slate-900 px-4 py-2 text-xs font-black shadow-[4px_4px_0_0_#0f172a] outline-none transition-all duration-200 [6px_6px_0_0_#0f172a] ${searchTheme}`}
-                  >
-                    <option value="allMetricsCombined">
-                      Total Units + Medicine Count + Total Stock Value
-                    </option>
-                    <option value="medicineCountAndStockValue">
-                      Medicine Count + Total Stock Value
-                    </option>
-                    {(
-                      Object.entries(CATEGORY_ANALYTICS_METRICS) as Array<
-                        [
-                          CategoryMetricKey,
-                          (typeof CATEGORY_ANALYTICS_METRICS)[CategoryMetricKey],
-                        ]
-                      >
-                    ).map(([metricKey, metric]) => (
-                      <option key={metricKey} value={metricKey}>
-                        {metric.label}
-                      </option>
-                    ))}
-                  </select>
+            <div className="font-semibold">{toast.title}</div>
+            <div className="mt-1">{toast.description}</div>
+          </div>
+        ) : null}
+
+        <section className="grid gap-4 md:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => setIsSellOutOpen(true)}
+            className="group rounded-3xl border border-emerald-100 bg-emerald-50/60 p-6 text-left shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-emerald-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
+          >
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-700 transition-colors duration-300 group-hover:text-emerald-600">Sell out</div>
+            <div className="mt-3 text-2xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">Open sales cart</div>
+            <p className="mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700">Use the existing attachment flow to sell one or more medicines.</p>
+          </button>
+          <Link href="/stock-entry" className="group rounded-3xl border border-sky-100 bg-sky-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:bg-sky-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">Stock entry</div>
+            <div className={actionTileTitleClassName}>Add or receive stock</div>
+            <p className={actionTileCaptionClassName}>Use the dedicated stock page for new inventory, optional category entry, and category auto-creation.</p>
+          </Link>
+          <Link href="/analytics" className="group rounded-3xl border border-violet-100 bg-violet-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:bg-violet-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]">
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">Analytics</div>
+            <div className={actionTileTitleClassName}>View charts and reports</div>
+            <p className={actionTileCaptionClassName}>Inventory trends, inactivity, and sales reporting now have their own page.</p>
+          </Link>
+          <div className="group rounded-3xl border border-slate-100 bg-slate-50/70 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-slate-200 hover:bg-slate-50/90 hover:shadow-[0_24px_70px_rgba(16,24,40,0.12)]">
+            <div className="group inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-slate-700">
+              <span className={titleLineClassName}>Session</span>
+            </div>
+            <div className="mt-3 text-2xl font-black text-slate-950 transition-colors duration-300 group-hover:text-slate-700 group-hover:underline group-hover:decoration-slate-400 group-hover:decoration-2 group-hover:underline-offset-8">{user.role}</div>
+            <p className="mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700">Signed in as {user.username}.</p>
+          </div>
+        </section>
+
+        <MultiItemOrderCart
+          isOpen={isSellOutOpen}
+          onClose={() => setIsSellOutOpen(false)}
+          onSubmit={handleSellOutSubmit}
+          isProcessing={isProcessingSale}
+        />
+
+        <section className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Items loaded", value: inventory.length },
+            { label: "Low stock", value: lowStockCount },
+            { label: "Expired", value: expiredCount },
+          ].map((item) => (
+            <div key={item.label} className={metricCardClassName}>
+                <div className="group/title inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-emerald-600">
+                  <span className={titleLineClassName}>{item.label}</span>
                 </div>
-                <div className="h-[18rem] sm:h-[22rem] md:h-[26rem]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    {selectedCategoryMetric === "allMetricsCombined" ? (
-                      <BarChart data={categoryAnalyticsData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          vertical={false}
-                          stroke="#f1f5f9"
-                        />
-                        <XAxis
-                          dataKey="category"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                        />
-                        <YAxis
-                          yAxisId="count"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            `${Math.round(Number(value))}`
-                          }
-                        />
-                        <YAxis
-                          yAxisId="value"
-                          orientation="right"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            `ETB ${Number(value).toFixed(0)}`
-                          }
-                        />
-                        <Tooltip
-                          cursor={{ fill: "#f8fafc" }}
-                          contentStyle={{
-                            borderRadius: "15px",
-                            border: "none",
-                          }}
-                          formatter={(value, name) => {
-                            if (name === "Total Stock Value") {
-                              return [
-                                `ETB ${Number(value ?? 0).toFixed(2)}`,
-                                name,
-                              ];
-                            }
-
-                            if (name === "Medicine Count") {
-                              return [
-                                `${Math.round(Number(value ?? 0))} medicines`,
-                                name,
-                              ];
-                            }
-
-                            return [
-                              `${Math.round(Number(value ?? 0))} units`,
-                              name,
-                            ];
-                          }}
-                        />
-                        <Bar
-                          yAxisId="count"
-                          dataKey="totalQuantity"
-                          name="Total Units"
-                          fill={CATEGORY_ANALYTICS_METRICS.totalQuantity.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={20}
-                        />
-                        <Bar
-                          yAxisId="count"
-                          dataKey="medicineCount"
-                          name="Medicine Count"
-                          fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={20}
-                        />
-                        <Bar
-                          yAxisId="value"
-                          dataKey="totalValue"
-                          name="Total Stock Value"
-                          fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={20}
-                        />
-                      </BarChart>
-                    ) : selectedCategoryMetric ===
-                      "medicineCountAndStockValue" ? (
-                      <BarChart data={categoryAnalyticsData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          vertical={false}
-                          stroke="#f1f5f9"
-                        />
-                        <XAxis
-                          dataKey="category"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                        />
-                        <YAxis
-                          yAxisId="count"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            `${Math.round(Number(value))}`
-                          }
-                        />
-                        <YAxis
-                          yAxisId="value"
-                          orientation="right"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            `ETB ${Number(value).toFixed(0)}`
-                          }
-                        />
-                        <Tooltip
-                          cursor={{ fill: "#f8fafc" }}
-                          contentStyle={{
-                            borderRadius: "15px",
-                            border: "none",
-                          }}
-                          formatter={(value, name) => {
-                            if (name === "Medicine Count") {
-                              return [
-                                `${Math.round(Number(value ?? 0))} medicines`,
-                                name,
-                              ];
-                            }
-
-                            return [
-                              `ETB ${Number(value ?? 0).toFixed(2)}`,
-                              name,
-                            ];
-                          }}
-                        />
-                        <Bar
-                          yAxisId="count"
-                          dataKey="medicineCount"
-                          name="Medicine Count"
-                          fill={CATEGORY_ANALYTICS_METRICS.medicineCount.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={24}
-                        />
-                        <Bar
-                          yAxisId="value"
-                          dataKey="totalValue"
-                          name="Total Stock Value"
-                          fill={CATEGORY_ANALYTICS_METRICS.totalValue.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={24}
-                        />
-                      </BarChart>
-                    ) : (
-                      <BarChart data={categoryAnalyticsData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          vertical={false}
-                          stroke="#f1f5f9"
-                        />
-                        <XAxis
-                          dataKey="category"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                        />
-                        <YAxis
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: "#94a3b8", fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            selectedCategoryMetric === "totalValue"
-                              ? `ETB ${Number(value).toFixed(0)}`
-                              : `${Math.round(Number(value))}`
-                          }
-                        />
-                        <Tooltip
-                          cursor={{ fill: "#f8fafc" }}
-                          contentStyle={{
-                            borderRadius: "15px",
-                            border: "none",
-                          }}
-                          formatter={(value) =>
-                            currentCategoryMetric.formatValue(
-                              Number(value ?? 0),
-                            )
-                          }
-                        />
-                        <Bar
-                          dataKey={selectedCategoryMetric}
-                          fill={currentCategoryMetric.color}
-                          radius={[6, 6, 0, 0]}
-                          barSize={40}
-                        />
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
-                </div>
+                <div className="mt-3 text-3xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
+                {item.value}
               </div>
-            )}
+              <div className="mt-4 h-px w-full bg-linear-to-r from-emerald-200 via-emerald-100 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+            </div>
+          ))}
+        </section>
 
-            <div
-              id="quick-import"
-              className={`w-full rounded-lg border border-white/25 bg-linear-to-br from-cyan-600 via-blue-600 to-indigo-700 p-8 text-white shadow-none transition-all duration-200 ${
-                isAdmin ? "" : "mx-auto w-full max-w-4xl"
-              }`}
-            >
-              <div className="mb-6">
-                <h2 className="text-3xl font-black tracking-tight">
-                  Quick Import
-                </h2>
-                <p className="mt-1 text-sm font-medium text-blue-100/90">
-                  Add new stock batches with complete product details.
-                </p>
-              </div>
-              <form
-                onSubmit={handleAddStock}
-                className="grid grid-cols-1 gap-4 md:grid-cols-2"
+        <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 className={sectionTitleClassName}>
+                <span className={titleLineClassName}>Current inventory</span>
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">Search by medicine name or batch number, then filter by category.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                value={inventoryQuery}
+                onChange={(event) => setInventoryQuery(event.target.value)}
+                placeholder="Search by name or batch"
+                className="min-w-55 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
+              />
+              <select
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
               >
-                <div className="md:col-span-2">
-                  <input
-                    type="text"
-                    placeholder="Search Category"
-                    className={quickImportFieldClass}
-                    value={categorySearchTerm}
-                    onChange={(e) => setCategorySearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => {
-                      setFormData({ ...formData, categoryId: e.target.value });
-                      if (e.target.value !== "other") {
-                        setCustomCategoryName("");
-                      }
-                    }}
-                    className={`${quickImportFieldClass} font-bold text-black`}
-                  >
-                    <option value="" className="text-slate-600">
-                      Select Category (Optional)
-                    </option>
-                    {filteredCategories.map((category) => (
-                      <option
-                        key={category.id}
-                        value={category.id}
-                        className="text-black"
-                      >
-                        {category.category_name}
-                      </option>
-                    ))}
-                    <option value="other" className="text-black font-bold">
-                      ➕ Other (Add Custom)
-                    </option>
-                  </select>
-                </div>
-                {formData.categoryId === "other" && (
-                  <div className="md:col-span-2">
-                    <input
-                      type="text"
-                      placeholder="Enter custom category name"
-                      className={quickImportFieldClass}
-                      value={customCategoryName}
-                      onChange={(e) => setCustomCategoryName(e.target.value)}
-                    />
-                  </div>
-                )}
-                <input
-                  type="number"
-                  placeholder="Med ID"
-                  className={quickImportFieldClass}
-                  value={formData.medId}
-                  onChange={(e) =>
-                    setFormData({ ...formData, medId: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Medicine Name"
-                  className={quickImportFieldClass}
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Batch #"
-                  className={quickImportFieldClass}
-                  value={formData.batch}
-                  onChange={(e) =>
-                    setFormData({ ...formData, batch: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  className={quickImportFieldClass}
-                  value={formData.qty}
-                  onChange={(e) =>
-                    setFormData({ ...formData, qty: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="Price per Unit"
-                  className={quickImportFieldClass}
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  required
-                />
-                <input
-                  type="date"
-                  className={quickImportFieldClass}
-                  value={formData.expiry}
-                  onChange={(e) =>
-                    setFormData({ ...formData, expiry: e.target.value })
-                  }
-                  required
-                />
-                <button
-                  type="submit"
-                  className="md:col-span-2 mt-1 rounded-lg border border-slate-900 bg-white py-4 font-black text-blue-700 shadow-[4px_4px_0_0_#0f172a] transition-all duration-200 hover:bg-cyan-50 [6px_6px_0_0_#0f172a] active:scale-[0.99]"
-                >
-                  Update Stock
-                </button>
-              </form>
+                {categoryOptions.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+              {isLoadingInventory ? <span className="text-sm font-semibold text-slate-500">Refreshing...</span> : null}
             </div>
           </div>
-
-          <div
-            id="live-inventory"
-            className={`rounded-lg shadow-none border overflow-hidden transition-all duration-200 print:hidden ${cardTheme}`}
-          >
-            <div
-              className={`p-8 border-b flex justify-between items-center ${isDarkMode ? "border-slate-700" : "border-slate-50"}`}
-            >
-              <h2 className={`text-xl font-bold ${titleTheme}`}>
-                Live Inventory
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="relative w-80">
-                  <input
-                    type="text"
-                    placeholder="Search by name or ID..."
-                    value={searchTerm}
-                    className={`px-6 py-3 pr-12 rounded-full w-full outline-none text-sm border border-slate-900 shadow-none ${searchTheme}`}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                  {searchTerm && (
-                    <button
-                      type="button"
-                      aria-label="Clear search"
-                      onClick={() => setSearchTerm("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full border border-slate-900 bg-white text-black text-sm font-black shadow-none"
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className={`px-4 py-3 rounded-full outline-none text-sm border border-slate-900 bg-white text-black shadow-none ${searchTheme}`}
-                >
-                  <option value="all" className="text-black">
-                    All Categories
-                  </option>
-                  {categories.map((category) => (
-                    <option
-                      key={category.id}
-                      value={String(category.id)}
-                      className="text-black"
-                    >
-                      {category.category_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <table className="w-full text-left">
-              <thead
-                className={`text-[10px] uppercase tracking-widest font-black ${isDarkMode ? "bg-slate-700 text-slate-300" : "bg-white text-slate-400"}`}
-              >
+          <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                 <tr>
-                  <th className="px-8 py-4">Medicine Info</th>
-                  <th className="px-8 py-4">Batch Details</th>
-                  <th className="px-8 py-4">Price / Unit</th>
-                  <th className="px-8 py-4">Stock Status</th>
-                  <th className="px-8 py-4">Expiration</th>
-                  <th className="px-8 py-4 text-right">Actions</th>
+                  <th className="px-4 py-3">Medicine</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Batch</th>
+                  <th className="px-4 py-3">Qty</th>
+                  <th className="px-4 py-3">Expiry</th>
                 </tr>
               </thead>
-              <tbody
-                className={
-                  isDarkMode
-                    ? "divide-y divide-slate-700"
-                    : "divide-y divide-slate-50"
-                }
-              >
-                {filteredInventory.length === 0 ? (
+              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                {visibleInventory.slice(0, 10).map((item) => {
+                  const initialQty = (item as any).initial_batch_quantity ?? (item as any).initial_quantity ?? item.quantity;
+                  const pct = initialQty > 0 ? item.quantity / initialQty : 1;
+                  const now = new Date();
+                  const expiry = item.expiry_date ? new Date(item.expiry_date) : null;
+                  let expiryMessage: { tone?: 'danger'|'warning'|'ok'; text?: string } = {};
+
+                  if (expiry) {
+                    const monthsLeft = (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30);
+                    if (expiry.getTime() < now.getTime()) {
+                      expiryMessage = { tone: 'danger', text: 'This medicine is expired — remove from stock' };
+                    } else if (monthsLeft <= 6) {
+                      expiryMessage = { tone: 'warning', text: 'Expires in under 6 months — sell immediately' };
+                    }
+                  }
+
+                  const lowStock = pct <= 0.2;
+
+                  return (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3 font-medium text-slate-950">
+                        <div className="flex flex-col">
+                          <span>{item.name}</span>
+                          <span className="inventory-note mt-1">Batch {item.batch_number}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{item.category_name ?? "Uncategorized"}</td>
+                      <td className="px-4 py-3">{item.batch_number}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold">{item.quantity}</span>
+                          {lowStock ? (
+                            <span className="badge-cool" title="Low stock — add to stock">This item may disappear — add to stock</span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <span>{item.expiry_date ?? "-"}</span>
+                          {expiryMessage.tone === 'danger' ? (
+                            <span className="badge-danger">{expiryMessage.text}</span>
+                          ) : expiryMessage.tone === 'warning' ? (
+                            <span className="badge-warning">{expiryMessage.text}</span>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!visibleInventory.length ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className={`px-8 py-10 text-center text-sm font-bold ${mutedTheme}`}
-                    >
-                      No matching medicines found
+                    <td className="px-4 py-8 text-center text-slate-500" colSpan={5}>
+                      No inventory matches the current search and category filter.
                     </td>
                   </tr>
-                ) : (
-                  filteredInventory.map((item) => {
-                    const rowStatus = getStatusStyles(
-                      item.quantity,
-                      item.expiry_date,
-                      item.initial_batch_quantity ?? item.initial_quantity,
-                    );
-                    const expiryDate = new Date(item.expiry_date);
-                    const isSellDisabled =
-                      rowStatus.isExpired || item.quantity <= 0;
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`group transition-all ${
-                          item.quantity <= 0
-                            ? isDarkMode
-                              ? "bg-slate-800/50 opacity-60"
-                              : "bg-slate-100/50 opacity-60"
-                            : isDarkMode
-                              ? "hover:bg-slate-700/40"
-                              : "hover:bg-white/50"
-                        }`}
-                      >
-                        <td className={`px-8 py-6 font-bold ${titleTheme}`}>
-                          <div className="flex flex-col gap-2">
-                            <span>{item.name}</span>
-                            <span className="inline-flex w-fit rounded-lg border border-slate-900 bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-black shadow-none">
-                              {item.category_name || "Uncategorized"}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6 font-mono text-xs text-slate-400">
-                          {item.batch_number}
-                        </td>
-                        <td className="px-8 py-6 text-sm font-black text-blue-700">
-                          ETB {Number(item.price_per_unit || 0).toFixed(2)}
-                        </td>
-                        <td className="px-8 py-6">
-                          <div
-                            className={rowStatus.stockBadgeClass}
-                            style={rowStatus.stockBadgeStyle}
-                          >
-                            {rowStatus.stockDisplayText}
-                          </div>
-                          <p
-                            className={rowStatus.stockWarningClass}
-                            style={{
-                              color: rowStatus.isLowStock
-                                ? "#722F37"
-                                : "#10B981",
-                            }}
-                          >
-                            {rowStatus.stockWarningText}
-                          </p>
-                        </td>
-                        <td className="px-8 py-6">
-                          <p className={rowStatus.expiryTextClass}>
-                            {expiryDate.toLocaleDateString("en-GB")}
-                          </p>
-                          <p className={rowStatus.expiryWarningClass}>
-                            <span aria-hidden="true" className="mr-1">
-                              {rowStatus.expiryIcon}
-                            </span>
-                            {rowStatus.expiryWarningText}
-                          </p>
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                          <div className="flex justify-end items-center gap-2">
-                            {isAdmin && activeActionMenuId === item.id && (
-                              <button
-                                onClick={() => {
-                                  setDeleteModalItem(item);
-                                  setActiveActionMenuId(null);
-                                }}
-                                className="px-3 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200"
-                              >
-                                Delete
-                              </button>
-                            )}
-
-                            {isAdmin && (
-                              <button
-                                onClick={() =>
-                                  setActiveActionMenuId((prev) =>
-                                    prev === item.id ? null : item.id,
-                                  )
-                                }
-                                className="h-8 w-8 rounded-lg border border-slate-300 bg-white text-slate-600 text-lg leading-none font-black"
-                                aria-label="Open actions menu"
-                              >
-                                ⋯
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                ) : null}
               </tbody>
             </table>
           </div>
-
-          {/* ========== MULTI-ITEM ORDER MODAL ========== */}
-          <MultiItemOrderCart
-            isOpen={isGeneralSaleOpen}
-            onClose={() => setIsGeneralSaleOpen(false)}
-            onSubmit={handleBulkSaleSubmit}
-            isProcessing={isProcessingBulkSale}
-          />
-          {/* ========== END MODAL ========== */}
-        </main>
+        </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -343,12 +343,13 @@ export function PrintableInvoice({
             position: absolute;
             inset: 0;
             width: 100%;
+            padding: 20mm;
             box-sizing: border-box;
           }
 
           /* Page setup */
           @page {
-            margin: 20mm;
+            margin: 0;
             size: A4;
           }
 
@@ -692,7 +693,7 @@ export function PrintableInvoice({
         {/* ========== PROFESSIONAL PHARMACEUTICAL ACCOUNTING TOTALS SECTION ========== */}
         {/* 
           ACCOUNTING FORMAT DESIGN:
-          - Three-row vertical layout (sub total → Not Taxable → Grand Total)
+          - Three-row vertical layout (Total → Not Taxable → Grand Total)
           - Single line separator above Grand Total
           - Double line beneath Grand Total amount to signify closed balance
           - Pinned to right side using ml-auto
@@ -707,9 +708,9 @@ export function PrintableInvoice({
                 Order Totals
               </p>
 
-              {/* ROW 1: total */}
+              {/* ROW 1: Total */}
               <div className="flex justify-between text-base mb-2">
-                <span className="text-[#64748B] font-normal">total</span>
+                <span className="text-[#64748B] font-normal">Total</span>
                 <span className="text-[#334155] font-semibold tabular-nums">
                   {formatCurrency(subtotal)}
                 </span>

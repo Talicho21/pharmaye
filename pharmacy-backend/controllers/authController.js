@@ -1,127 +1,123 @@
-const db = require("../config/db");
+// backend/controllers/authController.js
+const db = require("../config/db"); // Direct connection hook to your Supabase PostgreSQL pool
+const bcrypt = require("bcrypt");
 const { createAuthToken } = require("../utils/authToken");
 
-// Helper function to check table schema structure
-const hasColumn = async (tableName, columnName) => {
-  // CRITICAL FIX: Changed from db.execute to db.query to allow information_schema reads on Aiven
-  const [rows] = await db.query(
-    `
-      SELECT 1
-      FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = ?
-        AND COLUMN_NAME = ?
-      LIMIT 1
-    `,
-    [tableName, columnName],
-  );
+const JWT_SECRET = process.env.JWT_SECRET || "your_ultimate_fallback_pharmacy_secret_key";
 
-  return rows.length > 0;
-};
-
-// Ensures the database table and structural constraints are initialized
-const ensureUsersTable = async () => {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(120) NOT NULL UNIQUE,
-      password_hash CHAR(64) NOT NULL,
-      role ENUM('admin','staff') NOT NULL DEFAULT 'staff',
-      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  if (!(await hasColumn("users", "password_hash"))) {
-    await db.execute(`ALTER TABLE users ADD COLUMN password_hash CHAR(64) NOT NULL`);
-  }
-
-  if (!(await hasColumn("users", "role"))) {
-    await db.execute(
-      `ALTER TABLE users ADD COLUMN role ENUM('admin','staff') NOT NULL DEFAULT 'staff'`,
-    );
-  }
-
-  // Uses SHA2 encryption matching your local schema standard hashing architecture
-  await db.execute(
-    `
-      INSERT IGNORE INTO users (username, password_hash, role)
-      VALUES
-        ('eseruadmin', SHA2('eseru16', 256), 'admin'),
-        ('expresstaff1', SHA2('express16', 256), 'staff'),
-        ('testers12', SHA2('testersdev1', 256), 'admin')
-    `,
-  );
-  // No legacy password updates required; seeding only the three requested users above.
-};
-
-// Main Authentication Controller Function
+// 1. Authenticate System Session (User Login)
 exports.login = async (req, res) => {
-  const username = String(req.body?.username || "").trim();
-  const password = String(req.body?.password || "");
+  const { username, password } = req.body;
 
   if (!username || !password) {
-    return res
-      .status(400)
-      .json({ message: "username and password are required." });
+    return res.status(400).json({ message: "Username and password are required parameters." });
   }
 
   try {
-    // Run structural integrity check against Aiven MySQL instance
-    await ensureUsersTable();
+    // Lookup user using standard PostgreSQL numbered parameter identifiers ($1)
+    const userQueryText = "SELECT id, username, password, role FROM users WHERE LOWER(username) = LOWER($1)";
+    const result = await db.query(userQueryText, [username.trim()]);
 
-    const passwordChecks = [];
-    const params = [username];
-
-    if (await hasColumn("users", "password_hash")) {
-      passwordChecks.push("password_hash = SHA2(?, 256)");
-      params.push(password);
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid username or password credentials." });
     }
 
-    if (await hasColumn("users", "password")) {
-      passwordChecks.push("password = ?");
-      params.push(password);
+    const user = result.rows[0];
+
+    // Evaluate password compliance against cryptographically secure blowfish cipher salt hashes
+    const storedCredential = user.password;
+    if (!storedCredential) {
+      return res.status(401).json({ message: "Invalid username or password credentials." });
     }
 
-    if (passwordChecks.length === 0) {
-      return res.status(500).json({ message: "No supported password column found." });
+    const looksLikeBcryptHash = /^\$2[aby]\$\d{2}\$/.test(storedCredential);
+    const isMatch = looksLikeBcryptHash
+      ? await bcrypt.compare(password, storedCredential)
+      : password === storedCredential;
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid username or password credentials." });
     }
 
-    // Dynamic query matching existing users rows securely
-    const [rows] = await db.execute(
-      `
-        SELECT id, username, role
-        FROM users
-        WHERE username = ?
-          AND (${passwordChecks.join(" OR ")})
-        LIMIT 1
-      `,
-      params,
-    );
-
-    if (!rows.length) {
-      return res.status(401).json({ message: "Invalid username or password." });
-    }
-
-    const user = rows[0];
-    const role = user.role === "admin" ? "admin" : "staff";
-
-    // Build signed JWT authentication token
+    // Build the structural state authentication payload token signatures
     const token = createAuthToken({
-      userId: Number(user.id),
+      id: user.id,
       username: user.username,
-      role,
+      role: user.role,
     });
 
     return res.status(200).json({
+      message: "Authentication handshake successful.",
       token,
       user: {
-        id: Number(user.id),
+        id: user.id,
         username: user.username,
-        role,
-      },
+        role: user.role
+      }
     });
-  } catch (error) {
-    // Gracefully handles serverless function routing catches
-    return res.status(500).json({ error: error.message });
+
+  } catch (err) {
+    console.error("Postgres authController Login Error:", err);
+    return res.status(500).json({ message: "Internal server authentication fault occurred." });
+  }
+};
+
+// 2. Register New Staff / Admin Profile Record Instance
+exports.register = async (req, res) => {
+  const { username, password, role } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Missing required identity enrollment parameters." });
+  }
+
+  const assignedRole = role === "admin" ? "admin" : "staff";
+
+  try {
+    // Prevent collision duplicates on unique identifiers
+    const checkUserText = "SELECT id FROM users WHERE LOWER(username) = LOWER($1)";
+    const checkResult = await db.query(checkUserText, [username.trim()]);
+
+    if (checkResult.rows.length > 0) {
+      return res.status(400).json({ message: "This username profile registry string is already occupied." });
+    }
+
+    // Securely obscure plain text passwords 
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Write parameters into PostgreSQL returning newly assigned auto-generated serial row keys
+    const insertUserText = `
+      INSERT INTO users (username, password, role)
+      VALUES ($1, $2, $3)
+      RETURNING id, username, role
+    `;
+    const insertResult = await db.query(insertUserText, [username.trim(), hashedPassword, assignedRole]);
+
+    return res.status(201).json({
+      message: "User profile successfully registered inside systems registry data tier.",
+      user: insertResult.rows[0]
+    });
+
+  } catch (err) {
+    console.error("Postgres authController Register Error:", err);
+    return res.status(500).json({ message: "Database failure creating user account profile." });
+  }
+};
+
+// Returns the current authenticated user (populated by requireAuth middleware)
+exports.me = async (req, res) => {
+  try {
+    const auth = req.auth;
+    if (!auth || !auth.id) return res.status(401).json({ message: "Not authenticated." });
+
+    // Read latest user record from database to ensure up-to-date info
+    const q = "SELECT id, username, role FROM users WHERE id = $1";
+    const r = await db.query(q, [auth.id]);
+    const user = r.rows[0];
+    if (!user) return res.status(404).json({ message: "User not found." });
+
+    return res.status(200).json({ user });
+  } catch (err) {
+    console.error("Postgres authController me error:", err);
+    return res.status(500).json({ message: "Unable to fetch authenticated user." });
   }
 };

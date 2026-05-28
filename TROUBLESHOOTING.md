@@ -447,14 +447,11 @@ Can't connect to backend at all
 
    Should show: `Server running on port 5000`
 
-2. Verify MySQL is running:
+2. Verify PostgreSQL is reachable (Supabase / local):
 
    ```bash
-   # Mac/Linux
-   mysql -u root -p
-
-   # Windows
-   mysql.exe -u root -p
+   # Mac/Linux / Windows (psql CLI)
+   psql -U <your_user> -h <host> -d pharmacy_db
    ```
 
 3. Check database exists and has tables:
@@ -573,7 +570,7 @@ Before clicking "Process Sale":
 
 - [ ] Frontend running: `npm run dev` in pharmacy-frontend
 - [ ] Backend running: `node server.js` in pharmacy-backend
-- [ ] MySQL running and pharmacy_db exists
+- [ ] PostgreSQL (Supabase/local) reachable and pharmacy_db exists
 - [ ] Logged in as admin user
 - [ ] At least 1 item added to cart
 - [ ] Seller name field filled

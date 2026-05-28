@@ -1,20 +1,15 @@
 {
     "sqltools.connections": [
         {
-            "mysqlOptions": {
-                "authProtocol": "xprotocol",
-                "enableSsl": "Disabled"
-            },
-            "ssh": "Disabled",
-            "previewLimit": 50,
-            "server": "localhost",
-            "port": 33060,
-            "driver": "MySQL",
-            "name": "Project",
-            "database": "pharmacy_db",
-            "username": "root",
-            "password": "@Talicho1995",
-            "connectionTimeout": 30
-        }
+                "previewLimit": 50,
+                "server": "localhost",
+                "port": 5432,
+                "driver": "PostgreSQL",
+                "name": "Project-Postgres",
+                "database": "pharmacy_db",
+                "username": "postgres",
+                "password": "<your_password>",
+                "connectionTimeout": 30
+            }
     ]
 }

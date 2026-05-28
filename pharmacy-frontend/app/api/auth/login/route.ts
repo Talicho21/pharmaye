@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+const SESSION_COOKIE_KEY = "pharmacy_session_token";
+
 const BACKEND_BASE_URL = process.env.BACKEND_API_URL || "http://localhost:5000";
 
 export async function POST(request: Request) {
@@ -13,7 +15,18 @@ export async function POST(request: Request) {
     });
 
     const payload = await response.json();
-    return NextResponse.json(payload, { status: response.status });
+    const nextResponse = NextResponse.json(payload, { status: response.status });
+
+    if (response.ok && payload?.token) {
+      nextResponse.cookies.set(SESSION_COOKIE_KEY, payload.token, {
+        httpOnly: false,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+    }
+
+    return nextResponse;
   } catch (_error) {
     return NextResponse.json(
       {

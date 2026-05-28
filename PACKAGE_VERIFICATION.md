@@ -149,8 +149,8 @@
 
 ### Database Compatibility
 
-- ✅ Works with existing MySQL schema
-- ✅ Uses existing mysql2 package
+- ✅ Works with existing PostgreSQL schema (Supabase)
+- ✅ Uses existing `pg` package
 - ✅ `price_per_unit` column support (auto-adds if missing)
 - ✅ `sales` table support (auto-creates if missing)
 - ✅ Proper indexes recommended (documented)

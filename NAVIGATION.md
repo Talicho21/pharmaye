@@ -259,7 +259,7 @@ Make sure these are ready:
 ─────────────────────────────────────────────────
 □  Node.js running (npm run dev)             [Check this first]
 □  Backend running (node server.js)          [Check this first]
-□  MySQL running and pharmacy_db exists      [Check console]
+□  PostgreSQL (Supabase/local) reachable and pharmacy_db exists      [Check console]
 □  You're logged in as admin user            [Check dashboard]
 □  MultiItemOrderCart.tsx file exists        [Check folder]
 □  bulkSaleController.js in backend          [Check backend/controllers]

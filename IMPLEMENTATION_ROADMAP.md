@@ -125,15 +125,15 @@ Add this to your JSX (render section):
 **Step 3.1: Check Database Columns**
 
 ```bash
-# SSH into your MySQL server
-mysql -u your_user -p your_database
+# Connect to your PostgreSQL server (psql)
+psql -U your_user -h your_host -d your_database
 
 # Run these queries to verify columns exist:
-DESCRIBE batches;  -- Should show: price_per_unit DECIMAL(10,2)
-DESCRIBE sales;    -- Should show: all required columns
+\d+ batches  -- Should show: price_per_unit numeric(10,2)
+\d+ sales    -- Should show: all required columns
 
 # If price_per_unit is missing, run:
-ALTER TABLE batches ADD COLUMN price_per_unit DECIMAL(10,2) NOT NULL DEFAULT 0;
+ALTER TABLE batches ADD COLUMN price_per_unit numeric(10,2) NOT NULL DEFAULT 0;
 ```
 
 **Step 3.2: Verify Node Dependencies**
@@ -142,8 +142,8 @@ ALTER TABLE batches ADD COLUMN price_per_unit DECIMAL(10,2) NOT NULL DEFAULT 0;
 cd pharmacy-backend
 
 # No new dependencies needed! Uses existing db connection
-# Just ensure mysql2 is installed:
-npm list mysql2
+# Just ensure `pg` is installed:
+npm list pg
 ```
 
 **Step 3.3: Test Backend Route**

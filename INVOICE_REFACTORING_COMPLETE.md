@@ -65,12 +65,12 @@ CREATE INDEX idx_sales_customer_tin ON sales(customer_tin);
 **How to Apply:**
 
 ```bash
-# 1. Connect to your pharmacy_db
-mysql -h localhost -u root -p pharmacy_db < pharmacy-backend/sql/sales_schema_update.sql
+# 1. Connect to your pharmacy_db (psql)
+psql -U <user> -h <host> -d pharmacy_db -f pharmacy-backend/sql/sales_schema_update.sql
 
-# 2. Verify the schema was updated
+# 2. Verify the schema was updated (psql)
 SELECT * FROM sales LIMIT 1;
-SHOW COLUMNS FROM sales;
+\d+ sales
 ```
 
 ---
@@ -444,7 +444,7 @@ console.log(generateInvoiceNumber('Ahmed Hassan', '0098248381'));
 ### 2. Verify Database Migration:
 
 ```bash
-mysql pharmacy_db -e "SHOW COLUMNS FROM sales;"
+psql -U <user> -d pharmacy_db -c "\d+ sales"
 # Should show: invoice_no, reference, customer_name, customer_tin
 ```
 

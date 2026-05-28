@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const authRoutes = require("./routes/authRoutes");
+const { ensureSalesTable } = require("./utils/salesSchema");
 
 const app = express();
 
@@ -16,6 +17,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api", inventoryRoutes);
 
 const PORT = Number(process.env.PORT || 5000);
-app.listen(PORT, () => {
-  console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
-});
+
+(async () => {
+  try {
+    await ensureSalesTable();
+    app.listen(PORT, () => {
+      console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("❌ Failed to initialize PostgreSQL sales schema:", err);
+    process.exit(1);
+  }
+})();

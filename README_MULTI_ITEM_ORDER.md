@@ -177,7 +177,7 @@ Returns: CartItem[] on submit
 ```
 What it does: Processes multi-item orders with FEFO + transactions
 Size: ~350 lines with detailed comments
-Dependencies: mysql2 (existing)
+Dependencies: pg (existing)
 Main export: exports.bulkSaleMedicine (async handler)
 Key feature: atomic transactions + ROLLBACK on error
 ```
@@ -279,7 +279,7 @@ ALTER TABLE batches ADD COLUMN price_per_unit DECIMAL(10,2) NOT NULL DEFAULT 0;
 
 ### Q: Is the transaction safe for production?
 
-**A**: Yes! Uses standard MySQL transactions with ROLLBACK. Data integrity guaranteed.
+**A**: Yes! Uses standard PostgreSQL transactions with ROLLBACK. Data integrity guaranteed.
 
 ### Q: Can staff member access bulk-sell without admin role?
 
