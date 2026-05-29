@@ -2,7 +2,7 @@
   "name": "pharmacy-system-root",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix pharmacy-frontend run dev",
+    "dev": "node scripts/dev.js",
     "dev:frontend": "npm --prefix pharmacy-frontend run dev",
     "dev:backend": "npm --prefix pharmacy-backend run dev"
   }
