@@ -341,6 +341,12 @@ exports.getSalesReport = async (req, res) => {
 // 9. Fetch comprehensive log ledger between specific calendar filters
 exports.getSalesLog = async (req, res) => {
   const { startDate, endDate } = req.query;
+
+  const safeEndDate = endDate || new Date().toISOString().slice(0, 10);
+  const defaultStart = new Date();
+  defaultStart.setDate(defaultStart.getDate() - 29);
+  const safeStartDate = startDate || defaultStart.toISOString().slice(0, 10);
+
   try {
     const queryText = `
       SELECT s.id, s.batch_id, s.sale_date, s.quantity_sold, s.unit_price, s.total_price, s.seller_name, s.receiver_name,
@@ -352,11 +358,11 @@ exports.getSalesLog = async (req, res) => {
       WHERE s.sale_date::date >= $1::date AND s.sale_date::date <= $2::date
       ORDER BY s.sale_date DESC
     `;
-    const result = await db.query(queryText, [startDate, endDate]);
+    const result = await db.query(queryText, [safeStartDate, safeEndDate]);
     
     return res.status(200).json({
-      startDate,
-      endDate,
+      startDate: safeStartDate,
+      endDate: safeEndDate,
       totalRecords: result.rows.length,
       records: result.rows.map(row => ({
         id: row.id,

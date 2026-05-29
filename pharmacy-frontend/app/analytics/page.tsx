@@ -83,6 +83,26 @@ type CategoryPoint = {
 const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
+const SALES_LOG_RANGE_OPTIONS = [
+  { value: 7, label: "Last 7 days" },
+  { value: 30, label: "Last 30 days" },
+  { value: 90, label: "Last 90 days" },
+  { value: 180, label: "Last 6 months" },
+];
+
+const toDateInputValue = (date: Date) => date.toISOString().slice(0, 10);
+
+const getSalesLogWindow = (days: number) => {
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - Math.max(days - 1, 0));
+
+  return {
+    startDate: toDateInputValue(startDate),
+    endDate: toDateInputValue(endDate),
+  };
+};
+
 export default function AnalyticsPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [reportRange, setReportRange] = useState<SalesReportData["range"]>("24h");
@@ -90,6 +110,8 @@ export default function AnalyticsPage() {
   const [salesLogData, setSalesLogData] = useState<SalesLogData | null>(null);
   const [inactiveData, setInactiveData] = useState<InactivityData | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [salesLogDays, setSalesLogDays] = useState(30);
   const [profileName, setProfileName] = useState("Guest user");
   const [profileEmail, setProfileEmail] = useState("guest@expresspharma.local");
   const [loading, setLoading] = useState(true);
@@ -98,27 +120,36 @@ export default function AnalyticsPage() {
     setLoading(true);
 
     try {
-      const inventoryResponse = await fetch(`${API_BASE}/inventory`, {
+      const { startDate, endDate } = getSalesLogWindow(salesLogDays);
+
+      const inventoryPromise = fetch(`${API_BASE}/inventory`, {
         cache: "no-store",
-      });
-      const inventoryPayload = (await inventoryResponse.json()) as InventoryItem[];
+      }).then(async (response) => (await response.json()) as InventoryItem[]);
+
+      const reportPromises = authToken
+        ? Promise.all([
+            fetch(`${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`, {
+              headers: { Authorization: `Bearer ${authToken}` },
+            }),
+            fetch(
+              `${API_BASE}/reports/sales-log?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+              { headers: { Authorization: `Bearer ${authToken}` } },
+            ),
+            fetch(`${API_BASE}/reports/inactive?thresholdMonths=3`, {
+              headers: { Authorization: `Bearer ${authToken}` },
+            }),
+          ])
+        : null;
+
+      const [inventoryPayload, reportResponses] = await Promise.all([
+        inventoryPromise,
+        reportPromises,
+      ]);
 
       setInventory(Array.isArray(inventoryPayload) ? inventoryPayload : []);
 
-      if (authToken) {
-        const [reportResponse, logResponse, inactiveResponse] = await Promise.all([
-          fetch(`${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }),
-          fetch(
-            `${API_BASE}/reports/sales-log?startDate=2026-05-20&endDate=2026-05-26`,
-            { headers: { Authorization: `Bearer ${authToken}` } },
-          ),
-          fetch(`${API_BASE}/reports/inactive?thresholdMonths=3`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          }),
-        ]);
-
+      if (reportResponses) {
+        const [reportResponse, logResponse, inactiveResponse] = reportResponses;
         const [reportPayload, logPayload, inactivePayload] = await Promise.all([
           reportResponse.json(),
           logResponse.json(),
@@ -137,57 +168,60 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [authToken, reportRange]);
+  }, [authToken, reportRange, salesLogDays]);
 
   useEffect(() => {
     const hydrateSession = async () => {
       try {
-      const storedSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!storedSession) {
-        const cookieToken = readSessionCookie();
-        if (!cookieToken) {
-          window.location.replace("/login?next=/analytics");
+        const storedSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+        if (!storedSession) {
+          const cookieToken = readSessionCookie();
+          if (!cookieToken) {
+            window.location.replace("/login?next=/analytics");
+            return;
+          }
+
+          const response = await fetch(`${API_BASE}/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${cookieToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            clearSessionCookie();
+            window.localStorage.removeItem(SESSION_STORAGE_KEY);
+            window.location.replace("/login?next=/analytics");
+            return;
+          }
+
+          const payload = (await response.json()) as { user?: { username?: string } };
+          if (payload?.user?.username) {
+            setAuthToken(cookieToken);
+            setProfileName(payload.user.username);
+            setProfileEmail(`${payload.user.username}@expresspharma.local`);
+            window.localStorage.setItem(
+              SESSION_STORAGE_KEY,
+              JSON.stringify({ token: cookieToken, user: payload.user }),
+            );
+            setSessionCookie(cookieToken);
+          }
+
+          setSessionReady(true);
           return;
         }
 
-        const response = await fetch(`${API_BASE}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${cookieToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          clearSessionCookie();
-          window.localStorage.removeItem(SESSION_STORAGE_KEY);
-          window.location.replace("/login?next=/analytics");
-          return;
+        const parsed = JSON.parse(storedSession) as { token?: string };
+        if (parsed?.token) {
+          setAuthToken(parsed.token);
         }
 
-        const payload = (await response.json()) as { user?: { username?: string } };
-        if (payload?.user?.username) {
-          setAuthToken(cookieToken);
-          setProfileName(payload.user.username);
-          setProfileEmail(`${payload.user.username}@expresspharma.local`);
-          window.localStorage.setItem(
-            SESSION_STORAGE_KEY,
-            JSON.stringify({ token: cookieToken, user: payload.user }),
-          );
-          setSessionCookie(cookieToken);
+        const parsedUser = JSON.parse(storedSession) as { user?: { username?: string } };
+        if (parsedUser?.user?.username) {
+          setProfileName(parsedUser.user.username);
+          setProfileEmail(`${parsedUser.user.username}@expresspharma.local`);
         }
 
-        return;
-      }
-
-      const parsed = JSON.parse(storedSession) as { token?: string };
-      if (parsed?.token) {
-        setAuthToken(parsed.token);
-      }
-
-      const parsedUser = JSON.parse(storedSession) as { user?: { username?: string } };
-      if (parsedUser?.user?.username) {
-        setProfileName(parsedUser.user.username);
-        setProfileEmail(`${parsedUser.user.username}@expresspharma.local`);
-      }
+        setSessionReady(true);
       } catch {
         setAuthToken(null);
         window.location.replace("/login?next=/analytics");
@@ -198,8 +232,12 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    if (!sessionReady) {
+      return;
+    }
+
     void refreshAnalytics();
-  }, [refreshAnalytics]);
+  }, [refreshAnalytics, sessionReady]);
 
   const categoryData = useMemo<CategoryPoint[]>(() => {
     const map = new Map<string, CategoryPoint>();
@@ -376,7 +414,23 @@ export default function AnalyticsPage() {
 
             <section className="grid gap-6 xl:grid-cols-2">
               <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">Sales log</h3>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">Sales log</h3>
+                    <p className="mt-1 text-xs font-medium text-slate-500">Loaded from the last {salesLogDays} days.</p>
+                  </div>
+                  <select
+                    value={salesLogDays}
+                    onChange={(event) => setSalesLogDays(Number(event.target.value))}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition focus:border-sky-400 focus:bg-white"
+                  >
+                    {SALES_LOG_RANGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 {salesLogData?.records?.length ? (
                   <div className="mt-4 space-y-3">
                     {salesLogData.records.slice(0, 5).map((record) => (
