@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SESSION_COOKIE_KEY = "pharmacy_session_token";
 
-const PROTECTED_PATHS = ["/", "/analytics", "/stock-entry"];
+const PROTECTED_PATHS = ["/analytics", "/stock-entry", "/reports"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -26,5 +26,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/analytics/:path*", "/stock-entry/:path*"],
+  matcher: ["/analytics/:path*", "/stock-entry/:path*", "/reports/:path*"],
 };
