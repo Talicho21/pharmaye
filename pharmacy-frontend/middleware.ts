@@ -18,9 +18,7 @@ export function middleware(request: NextRequest) {
 
   if (PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
     if (!sessionToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("next", pathname);
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

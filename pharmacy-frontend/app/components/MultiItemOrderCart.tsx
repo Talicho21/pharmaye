@@ -114,7 +114,9 @@ export function MultiItemOrderCart({
 
           const normalizedResults = rawResults.map((raw: any) => ({
             batch_id: Number(raw.batch_id ?? raw.id ?? raw.batchId ?? 0),
-            medicine_id: Number(raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0),
+            medicine_id: Number(
+              raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0,
+            ),
             medicine_name: String(raw.medicine_name ?? raw.name ?? ""),
             batch_number: String(raw.batch_number ?? raw.batchNumber ?? ""),
             quantity: Number(raw.quantity ?? 0),
@@ -165,7 +167,9 @@ export function MultiItemOrderCart({
       !newPricePerUnit.trim() ||
       !newExpiryDate.trim()
     ) {
-      setFormValidationError("Please fill in all required medicine fields before adding to cart.");
+      setFormValidationError(
+        "Please fill in all required medicine fields before adding to cart.",
+      );
       return;
     }
 
@@ -214,6 +218,47 @@ export function MultiItemOrderCart({
     setFormValidationError("");
   };
 
+  const formatDateForInput = (dateString?: string | null): string => {
+    if (!dateString) return "";
+    try {
+      // Handle both ISO format and other formats
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+      // Return YYYY-MM-DD format for HTML5 date input
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    } catch {
+      return "";
+    }
+  };
+
+  const formatExpiryDateFull = (dateString: string): string => {
+    if (!dateString) return "";
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      return dateString;
+    }
+
+    const ymdMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (ymdMatch) {
+      const [, y, m, d] = ymdMatch;
+      return `${m}/${d}/${y}`;
+    }
+
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      const year = date.getUTCFullYear();
+      return `${month}/${day}/${year}`;
+    } catch {
+      return dateString;
+    }
+  };
+
   const handleSelectSearchResult = (item: {
     batch_id: number;
     medicine_id: number;
@@ -227,7 +272,8 @@ export function MultiItemOrderCart({
     setNewMedicineName(item.medicine_name ?? "");
     setNewBatchNumber(item.batch_number ?? "");
     setNewPricePerUnit(String(item.price_per_unit ?? ""));
-    setNewExpiryDate(item.expiry_date ?? "");
+    // Convert date to YYYY-MM-DD format for HTML5 date input
+    setNewExpiryDate(formatDateForInput(item.expiry_date));
     setNewQuantity("1");
     setMedicineSearch("");
     setSearchResults([]);
@@ -585,12 +631,7 @@ export function MultiItemOrderCart({
           <tbody>
             ${cartItems
               .map((item, index) => {
-                const d = new Date(item.expiryDate);
-                const mm = String(d.getMonth() + 1).padStart(2, "0");
-                const yyyy = d.getFullYear();
-                const expiry = isNaN(d.getTime())
-                  ? item.expiryDate
-                  : `${mm}/${yyyy}`;
+                const expiry = formatExpiryDateFull(item.expiryDate);
                 return `
               <tr>
                 <td>${index + 1}</td>
@@ -785,7 +826,9 @@ export function MultiItemOrderCart({
             <>
               {formValidationError && (
                 <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800">{formValidationError}</p>
+                  <p className="text-sm font-medium text-amber-800">
+                    {formValidationError}
+                  </p>
                 </div>
               )}
 
@@ -934,24 +977,27 @@ export function MultiItemOrderCart({
                 <div className="grid grid-cols-2 gap-3">
                   <input
                     type="text"
-                    placeholder="Selected Medicine ID"
+                    placeholder="Medicine ID"
                     value={newMedicineId}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    onChange={(e) => setNewMedicineId(e.target.value)}
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                   <input
                     type="text"
-                    placeholder="Selected Medicine Name"
+                    placeholder="Medicine Name"
                     value={newMedicineName}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    onChange={(e) => setNewMedicineName(e.target.value)}
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                   <input
                     type="text"
-                    placeholder="Selected Batch Number"
+                    placeholder="Batch Number"
                     value={newBatchNumber}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    onChange={(e) => setNewBatchNumber(e.target.value)}
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                   <input
                     type="number"
@@ -960,23 +1006,25 @@ export function MultiItemOrderCart({
                     onChange={(e) => setNewQuantity(e.target.value)}
                     disabled={isProcessing}
                     min="1"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                   <input
                     type="number"
                     placeholder="Price Per Unit (ETB)"
                     value={newPricePerUnit}
-                    readOnly
+                    onChange={(e) => setNewPricePerUnit(e.target.value)}
+                    disabled={isProcessing}
                     step="0.01"
                     min="0"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                   <input
                     type="date"
                     placeholder="Expiry Date"
                     value={newExpiryDate}
                     onChange={(e) => setNewExpiryDate(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 disabled:bg-gray-100"
                   />
                 </div>
                 <button

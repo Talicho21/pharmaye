@@ -64,22 +64,41 @@ const formatTime = (date: Date = new Date()): string => {
 };
 
 /**
- * FORMAT EXPIRY DATE AS MM/YYYY
- * Input: "2026-12-15" or "12/15/2026"
- * Output: "12/2026"
+ * FORMAT EXPIRY DATE AS MM/DD/YYYY (TIMEZONE-SAFE)
+ * Input variants supported:
+ * - "YYYY-MM-DD" (preferred from HTML5 date inputs)
+ * - "YYYY-MM-DDTHH:mm:ssZ" (ISO timestamp)
+ * - "MM/DD/YYYY" (already formatted)
  *
- * Why: Pharmaceutical invoices typically show only month/year
- * for expiry dates to reduce line-item width and improve readability.
+ * This function intentionally avoids using local Date parsing for plain
+ * "YYYY-MM-DD" strings to prevent implicit timezone shifts that can drop
+ * or change the day component. For ISO timestamps we use UTC-based getters
+ * to preserve the calendar date as represented in the timestamp.
  */
-const formatExpiryDateMonthYear = (dateString: string): string => {
+const formatExpiryDateFull = (dateString: string): string => {
+  if (!dateString) return "";
+
+  // Already in MM/DD/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return dateString;
+
+  // Plain YYYY-MM-DD (no timezone) — parse components directly to avoid TZ shifts
+  const ymdMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch;
+    return `${m}/${d}/${y}`;
+  }
+
+  // ISO-like string (with time and possibly timezone) — use UTC getters
   try {
-    const date = new Date(dateString);
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${month}/${year}`;
-  } catch (error) {
-    console.warn(`Invalid date format: ${dateString}`);
-    return dateString; // fallback to original string
+    const dt = new Date(dateString);
+    if (isNaN(dt.getTime())) return dateString;
+    const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dt.getUTCDate()).padStart(2, "0");
+    const year = dt.getUTCFullYear();
+    return `${month}/${day}/${year}`;
+  } catch (err) {
+    console.warn(`Invalid expiry date: ${dateString}`);
+    return dateString;
   }
 };
 
@@ -672,9 +691,9 @@ export function PrintableInvoice({
                     {formatCurrency(item.pricePerUnit)}
                   </td>
 
-                  {/* Expiry Date: Formatted as MM/YYYY */}
+                  {/* Expiry Date: Formatted as MM/DD/YYYY (preserve day, timezone-safe) */}
                   <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-700 font-medium">
-                    {formatExpiryDateMonthYear(item.expiryDate)}
+                    {formatExpiryDateFull(item.expiryDate)}
                   </td>
 
                   <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-900 font-medium w-[8%]">

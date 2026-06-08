@@ -97,7 +97,7 @@ export default function ReportsPage() {
         if (!storedSession) {
           const cookieToken = readSessionCookie();
           if (!cookieToken) {
-            window.location.replace("/login?next=/reports");
+            window.location.replace("/");
             return;
           }
 
@@ -110,7 +110,7 @@ export default function ReportsPage() {
           if (!response.ok) {
             clearSessionCookie();
             window.localStorage.removeItem(SESSION_STORAGE_KEY);
-            window.location.replace("/login?next=/reports");
+            window.location.replace("/");
             return;
           }
 
@@ -152,7 +152,7 @@ export default function ReportsPage() {
 
         setSessionReady(true);
       } catch {
-        window.location.replace("/login?next=/reports");
+        window.location.replace("/");
       }
     };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell } from "@/app/components/AppShell";
 import {
@@ -13,7 +12,6 @@ import {
   readSessionCookie,
   setSessionCookie,
 } from "@/app/utils/session";
-import { getRolePermissions } from "@/app/utils/rolePermissions";
 
 const SESSION_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
@@ -69,7 +67,6 @@ export default function HomePage() {
   const [isSellOutOpen, setIsSellOutOpen] = useState(false);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
-  const router = useRouter();
 
   const pageClassName =
     theme === "dark"
@@ -169,7 +166,6 @@ export default function HomePage() {
         if (!raw) {
           const cookieToken = readSessionCookie();
           if (!cookieToken) {
-            window.location.replace("/login");
             return;
           }
 
@@ -182,7 +178,6 @@ export default function HomePage() {
           if (!response.ok) {
             clearSessionCookie();
             localStorage.removeItem(SESSION_KEY);
-            window.location.replace("/login");
             return;
           }
 
@@ -207,7 +202,6 @@ export default function HomePage() {
         }
       } catch {
         localStorage.removeItem(SESSION_KEY);
-        window.location.replace("/login");
       } finally {
         setAuthChecked(true);
       }
@@ -460,7 +454,6 @@ export default function HomePage() {
       description: "Your session was cleared.",
       tone: "info",
     });
-    router.replace("/login");
   };
 
   if (!mounted || !authChecked) {
@@ -662,23 +655,21 @@ export default function HomePage() {
               entry, and category auto-creation.
             </p>
           </Link>
-          {user.role === "admin" ? (
-            <Link
-              href="/analytics"
-              className="group rounded-3xl border border-violet-100 bg-violet-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:bg-violet-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
-            >
-              <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">
-                Analytics
-              </div>
-              <div className={actionTileTitleClassName}>
-                View charts and reports
-              </div>
-              <p className={actionTileCaptionClassName}>
-                Inventory trends, inactivity, and sales reporting now have their
-                own page.
-              </p>
-            </Link>
-          ) : null}
+          <Link
+            href="/analytics"
+            className="group rounded-3xl border border-violet-100 bg-violet-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:bg-violet-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
+          >
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">
+              Analytics
+            </div>
+            <div className={actionTileTitleClassName}>
+              View charts and reports
+            </div>
+            <p className={actionTileCaptionClassName}>
+              Inventory trends, inactivity, and sales reporting now have their
+              own page.
+            </p>
+          </Link>
           <div className="group rounded-3xl border border-slate-100 bg-slate-50/70 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-slate-200 hover:bg-slate-50/90 hover:shadow-[0_24px_70px_rgba(16,24,40,0.12)]">
             <div className="group inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-slate-700">
               <span className={titleLineClassName}>Session</span>
@@ -687,8 +678,7 @@ export default function HomePage() {
               {user.role}
             </div>
             <p className="mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700">
-              Signed in as {user.username}. (
-              {user.role === "admin" ? "Administrator" : "Staff Member"})
+              Signed in as {user.username}.
             </p>
           </div>
         </section>
@@ -700,25 +690,23 @@ export default function HomePage() {
           isProcessing={isProcessingSale}
         />
 
-        {user.role === "admin" ? (
-          <section className="grid gap-4 sm:grid-cols-3">
-            {[
-              { label: "Items loaded", value: inventory.length },
-              { label: "Low stock", value: lowStockCount },
-              { label: "Expired", value: expiredCount },
-            ].map((item) => (
-              <div key={item.label} className={metricCardClassName}>
-                <div className="group/title inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-emerald-600">
-                  <span className={titleLineClassName}>{item.label}</span>
-                </div>
-                <div className="mt-3 text-3xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
-                  {item.value}
-                </div>
-                <div className="mt-4 h-px w-full bg-linear-to-r from-emerald-200 via-emerald-100 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+        <section className="grid gap-4 sm:grid-cols-3">
+          {[
+            { label: "Items loaded", value: inventory.length },
+            { label: "Low stock", value: lowStockCount },
+            { label: "Expired", value: expiredCount },
+          ].map((item) => (
+            <div key={item.label} className={metricCardClassName}>
+              <div className="group/title inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-emerald-600">
+                <span className={titleLineClassName}>{item.label}</span>
               </div>
-            ))}
-          </section>
-        ) : null}
+              <div className="mt-3 text-3xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
+                {item.value}
+              </div>
+              <div className="mt-4 h-px w-full bg-linear-to-r from-emerald-200 via-emerald-100 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+            </div>
+          ))}
+        </section>
 
         <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
           <div className="mb-5 flex items-center justify-between gap-4">

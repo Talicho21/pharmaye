@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/app/components/AppShell";
 import {
   MultiItemOrderCart,
@@ -45,6 +46,8 @@ export default function SellOutPage() {
   } | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     const hydrateSession = async () => {
       try {
@@ -52,7 +55,7 @@ export default function SellOutPage() {
         if (!raw) {
           const cookieToken = readSessionCookie();
           if (!cookieToken) {
-            window.location.replace("/login");
+            router.replace("/");
             return;
           }
 
@@ -65,7 +68,7 @@ export default function SellOutPage() {
           if (!response.ok) {
             clearSessionCookie();
             localStorage.removeItem(SESSION_KEY);
-            window.location.replace("/login");
+            router.replace("/");
             return;
           }
 
@@ -90,7 +93,7 @@ export default function SellOutPage() {
         }
       } catch {
         localStorage.removeItem(SESSION_KEY);
-        window.location.replace("/login");
+        router.replace("/");
       } finally {
         setAuthChecked(true);
       }
@@ -248,6 +251,7 @@ export default function SellOutPage() {
       description: "Your session was cleared.",
       tone: "info",
     });
+    router.replace("/");
   };
 
   if (!authChecked || !user) {

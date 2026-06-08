@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { AppShell } from "@/app/components/AppShell";
 import { clearSessionCookie } from "@/app/utils/session";
-import type { UserRole } from "@/app/utils/rolePermissions";
 
 type CategoryItem = {
   id: number;
@@ -44,7 +43,7 @@ export default function StockEntryPage() {
   const [form, setForm] = useState<StockFormState>(initialFormState);
   const [profileName, setProfileName] = useState("Guest user");
   const [profileEmail, setProfileEmail] = useState("guest@expresspharma.local");
-  const [userRole, setUserRole] = useState<UserRole>("staff");
+  const [userRole, setUserRole] = useState<"admin" | "staff">("staff");
 
   const handleSignOut = () => {
     window.localStorage.removeItem("pharmacy_auth_session_v1");
@@ -69,7 +68,7 @@ export default function StockEntryPage() {
       );
       if (storedSession) {
         const parsed = JSON.parse(storedSession) as {
-          user?: { username?: string; role?: UserRole };
+          user?: { username?: string; role?: "admin" | "staff" };
         };
         if (parsed?.user?.username) {
           setProfileName(parsed.user.username);

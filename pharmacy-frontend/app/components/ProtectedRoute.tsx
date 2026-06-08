@@ -31,7 +31,7 @@ export function ProtectedRoute({
         // Get stored session
         const sessionStorage = localStorage.getItem("pharmacy_auth_session_v1");
         if (!sessionStorage) {
-          router.push("/login");
+          router.push("/");
           return;
         }
 
@@ -41,7 +41,7 @@ export function ProtectedRoute({
         const userRole = session?.user?.role;
 
         if (!userRole) {
-          router.push("/login");
+          router.push("/");
           return;
         }
 
@@ -63,7 +63,7 @@ export function ProtectedRoute({
         setIsAuthorized(true);
       } catch (error) {
         console.error("Authorization check failed:", error);
-        router.push("/login");
+        router.push("/");
       } finally {
         setIsChecking(false);
       }
