@@ -47,6 +47,8 @@ export default function StockEntryPage() {
 
   const handleSignOut = () => {
     window.localStorage.removeItem("pharmacy_auth_session_v1");
+    window.localStorage.removeItem("token");
+    window.localStorage.removeItem("rememberMe");
     clearSessionCookie();
     window.location.href = "/";
   };

@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/app/utils/rolePermissions";
-import { canAccessRoute } from "@/app/utils/rolePermissions";
+import { canAccessRoute, isAdminLikeUser } from "@/app/utils/rolePermissions";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -36,17 +36,21 @@ export function ProtectedRoute({
         }
 
         const session = JSON.parse(sessionStorage) as {
-          user?: { role: UserRole };
+          user?: { role?: UserRole | string; username?: string };
         };
         const userRole = session?.user?.role;
+        const username = session?.user?.username;
+        const effectiveRole = isAdminLikeUser(userRole, username)
+          ? "admin"
+          : userRole;
 
-        if (!userRole) {
+        if (!effectiveRole) {
           router.push("/");
           return;
         }
 
         // Check if user has access to this route
-        const hasAccess = canAccessRoute(userRole, routePath);
+        const hasAccess = canAccessRoute(routePath, effectiveRole, username);
 
         if (!hasAccess) {
           // Redirect staff users back to dashboard
@@ -55,7 +59,7 @@ export function ProtectedRoute({
         }
 
         // Check specific role requirement if provided
-        if (requiredRole && userRole !== requiredRole) {
+        if (requiredRole && effectiveRole !== requiredRole) {
           router.push("/");
           return;
         }

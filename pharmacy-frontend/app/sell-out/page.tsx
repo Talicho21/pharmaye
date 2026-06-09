@@ -245,13 +245,10 @@ export default function SellOutPage() {
     setUser(null);
     setInventory([]);
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem("token");
+    localStorage.removeItem("rememberMe");
     clearSessionCookie();
-    setToast({
-      title: "Signed out",
-      description: "Your session was cleared.",
-      tone: "info",
-    });
-    router.replace("/");
+    window.location.href = "/";
   };
 
   if (!authChecked || !user) {

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import type { ReactNode } from "react";
 import type { UserRole } from "@/app/utils/rolePermissions";
-import { getRolePermissions } from "@/app/utils/rolePermissions";
+import { isAdminLikeUser } from "@/app/utils/rolePermissions";
 
 type NavItem = {
   href: string;
@@ -68,8 +68,9 @@ export function AppShell({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
   const currentPath = pathname || "/";
-  const permissions = getRolePermissions(userRole);
-  const effectiveNavItems = navItems || getDefaultNavItems(userRole);
+  const isAdminClearance = isAdminLikeUser(userRole, profileName);
+  const effectiveRole = isAdminClearance ? "admin" : userRole;
+  const effectiveNavItems = navItems || getDefaultNavItems(effectiveRole);
 
   const closeDrawer = () => setDrawerOpen(false);
   const toggleDrawer = () => setDrawerOpen((previous) => !previous);
@@ -135,7 +136,7 @@ export function AppShell({
               {profileName}
             </p>
             <p className="text-xs font-medium text-slate-500">
-              {userRole === "admin" ? "Administrator" : "Staff Member"}
+              {effectiveRole === "admin" ? "Administrator" : "Staff Member"}
             </p>
           </div>
         </div>

@@ -18,11 +18,23 @@ export interface RolePermissions {
   canViewAdminCards: boolean;
 }
 
+export const isAdminLikeUser = (role?: string, username?: string): boolean => {
+  const normalizedRole = (role ?? "").trim().toLowerCase();
+  const normalizedUsername = (username ?? "").trim().toLowerCase();
+
+  return normalizedRole === "admin" || normalizedUsername.includes("admin");
+};
+
+export const getEffectiveRole = (role?: string, username?: string): UserRole =>
+  isAdminLikeUser(role, username) ? "admin" : "staff";
+
 /**
  * Get permissions for a given role
  */
-export const getRolePermissions = (role: UserRole): RolePermissions => {
-  if (role === "admin") {
+export const getRolePermissions = (role?: string, username?: string): RolePermissions => {
+  const effectiveRole = getEffectiveRole(role, username);
+
+  if (effectiveRole === "admin") {
     return {
       canAccessDashboard: true,
       canAccessStockEntry: true,
@@ -55,8 +67,12 @@ export const getRolePermissions = (role: UserRole): RolePermissions => {
 /**
  * Check if a user can access a specific route
  */
-export const canAccessRoute = (role: UserRole, route: string): boolean => {
-  const permissions = getRolePermissions(role);
+export const canAccessRoute = (
+  route: string,
+  role?: string,
+  username?: string,
+): boolean => {
+  const permissions = getRolePermissions(role, username);
 
   const routeMap: Record<string, keyof RolePermissions> = {
     "/": "canAccessDashboard",

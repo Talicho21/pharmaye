@@ -169,6 +169,8 @@ export default function ReportsPage() {
 
   const handleSignOut = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.localStorage.removeItem("token");
+    window.localStorage.removeItem("rememberMe");
     clearSessionCookie();
     window.location.href = "/";
   };

@@ -256,6 +256,8 @@ export default function AnalyticsPage() {
 
   const handleSignOut = useCallback(() => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.localStorage.removeItem("token");
+    window.localStorage.removeItem("rememberMe");
     clearSessionCookie();
     window.location.href = "/";
   }, []);

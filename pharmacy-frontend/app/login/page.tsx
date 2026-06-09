@@ -43,10 +43,6 @@ type Toast = {
   tone: "success" | "error" | "info";
 };
 
-type LoginPageProps = {
-  onLoginSuccess?: (user: AuthUser, token: string) => void;
-};
-
 const featureCards = [
   {
     icon: <ShieldCheck className="h-6 w-6" />,
@@ -70,7 +66,7 @@ const featureCards = [
   },
 ];
 
-export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
+export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -136,12 +132,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
       }
       setSessionCookie(data.token);
 
-      // Notify parent component if callback provided, otherwise navigate
-      if (onLoginSuccess) {
-        onLoginSuccess(data.user, data.token);
-      } else {
-        router.replace(nextPath);
-      }
+      router.replace(nextPath);
     } catch (error) {
       setToast({
         title: "Login failed",

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/app/components/AppShell";
-import LoginPage from "./login/page";
 import {
   MultiItemOrderCart,
   type CartItem,
@@ -15,7 +14,7 @@ import {
 } from "@/app/utils/session";
 
 const SESSION_KEY = "pharmacy_auth_session_v1";
-const API_BASE = "/api/backend";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
 type UserRole = "admin" | "staff";
 
@@ -110,7 +109,7 @@ export default function HomePage() {
 
       setIsLoadingInventory(true);
       try {
-        const response = await fetch(`${API_BASE}/inventory`, {
+        const response = await fetch(`${API_BASE}/api/inventory`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -147,30 +146,6 @@ export default function HomePage() {
 
   useEffect(() => {
     setMounted(true);
-    // Development-only helper: visit /?dev=1 to auto-bootstrap an admin session for quick UI testing.
-    try {
-      if (process.env.NODE_ENV === "development") {
-        const url = new URL(window.location.href);
-        const devFlag = url.searchParams.get("dev");
-        if (
-          (devFlag === "1" || devFlag === "admin") &&
-          !localStorage.getItem(SESSION_KEY)
-        ) {
-          const fake = {
-            token: "devtoken_local",
-            user: { id: 1, username: "devadmin", role: "admin" },
-          };
-          localStorage.setItem(SESSION_KEY, JSON.stringify(fake));
-          setSessionCookie(fake.token);
-          // remove the dev flag and reload once so navigation works normally
-          url.searchParams.delete("dev");
-          window.location.replace(url.toString());
-          return;
-        }
-      }
-    } catch (err) {
-      // ignore errors in dev helper
-    }
     const hydrateSession = async () => {
       try {
         const savedTheme = localStorage.getItem("pharmacy_theme_v1") as
@@ -191,10 +166,11 @@ export default function HomePage() {
         if (!raw) {
           const cookieToken = readSessionCookie();
           if (!cookieToken) {
+            window.location.replace("/login");
             return;
           }
 
-          const response = await fetch(`${API_BASE}/auth/me`, {
+          const response = await fetch(`${API_BASE}/api/auth/me`, {
             headers: {
               Authorization: `Bearer ${cookieToken}`,
             },
@@ -203,6 +179,7 @@ export default function HomePage() {
           if (!response.ok) {
             clearSessionCookie();
             localStorage.removeItem(SESSION_KEY);
+            window.location.replace("/login");
             return;
           }
 
@@ -227,6 +204,7 @@ export default function HomePage() {
         }
       } catch {
         localStorage.removeItem(SESSION_KEY);
+        window.location.replace("/login");
       } finally {
         setAuthChecked(true);
       }
@@ -340,7 +318,7 @@ export default function HomePage() {
         medicine_name: item.medicineName,
       }));
 
-      const response = await fetch(`${API_BASE}/inventory/bulk-sell`, {
+      const response = await fetch(`${API_BASE}/api/inventory/bulk-sell`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -401,7 +379,7 @@ export default function HomePage() {
       );
 
       setIsSellOutOpen(false);
-      await fetch(`${API_BASE}/inventory`, {
+      await fetch(`${API_BASE}/api/inventory`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -473,12 +451,10 @@ export default function HomePage() {
     setUser(null);
     setInventory([]);
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem("token");
+    localStorage.removeItem("rememberMe");
     clearSessionCookie();
-    setToast({
-      title: "Signed out",
-      description: "Your session was cleared.",
-      tone: "info",
-    });
+    window.location.href = "/";
   };
 
   if (!mounted || !authChecked) {
@@ -494,23 +470,107 @@ export default function HomePage() {
   }
 
   if (!user) {
-    const handleLoginFromPage = (loginUser: AuthUser, loginToken: string) => {
-      setUser(loginUser);
-      setToken(loginToken);
-      localStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify({ token: loginToken, user: loginUser }),
-      );
-      setSessionCookie(loginToken);
-    };
-    return <LoginPage onLoginSuccess={handleLoginFromPage} />;
+    return (
+      <main className={pageClassName}>
+        <div className="mx-auto grid min-h-[85vh] max-w-6xl items-center gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="space-y-6">
+            <span className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-sky-700">
+              Pharmacy system
+            </span>
+            <div className="space-y-4">
+              <h1 className="max-w-2xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
+                Faster stock entry, cleaner analytics, and a simpler dashboard.
+              </h1>
+              <p className="max-w-2xl text-lg leading-8 text-slate-600">
+                Stock entry now lives on its own page, analytics live
+                separately, and the main dashboard stays focused on login,
+                status, and shortcuts.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { label: "Dedicated stock page", value: "/stock-entry" },
+                { label: "Analytics page", value: "/analytics" },
+                { label: "PostgreSQL auth", value: "Active" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-4xl border border-white/80 bg-white/85 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur"
+                >
+                  <div className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">
+                    {item.label}
+                  </div>
+                  <div className="mt-2 text-lg font-bold text-slate-950">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_30px_90px_rgba(15,23,42,0.14)] backdrop-blur sm:p-8">
+            <div className="mb-6 space-y-2">
+              <h2 className="text-2xl font-bold text-slate-950">Sign in</h2>
+              <p className="text-sm leading-6 text-slate-500">
+                Use your pharmacy account to access the dashboard.
+              </p>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleLogin}>
+              <label className="block space-y-2 text-sm font-semibold text-slate-700">
+                <span>Username</span>
+                <input
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-sky-400 focus:bg-white"
+                  placeholder="Enter username"
+                  autoComplete="username"
+                />
+              </label>
+              <label className="block space-y-2 text-sm font-semibold text-slate-700">
+                <span>Password</span>
+                <input
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  type="password"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-sky-400 focus:bg-white"
+                  placeholder="Enter password"
+                  autoComplete="current-password"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isLoggingIn ? "Signing in..." : "Sign in"}
+              </button>
+            </form>
+
+            {toast ? (
+              <div
+                className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
+                  toast.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : toast.tone === "error"
+                      ? "border-rose-200 bg-rose-50 text-rose-800"
+                      : "border-sky-200 bg-sky-50 text-sky-800"
+                }`}
+              >
+                <div className="font-semibold">{toast.title}</div>
+                <div className="mt-1">{toast.description}</div>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (
     <AppShell
       profileName={user.username}
       profileEmail={`${user.username}@expresspharma.local`}
-      userRole={user.role}
       onSignOut={handleLogout}
     >
       <div className={dashboardFrameClassName}>
