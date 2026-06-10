@@ -114,7 +114,9 @@ export function MultiItemOrderCart({
 
           const normalizedResults = rawResults.map((raw: any) => ({
             batch_id: Number(raw.batch_id ?? raw.id ?? raw.batchId ?? 0),
-            medicine_id: Number(raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0),
+            medicine_id: Number(
+              raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0,
+            ),
             medicine_name: String(raw.medicine_name ?? raw.name ?? ""),
             batch_number: String(raw.batch_number ?? raw.batchNumber ?? ""),
             quantity: Number(raw.quantity ?? 0),
@@ -165,7 +167,9 @@ export function MultiItemOrderCart({
       !newPricePerUnit.trim() ||
       !newExpiryDate.trim()
     ) {
-      setFormValidationError("Please fill in all required medicine fields before adding to cart.");
+      setFormValidationError(
+        "Please fill in all required medicine fields before adding to cart.",
+      );
       return;
     }
 
@@ -785,7 +789,9 @@ export function MultiItemOrderCart({
             <>
               {formValidationError && (
                 <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800">{formValidationError}</p>
+                  <p className="text-sm font-medium text-amber-800">
+                    {formValidationError}
+                  </p>
                 </div>
               )}
 
