@@ -64,41 +64,42 @@ const formatTime = (date: Date = new Date()): string => {
 };
 
 /**
- * FORMAT EXPIRY DATE AS MM/DD/YYYY (TIMEZONE-SAFE)
+ * FORMAT EXPIRY DATE AS DD/MM/YY for compact invoice columns.
  * Input variants supported:
  * - "YYYY-MM-DD" (preferred from HTML5 date inputs)
  * - "YYYY-MM-DDTHH:mm:ssZ" (ISO timestamp)
- * - "MM/DD/YYYY" (already formatted)
- *
- * This function intentionally avoids using local Date parsing for plain
- * "YYYY-MM-DD" strings to prevent implicit timezone shifts that can drop
- * or change the day component. For ISO timestamps we use UTC-based getters
- * to preserve the calendar date as represented in the timestamp.
+ * - "DD/MM/YYYY" (already formatted)
  */
-const formatExpiryDateFull = (dateString: string): string => {
+const formatInvoiceExpiryDate = (dateString: string): string => {
   if (!dateString) return "";
 
-  // Already in MM/DD/YYYY
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) return dateString;
+  const raw = String(dateString).trim();
+
+  // Already in DD/MM/YYYY or DD/MM/YY
+  if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(raw)) {
+    const [day, month, year] = raw.split("/");
+    return `${day}/${month}/${String(year).slice(-2)}`;
+  }
 
   // Plain YYYY-MM-DD (no timezone) — parse components directly to avoid TZ shifts
-  const ymdMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const ymdMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (ymdMatch) {
-    const [, y, m, d] = ymdMatch;
-    return `${m}/${d}/${y}`;
+    return `${ymdMatch[3]}/${ymdMatch[2]}/${ymdMatch[1].slice(-2)}`;
   }
 
   // ISO-like string (with time and possibly timezone) — use UTC getters
   try {
-    const dt = new Date(dateString);
-    if (isNaN(dt.getTime())) return dateString;
-    const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return raw;
+
     const day = String(dt.getUTCDate()).padStart(2, "0");
-    const year = dt.getUTCFullYear();
-    return `${month}/${day}/${year}`;
-  } catch (err) {
+    const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const year = String(dt.getUTCFullYear()).slice(-2);
+
+    return `${day}/${month}/${year}`;
+  } catch (error) {
     console.warn(`Invalid expiry date: ${dateString}`);
-    return dateString;
+    return raw;
   }
 };
 
@@ -623,9 +624,9 @@ export function PrintableInvoice({
              - Starts at 1 (index + 1) for human-readable numbering
              - Essential for audit trails and physical stock verification
           
-          2. Expiry Date Formatting: Extracts MM/YYYY only
-             - Input: "2026-12-15" → Output: "12/2026"
-             - Improves readability on paper, saves horizontal space
+          2. Expiry Date Formatting: Uses compact DD/MM/YY
+             - Input: "2026-12-15" → Output: "15/12/26"
+             - Keeps the expiry column compact while preserving the full day
           
           3. Column Order: S.No → Description → Batch → Unit Price → Exp.Date → Qty → Total
              - S.No first helps with sequential verification during delivery
@@ -691,9 +692,9 @@ export function PrintableInvoice({
                     {formatCurrency(item.pricePerUnit)}
                   </td>
 
-                  {/* Expiry Date: Formatted as MM/DD/YYYY (preserve day, timezone-safe) */}
+                  {/* Expiry Date: Compact DD/MM/YY for a narrow invoice column */}
                   <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-700 font-medium">
-                    {formatExpiryDateFull(item.expiryDate)}
+                    {formatInvoiceExpiryDate(item.expiryDate)}
                   </td>
 
                   <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-900 font-medium w-[8%]">

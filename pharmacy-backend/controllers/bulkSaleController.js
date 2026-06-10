@@ -70,8 +70,28 @@ exports.bulkSaleMedicine = async (req, res) => {
       }
 
       const medicine = itemResult.rows[0];
+      const lineOverrides = (currentSale && typeof currentSale === "object" ? currentSale : {});
+      const editedItem = Array.isArray(req.body.items)
+        ? req.body.items.find((entry) => Number(entry.medicine_id ?? entry.batch_id ?? entry.id) === batchId)
+        : null;
+      const mergedEditedItem = {
+        medicine_id: Number(lineOverrides.medicine_id ?? lineOverrides.batch_id ?? lineOverrides.id ?? editedItem?.medicine_id ?? editedItem?.batch_id ?? editedItem?.id ?? batchId),
+        medicine_name: String(lineOverrides.medicine_name ?? lineOverrides.name ?? editedItem?.medicine_name ?? editedItem?.name ?? medicine.name ?? medicine_name ?? "").trim(),
+        batch_number: String(lineOverrides.batch_number ?? editedItem?.batch_number ?? medicine.batch_number ?? "").trim(),
+        price_per_unit: Number.parseFloat(String(lineOverrides.price_per_unit ?? editedItem?.price_per_unit ?? medicine.price_per_unit ?? 0)),
+        expiry_date: lineOverrides.expiry_date ?? editedItem?.expiry_date ?? medicine.expiry_date ?? null,
+      };
       const availableQty = medicine.quantity;
-      const pricePerUnit = parseFloat(medicine.price_per_unit);
+      const pricePerUnit = parseFloat(medicine.price_per_unit || 0);
+      const editedPricePerUnit = Number.isFinite(mergedEditedItem.price_per_unit) && mergedEditedItem.price_per_unit >= 0
+        ? mergedEditedItem.price_per_unit
+        : pricePerUnit;
+      const salePricePerUnit = Number.isFinite(editedPricePerUnit) && editedPricePerUnit >= 0
+        ? editedPricePerUnit
+        : pricePerUnit;
+      const editedBatchNumber = mergedEditedItem.batch_number;
+      const editedExpiryDate = mergedEditedItem.expiry_date;
+      const editedMedicineName = mergedEditedItem.medicine_name;
 
       // Ensure sales.medicine_id always targets a valid medicines(id) row.
       const medicineUpsertText = `
@@ -86,8 +106,8 @@ exports.bulkSaleMedicine = async (req, res) => {
         RETURNING id
       `;
       const medicineUpsertResult = await db.query(medicineUpsertText, [
-        medicine.name || medicine_name,
-        pricePerUnit,
+        editedMedicineName || medicine.name || medicine_name,
+        salePricePerUnit,
       ]);
       const resolvedMedicineId = Number(medicineUpsertResult.rows[0]?.id || 0);
 
@@ -100,15 +120,27 @@ exports.bulkSaleMedicine = async (req, res) => {
         throw new Error(`Insufficient inventory stock for ${medicine.name}. Requested: ${parsedQty}, Available: ${availableQty}`);
       }
 
-      const lineTotalRevenue = parsedQty * pricePerUnit;
+      const lineTotalRevenue = parsedQty * salePricePerUnit;
 
-      // 4. Deduct quantity levels from storage array
+      // 4. Update inventory metadata and deduct quantity in the same transaction
       const updateStockText = `
-        UPDATE inventory 
-        SET quantity = quantity - $1 
-        WHERE id = $2
+        UPDATE inventory
+        SET
+          name = COALESCE($1, name),
+          batch_number = COALESCE($2, batch_number),
+          expiry_date = $3,
+          price_per_unit = $4,
+          quantity = quantity - $5
+        WHERE id = $6
       `;
-      await db.query(updateStockText, [parsedQty, batchId]);
+      await db.query(updateStockText, [
+        editedMedicineName || null,
+        editedBatchNumber || null,
+        editedExpiryDate ? String(editedExpiryDate).slice(0, 10) : null,
+        salePricePerUnit,
+        parsedQty,
+        batchId,
+      ]);
 
       // 5. Append transaction tracking data directly to the relational log
       const logTransactionText = `
@@ -135,9 +167,9 @@ exports.bulkSaleMedicine = async (req, res) => {
         Number(req.auth.id),
         resolvedMedicineId,
         batchId,
-        medicine.name || medicine_name,
+        editedMedicineName || medicine.name || medicine_name,
         parsedQty,
-        pricePerUnit,
+        salePricePerUnit,
         lineTotalRevenue,
         activeSeller,
         activeReceiver,
@@ -152,7 +184,7 @@ exports.bulkSaleMedicine = async (req, res) => {
       totalRevenue += lineTotalRevenue;
       processedItems.push({
         batch_id: batchId,
-        medicine_name: medicine.name || medicine_name,
+        medicine_name: editedMedicineName || medicine.name || medicine_name,
         quantity_sold: parsedQty,
         quantity_deducted: parsedQty,
       });

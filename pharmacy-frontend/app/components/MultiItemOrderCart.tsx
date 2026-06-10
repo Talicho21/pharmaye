@@ -14,6 +14,35 @@ export type CartItem = {
   availableStock?: number;
 };
 
+type EditableMedicineForm = {
+  medicineId: number;
+  medicineName: string;
+  batchNumber: string;
+  quantity: number;
+  pricePerUnit: number;
+  expiryDate: string;
+};
+
+const formatDateForInput = (value?: string | null) => {
+  if (!value) return "";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return parsed.toISOString().split("T")[0];
+};
+
+const initialEditableForm = (): EditableMedicineForm => ({
+  medicineId: 0,
+  medicineName: "",
+  batchNumber: "",
+  quantity: 1,
+  pricePerUnit: 0,
+  expiryDate: "",
+});
+
 type MultiItemOrderCartProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -51,12 +80,9 @@ export function MultiItemOrderCart({
     }>
   >([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [newMedicineId, setNewMedicineId] = useState("");
-  const [newBatchNumber, setNewBatchNumber] = useState("");
-  const [newMedicineName, setNewMedicineName] = useState("");
-  const [newQuantity, setNewQuantity] = useState("1");
-  const [newPricePerUnit, setNewPricePerUnit] = useState("");
-  const [newExpiryDate, setNewExpiryDate] = useState("");
+  const [editableForm, setEditableForm] = useState<EditableMedicineForm>(
+    initialEditableForm(),
+  );
   const [customerName, setCustomerName] = useState("");
   const [tinNumber, setTinNumber] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -81,6 +107,32 @@ export function MultiItemOrderCart({
     }
     return parsed.toLocaleDateString("en-GB");
   })();
+
+  const formatInvoiceExpiryDate = (dateValue?: string | null) => {
+    if (!dateValue) return "";
+
+    const raw = String(dateValue).trim();
+    if (/^\d{2}\/\d{2}\/\d{2,4}$/.test(raw)) {
+      const [day, month, year] = raw.split("/");
+      return `${day}/${month}/${String(year).slice(-2)}`;
+    }
+
+    const ymdMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (ymdMatch) {
+      return `${ymdMatch[3]}/${ymdMatch[2]}/${ymdMatch[1].slice(-2)}`;
+    }
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+      return raw;
+    }
+
+    const day = String(parsed.getUTCDate()).padStart(2, "0");
+    const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+    const year = String(parsed.getUTCFullYear()).slice(-2);
+
+    return `${day}/${month}/${year}`;
+  };
 
   useEffect(() => {
     const trimmedQuery = medicineSearch.trim();
@@ -159,13 +211,20 @@ export function MultiItemOrderCart({
   const addItemToCart = () => {
     setFormValidationError("");
 
-    // Validation
+    const {
+      medicineId,
+      medicineName,
+      batchNumber,
+      quantity,
+      pricePerUnit,
+      expiryDate,
+    } = editableForm;
+
     if (
-      !newMedicineId.trim() ||
-      !newMedicineName.trim() ||
-      !newBatchNumber.trim() ||
-      !newPricePerUnit.trim() ||
-      !newExpiryDate.trim()
+      !medicineId ||
+      !medicineName.trim() ||
+      !batchNumber.trim() ||
+      !expiryDate.trim()
     ) {
       setFormValidationError(
         "Please fill in all required medicine fields before adding to cart.",
@@ -173,47 +232,42 @@ export function MultiItemOrderCart({
       return;
     }
 
-    const quantity = Number(newQuantity);
     if (!Number.isInteger(quantity) || quantity <= 0) {
       setFormValidationError("Quantity must be a positive whole number.");
       return;
     }
 
-    const price = Number(newPricePerUnit);
+    const price = Number(pricePerUnit);
     if (!Number.isFinite(price) || price < 0) {
       setFormValidationError("Price must be a valid non-negative number.");
       return;
     }
-    // Validate against available stock (if known)
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate)) {
+      setFormValidationError("Expiry date must use the YYYY-MM-DD format.");
+      return;
+    }
+
     if (newAvailableStock !== null && quantity > newAvailableStock) {
       setFormValidationError(
-        `Cannot add ${quantity} units. Only ${newAvailableStock} units are available for ${newMedicineName}.`,
+        `Cannot add ${quantity} units. Only ${newAvailableStock} units are available for ${medicineName}.`,
       );
       return;
     }
 
-    // Create new cart item (store availableStock for later validation)
     const cartItem: CartItem = {
-      id: `${Date.now()}-${Math.random()}`, // Client-side unique ID
-      medicineId: Number(newMedicineId),
-      batchNumber: newBatchNumber.trim(),
-      medicineName: newMedicineName.trim(),
+      id: `${Date.now()}-${Math.random()}`,
+      medicineId,
+      batchNumber: batchNumber.trim(),
+      medicineName: medicineName.trim(),
       quantity,
       pricePerUnit: price,
-      expiryDate: newExpiryDate.trim(),
+      expiryDate,
       availableStock: newAvailableStock ?? undefined,
     };
 
-    // Add to cart (allows same medicine to be added multiple times)
     setCartItems([...cartItems, cartItem]);
-
-    // Reset form
-    setNewMedicineId("");
-    setNewBatchNumber("");
-    setNewMedicineName("");
-    setNewQuantity("1");
-    setNewPricePerUnit("");
-    setNewExpiryDate("");
+    setEditableForm(initialEditableForm());
     setNewAvailableStock(null);
     setFormValidationError("");
   };
@@ -227,12 +281,14 @@ export function MultiItemOrderCart({
     price_per_unit: number;
     expiry_date?: string | null;
   }) => {
-    setNewMedicineId(String(item.medicine_id ?? item.batch_id ?? ""));
-    setNewMedicineName(item.medicine_name ?? "");
-    setNewBatchNumber(item.batch_number ?? "");
-    setNewPricePerUnit(String(item.price_per_unit ?? ""));
-    setNewExpiryDate(item.expiry_date ?? "");
-    setNewQuantity("1");
+    setEditableForm({
+      medicineId: Number(item.medicine_id ?? item.batch_id ?? 0),
+      medicineName: item.medicine_name ?? "",
+      batchNumber: item.batch_number ?? "",
+      quantity: 1,
+      pricePerUnit: Number(item.price_per_unit ?? 0),
+      expiryDate: formatDateForInput(item.expiry_date),
+    });
     setMedicineSearch("");
     setSearchResults([]);
     setStockValidationError("");
@@ -589,12 +645,7 @@ export function MultiItemOrderCart({
           <tbody>
             ${cartItems
               .map((item, index) => {
-                const d = new Date(item.expiryDate);
-                const mm = String(d.getMonth() + 1).padStart(2, "0");
-                const yyyy = d.getFullYear();
-                const expiry = isNaN(d.getTime())
-                  ? item.expiryDate
-                  : `${mm}/${yyyy}`;
+                const expiry = formatInvoiceExpiryDate(item.expiryDate);
                 return `
               <tr>
                 <td>${index + 1}</td>
@@ -939,31 +990,55 @@ export function MultiItemOrderCart({
 
                 <div className="grid grid-cols-2 gap-3">
                   <input
-                    type="text"
+                    type="number"
                     placeholder="Selected Medicine ID"
-                    value={newMedicineId}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    value={editableForm.medicineId || ""}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        medicineId: Number(e.target.value) || 0,
+                      }))
+                    }
+                    disabled={isProcessing}
+                    min="1"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                   <input
                     type="text"
                     placeholder="Selected Medicine Name"
-                    value={newMedicineName}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    value={editableForm.medicineName}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        medicineName: e.target.value,
+                      }))
+                    }
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                   <input
                     type="text"
                     placeholder="Selected Batch Number"
-                    value={newBatchNumber}
-                    readOnly
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    value={editableForm.batchNumber}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        batchNumber: e.target.value,
+                      }))
+                    }
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                   <input
                     type="number"
                     placeholder="Quantity"
-                    value={newQuantity}
-                    onChange={(e) => setNewQuantity(e.target.value)}
+                    value={editableForm.quantity}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        quantity: Number(e.target.value) || 0,
+                      }))
+                    }
                     disabled={isProcessing}
                     min="1"
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
@@ -971,18 +1046,30 @@ export function MultiItemOrderCart({
                   <input
                     type="number"
                     placeholder="Price Per Unit (ETB)"
-                    value={newPricePerUnit}
-                    readOnly
+                    value={editableForm.pricePerUnit}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        pricePerUnit: Number(e.target.value) || 0,
+                      }))
+                    }
+                    disabled={isProcessing}
                     step="0.01"
                     min="0"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                   <input
                     type="date"
                     placeholder="Expiry Date"
-                    value={newExpiryDate}
-                    onChange={(e) => setNewExpiryDate(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    value={editableForm.expiryDate}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        expiryDate: e.target.value,
+                      }))
+                    }
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                 </div>
                 <button
@@ -1027,50 +1114,114 @@ export function MultiItemOrderCart({
                           ✕
                         </button>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
-                          <label className="text-xs text-gray-600 block mb-1">
-                            Qty
-                          </label>
-                          <input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const qty = Number(e.target.value);
-                              if (qty > 0) {
-                                updateCartItem(item.id, "quantity", qty);
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Medicine Name
+                            </label>
+                            <input
+                              type="text"
+                              value={item.medicineName}
+                              onChange={(e) =>
+                                updateCartItem(
+                                  item.id,
+                                  "medicineName",
+                                  e.target.value,
+                                )
                               }
-                            }}
-                            disabled={isProcessing}
-                            min="1"
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-600 block mb-1">
-                            Unit Price (ETB)
-                          </label>
-                          <input
-                            type="number"
-                            value={item.pricePerUnit}
-                            onChange={(e) => {
-                              const price = Number(e.target.value);
-                              if (price >= 0) {
-                                updateCartItem(item.id, "pricePerUnit", price);
+                              disabled={isProcessing}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Batch Number
+                            </label>
+                            <input
+                              type="text"
+                              value={item.batchNumber}
+                              onChange={(e) =>
+                                updateCartItem(
+                                  item.id,
+                                  "batchNumber",
+                                  e.target.value,
+                                )
                               }
-                            }}
-                            disabled={isProcessing}
-                            step="0.01"
-                            min="0"
-                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                          />
+                              disabled={isProcessing}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <label className="text-xs text-gray-600 block mb-1">
-                            Subtotal (ETB)
-                          </label>
-                          <div className="px-2 py-1 bg-gray-100 rounded text-sm font-semibold">
-                            {(item.quantity * item.pricePerUnit).toFixed(2)}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Expiry Date
+                            </label>
+                            <input
+                              type="date"
+                              value={item.expiryDate}
+                              onChange={(e) =>
+                                updateCartItem(
+                                  item.id,
+                                  "expiryDate",
+                                  e.target.value,
+                                )
+                              }
+                              disabled={isProcessing}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Qty
+                            </label>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const qty = Number(e.target.value);
+                                if (qty > 0) {
+                                  updateCartItem(item.id, "quantity", qty);
+                                }
+                              }}
+                              disabled={isProcessing}
+                              min="1"
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Unit Price (ETB)
+                            </label>
+                            <input
+                              type="number"
+                              value={item.pricePerUnit}
+                              onChange={(e) => {
+                                const price = Number(e.target.value);
+                                if (price >= 0) {
+                                  updateCartItem(
+                                    item.id,
+                                    "pricePerUnit",
+                                    price,
+                                  );
+                                }
+                              }}
+                              disabled={isProcessing}
+                              step="0.01"
+                              min="0"
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Subtotal (ETB)
+                            </label>
+                            <div className="px-2 py-1 bg-gray-100 rounded text-sm font-semibold">
+                              {(item.quantity * item.pricePerUnit).toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1199,7 +1350,7 @@ export function MultiItemOrderCart({
                           {item.batchNumber}
                         </div>
                         <div className="col-span-2 text-[#64748B]">
-                          {item.expiryDate}
+                          {formatInvoiceExpiryDate(item.expiryDate)}
                         </div>
                         <div className="col-span-1 text-right text-[#334155]">
                           {item.quantity}

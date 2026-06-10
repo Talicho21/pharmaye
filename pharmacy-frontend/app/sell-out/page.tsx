@@ -157,6 +157,10 @@ export default function SellOutPage() {
         batch_id: item.medicineId,
         quantity_sold: item.quantity,
         medicine_name: item.medicineName,
+        name: item.medicineName,
+        batch_number: item.batchNumber,
+        price_per_unit: item.pricePerUnit,
+        expiry_date: item.expiryDate,
       }));
 
       const response = await fetch(`${API_BASE}/inventory/bulk-sell`, {
@@ -173,6 +177,7 @@ export default function SellOutPage() {
             medicine_name: item.medicineName,
             quantity: item.quantity,
             price_per_unit: item.pricePerUnit,
+            expiry_date: item.expiryDate,
           })),
           seller_name: sellerName?.trim() || undefined,
           receiver_name: customerName.trim(),
@@ -210,10 +215,16 @@ export default function SellOutPage() {
       setInventory((previous) =>
         previous.map((row) => {
           const sold = soldById.get(row.id) || 0;
+          const editedItem = items.find((entry) => entry.medicineId === row.id);
+
           return sold > 0
             ? {
                 ...row,
                 quantity: Math.max(0, row.quantity - sold),
+                name: editedItem?.medicineName ?? row.name,
+                batch_number: editedItem?.batchNumber ?? row.batch_number,
+                expiry_date: editedItem?.expiryDate ?? row.expiry_date,
+                price_per_unit: editedItem?.pricePerUnit ?? row.price_per_unit,
               }
             : row;
         }),
@@ -268,7 +279,7 @@ export default function SellOutPage() {
       userRole={user.role}
       onSignOut={handleLogout}
     >
-      <div className="mx-auto max-w-7xl space-y-8 rounded-[2rem] border border-white/80 bg-slate-50/60 p-4 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-8 rounded-4xl border border-white/80 bg-slate-50/60 p-4 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md sm:p-6 lg:p-8">
         <header className="rounded-4xl border border-white/80 bg-linear-to-r from-[#0f172a] via-[#1d4ed8] to-[#0ea5e9] p-6 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)] sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
@@ -388,7 +399,7 @@ export default function SellOutPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        PKR {item.price_per_unit?.toLocaleString() || "N/A"}
+                        ETB {item.price_per_unit?.toLocaleString() || "N/A"}
                       </td>
                     </tr>
                   ))}

@@ -316,6 +316,10 @@ export default function HomePage() {
         batch_id: item.medicineId,
         quantity_sold: item.quantity,
         medicine_name: item.medicineName,
+        name: item.medicineName,
+        batch_number: item.batchNumber,
+        price_per_unit: item.pricePerUnit,
+        expiry_date: item.expiryDate,
       }));
 
       const response = await fetch(`${API_BASE}/api/inventory/bulk-sell`, {
@@ -332,6 +336,7 @@ export default function HomePage() {
             medicine_name: item.medicineName,
             quantity: item.quantity,
             price_per_unit: item.pricePerUnit,
+            expiry_date: item.expiryDate,
           })),
           seller_name: sellerName?.trim() || undefined,
           receiver_name: customerName.trim(),
@@ -369,10 +374,16 @@ export default function HomePage() {
       setInventory((previous) =>
         previous.map((row) => {
           const sold = soldById.get(row.id) || 0;
+          const editedItem = items.find((entry) => entry.medicineId === row.id);
+
           return sold > 0
             ? {
                 ...row,
                 quantity: Math.max(0, row.quantity - sold),
+                name: editedItem?.medicineName ?? row.name,
+                batch_number: editedItem?.batchNumber ?? row.batch_number,
+                expiry_date: editedItem?.expiryDate ?? row.expiry_date,
+                price_per_unit: editedItem?.pricePerUnit ?? row.price_per_unit,
               }
             : row;
         }),

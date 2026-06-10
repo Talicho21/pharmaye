@@ -251,7 +251,7 @@ export default function ReportsPage() {
                       Total Revenue
                     </div>
                     <div className="mt-2 text-3xl font-black text-slate-950">
-                      PKR {reportData.totalRevenue?.toLocaleString() || "0"}
+                      ETB {reportData.totalRevenue?.toLocaleString() || "0"}
                     </div>
                   </div>
                   <div className="rounded-3xl border border-sky-100 bg-sky-50/60 p-4">
@@ -297,7 +297,7 @@ export default function ReportsPage() {
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-emerald-700">
-                              PKR{" "}
+                              ETB{" "}
                               {medicine.totalRevenue?.toLocaleString() || "0"}
                             </p>
                           </div>
