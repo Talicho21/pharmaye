@@ -16,6 +16,7 @@ type StockFormState = {
   medicineName: string;
   batchNumber: string;
   quantity: string;
+  unit: string;
   expiryDate: string;
   pricePerUnit: string;
 };
@@ -26,6 +27,7 @@ const initialFormState: StockFormState = {
   medicineName: "",
   batchNumber: "",
   quantity: "",
+  unit: "",
   expiryDate: "",
   pricePerUnit: "",
 };
@@ -130,6 +132,7 @@ export default function StockEntryPage() {
     const medicineName = form.medicineName.trim();
     const batchNumber = form.batchNumber.trim();
     const quantity = Number.parseInt(form.quantity, 10);
+    const unit = form.unit.trim();
     const expiryDate = form.expiryDate.trim();
     const pricePerUnit = Number.parseFloat(form.pricePerUnit);
     const categoryName = form.categoryName.trim();
@@ -170,6 +173,7 @@ export default function StockEntryPage() {
           medicine_name: medicineName,
           batch_number: batchNumber,
           quantity,
+          unit,
           expiry_date: expiryDate,
           price_per_unit: pricePerUnit,
           category_id: categoryId ? Number(categoryId) : null,
@@ -313,6 +317,18 @@ export default function StockEntryPage() {
                   }
                   className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition focus:border-sky-400 focus:bg-white"
                   placeholder="0"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">
+                  Unit
+                </span>
+                <input
+                  value={form.unit}
+                  onChange={(event) => updateField("unit", event.target.value)}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition focus:border-sky-400 focus:bg-white"
+                  placeholder="e.g. PKT, BOT, VIAL"
                 />
               </label>
 

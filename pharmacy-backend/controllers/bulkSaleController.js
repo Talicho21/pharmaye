@@ -58,7 +58,7 @@ exports.bulkSaleMedicine = async (req, res) => {
 
       // 2. Fetch inventory status using PostgreSQL numbered parameterized inputs ($1)
       const itemLookupText = `
-        SELECT quantity, price_per_unit, name 
+        SELECT quantity, price_per_unit, name, batch_number, expiry_date, unit
         FROM inventory 
         WHERE id = $1
         FOR UPDATE
@@ -80,6 +80,7 @@ exports.bulkSaleMedicine = async (req, res) => {
         batch_number: String(lineOverrides.batch_number ?? editedItem?.batch_number ?? medicine.batch_number ?? "").trim(),
         price_per_unit: Number.parseFloat(String(lineOverrides.price_per_unit ?? editedItem?.price_per_unit ?? medicine.price_per_unit ?? 0)),
         expiry_date: lineOverrides.expiry_date ?? editedItem?.expiry_date ?? medicine.expiry_date ?? null,
+        unit: String(lineOverrides.unit ?? editedItem?.unit ?? medicine.unit ?? "").trim(),
       };
       const availableQty = medicine.quantity;
       const pricePerUnit = parseFloat(medicine.price_per_unit || 0);
@@ -130,14 +131,16 @@ exports.bulkSaleMedicine = async (req, res) => {
           batch_number = COALESCE($2, batch_number),
           expiry_date = $3,
           price_per_unit = $4,
-          quantity = quantity - $5
-        WHERE id = $6
+          unit = $5,
+          quantity = quantity - $6
+        WHERE id = $7
       `;
       await db.query(updateStockText, [
         editedMedicineName || null,
         editedBatchNumber || null,
         editedExpiryDate ? String(editedExpiryDate).slice(0, 10) : null,
         salePricePerUnit,
+        mergedEditedItem.unit || null,
         parsedQty,
         batchId,
       ]);

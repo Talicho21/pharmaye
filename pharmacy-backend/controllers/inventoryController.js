@@ -4,7 +4,7 @@ const db = require("../config/db");
 // 1. Get complete inventory with joined category names
 exports.getInventory = async (req, res) => {
   const queryText = `
-    SELECT i.id, i.name, i.batch_number, i.quantity, i.expiry_date, i.price_per_unit, i.initial_batch_quantity,
+    SELECT i.id, i.name, i.batch_number, i.quantity, i.expiry_date, i.price_per_unit, i.unit, i.initial_batch_quantity,
            c.id AS category_id, c.category_name
     FROM inventory i
     LEFT JOIN categories c ON i.category_id = c.id
@@ -25,7 +25,13 @@ exports.searchInventory = async (req, res) => {
   const searchTerm = searchSource ? `%${String(searchSource).trim().toLowerCase()}%` : "%%";
   
   const queryText = `
-    SELECT i.id, i.name, i.batch_number, i.quantity, i.expiry_date, i.price_per_unit,
+    SELECT i.id,
+           i.name,
+           i.batch_number,
+           i.quantity,
+           i.expiry_date,
+           i.price_per_unit,
+           i.unit AS unit,
            i.category_id,
            c.category_name
     FROM inventory i
@@ -94,6 +100,7 @@ exports.stockIn = async (req, res) => {
     expiry,
     price_per_unit,
     price,
+    unit,
   } = req.body;
 
   const resolvedName = [name, medicine_name, product_name].find(
@@ -107,6 +114,7 @@ exports.stockIn = async (req, res) => {
   )?.trim();
   const resolvedQuantity = Number.parseInt(String(quantity ?? qty ?? ""), 10);
   const resolvedPrice = Number.parseFloat(String(price_per_unit ?? price ?? ""));
+  const resolvedUnit = [unit].find((value) => typeof value === "string" && value.trim())?.trim() || "";
   const resolvedCategoryName = [category_name, new_category_name].find(
     (value) => typeof value === "string" && value.trim(),
   )?.trim();
@@ -157,8 +165,8 @@ exports.stockIn = async (req, res) => {
     }
 
     const insertText = `
-      INSERT INTO inventory (name, category_id, batch_number, quantity, initial_batch_quantity, expiry_date, price_per_unit)
-      VALUES ($1, $2, $3, $4, $4, $5, $6)
+      INSERT INTO inventory (name, category_id, batch_number, quantity, initial_batch_quantity, expiry_date, price_per_unit, unit)
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7)
       RETURNING id
     `;
     await db.query(insertText, [
@@ -168,6 +176,7 @@ exports.stockIn = async (req, res) => {
       resolvedQuantity,
       resolvedExpiryDate,
       resolvedPrice,
+      resolvedUnit,
     ]);
     return res.status(201).json({ message: "Inventory stock batch added successfully." });
   } catch (err) {
@@ -199,7 +208,7 @@ exports.sellMedicine = async (req, res) => {
   try {
     await db.query("BEGIN");
 
-    const itemLookup = await db.query("SELECT quantity, price_per_unit, name FROM inventory WHERE id = $1 FOR UPDATE", [batch_id]);
+    const itemLookup = await db.query("SELECT quantity, price_per_unit, name, unit FROM inventory WHERE id = $1 FOR UPDATE", [batch_id]);
     if (itemLookup.rows.length === 0) throw new Error("Batch instance not found.");
 
     const item = itemLookup.rows[0];
@@ -351,6 +360,7 @@ exports.getSalesLog = async (req, res) => {
     const queryText = `
       SELECT s.id, s.batch_id, s.sale_date, s.quantity_sold, s.unit_price, s.total_price, s.seller_name, s.receiver_name,
              COALESCE(s.medicine_name, i.name, 'Purged Item') AS medicine_name,
+             COALESCE(i.unit, '') AS unit,
              COALESCE(c.category_name, 'General') AS category
       FROM sales s
       LEFT JOIN inventory i ON s.batch_id = i.id
@@ -369,6 +379,7 @@ exports.getSalesLog = async (req, res) => {
         batchId: row.batch_id,
         saleDate: row.sale_date,
         medicineName: row.medicine_name || "Purged Item",
+        unit: row.unit || "",
         category: row.category || "General",
         quantitySold: parseInt(row.quantity_sold, 10),
         unitPrice: parseFloat(row.unit_price),

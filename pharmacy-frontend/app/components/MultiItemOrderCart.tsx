@@ -10,6 +10,7 @@ export type CartItem = {
   quantity: number;
   pricePerUnit: number;
   expiryDate: string;
+  unit?: string;
   // availableStock is the current stock for this batch at time of adding to cart
   availableStock?: number;
 };
@@ -21,6 +22,7 @@ type EditableMedicineForm = {
   quantity: number;
   pricePerUnit: number;
   expiryDate: string;
+  unit: string;
 };
 
 const formatDateForInput = (value?: string | null) => {
@@ -41,6 +43,7 @@ const initialEditableForm = (): EditableMedicineForm => ({
   quantity: 1,
   pricePerUnit: 0,
   expiryDate: "",
+  unit: "",
 });
 
 type MultiItemOrderCartProps = {
@@ -77,6 +80,7 @@ export function MultiItemOrderCart({
       price_per_unit: number;
       expiry_date?: string | null;
       category_name?: string | null;
+      unit?: string | null;
     }>
   >([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -174,6 +178,7 @@ export function MultiItemOrderCart({
             quantity: Number(raw.quantity ?? 0),
             price_per_unit: Number(raw.price_per_unit ?? raw.pricePerUnit ?? 0),
             expiry_date: raw.expiry_date ?? raw.expiryDate ?? "",
+            unit: String(raw.unit ?? ""),
             category_name: raw.category_name ?? raw.categoryName ?? null,
           }));
 
@@ -218,6 +223,7 @@ export function MultiItemOrderCart({
       quantity,
       pricePerUnit,
       expiryDate,
+      unit,
     } = editableForm;
 
     if (
@@ -263,6 +269,7 @@ export function MultiItemOrderCart({
       quantity,
       pricePerUnit: price,
       expiryDate,
+      unit: unit.trim(),
       availableStock: newAvailableStock ?? undefined,
     };
 
@@ -280,7 +287,10 @@ export function MultiItemOrderCart({
     quantity: number;
     price_per_unit: number;
     expiry_date?: string | null;
+    unit?: string | null;
   }) => {
+    const selectedUnit = String(item.unit ?? "PKT").trim() || "PKT";
+
     setEditableForm({
       medicineId: Number(item.medicine_id ?? item.batch_id ?? 0),
       medicineName: item.medicine_name ?? "",
@@ -288,6 +298,7 @@ export function MultiItemOrderCart({
       quantity: 1,
       pricePerUnit: Number(item.price_per_unit ?? 0),
       expiryDate: formatDateForInput(item.expiry_date),
+      unit: selectedUnit,
     });
     setMedicineSearch("");
     setSearchResults([]);
@@ -350,28 +361,27 @@ export function MultiItemOrderCart({
           .receipt-shell {
             position: relative;
             box-sizing: border-box;
-            min-height: calc(297mm - (var(--print-margin) * 2));
-            padding-top: var(--header-space);
-            padding-bottom: var(--footer-space);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            height: auto;
+            padding: 8mm;
+            background: #fff;
           }
 
-          .invoice-fixed-header,
-          .invoice-fixed-footer {
-            position: fixed;
-            left: var(--print-margin);
-            right: var(--print-margin);
-            z-index: 10;
+          /* Use standard document flow for header/footer to avoid overlap in print */
+          .invoice-header,
+          .invoice-footer {
+            position: static;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            box-sizing: border-box;
+            width: 100%;
             background: #fff;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-
-          .invoice-fixed-header {
-            top: var(--print-margin);
-          }
-
-          .invoice-fixed-footer {
-            bottom: var(--print-margin);
           }
 
           .receipt-info {
@@ -436,7 +446,9 @@ export function MultiItemOrderCart({
             border-collapse: collapse;
             table-layout: fixed;
             margin: 10px 0 8px;
+            height: auto;
             border: 1px solid #111;
+            overflow: hidden;
           }
 
           .items-table thead {
@@ -455,10 +467,11 @@ export function MultiItemOrderCart({
           .items-table th,
           .items-table td {
             border: 1px solid #111;
-            padding: 8px 10px;
-            font-size: 14px;
+            padding: 4px 6px;
+            font-size: 10px;
+            line-height: 1.15;
             vertical-align: top;
-            white-space: normal;
+            white-space: nowrap;
             overflow-wrap: anywhere;
             background: #fff;
             color: #111;
@@ -468,7 +481,14 @@ export function MultiItemOrderCart({
             background-color: #f3f4f6;
             font-weight: 700;
             text-align: left;
-            font-size: 15px;
+            font-size: 10px;
+            line-height: 1.15;
+            white-space: nowrap;
+          }
+
+          .items-table td.description-cell {
+            white-space: normal;
+            overflow-wrap: anywhere;
           }
 
           .items-table tbody td {
@@ -476,9 +496,9 @@ export function MultiItemOrderCart({
           }
 
           .signature-section {
-            margin-top: 48px;
+            margin-top: 18px;
             border-top: 0;
-            padding-top: 40px;
+            padding-top: 12px;
           }
 
           .signature-grid {
@@ -514,13 +534,17 @@ export function MultiItemOrderCart({
           }
 
           .legal-disclaimer {
+            margin-top: auto;
             border-top: 0;
             text-align: center;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.7px;
-            padding-top: 4px;
+            letter-spacing: 0.8px;
+            padding-top: 12px;
+            padding-bottom: 4px;
+            width: 100%;
+            display: block;
           }
 
           @media print {
@@ -544,9 +568,9 @@ export function MultiItemOrderCart({
               text-shadow: none !important;
             }
 
-            .invoice-fixed-header,
-            .invoice-fixed-footer {
-              display: block;
+            .invoice-header,
+            .invoice-footer {
+              display: flex;
             }
           }
         </style>
@@ -569,7 +593,7 @@ export function MultiItemOrderCart({
       </head>
       <body>
         <div class="receipt-shell">
-        <div class="invoice-fixed-header" style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div class="invoice-header" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
             <div>
               <div class="company-title">EXPRESS PHARMA ONE ME. PLC</div>
@@ -621,25 +645,27 @@ export function MultiItemOrderCart({
         </div>
 
         <div class="items-section">
-        <table class="items-table">
+        <table class="items-table" style="height:auto;">
           <colgroup>
-            <col style="width: 6%;" />
-            <col style="width: 38%;" />
-            <col style="width: 14%;" />
+            <col style="width: 5%;" />
+            <col style="width: 35%;" />
             <col style="width: 12%;" />
             <col style="width: 8%;" />
-            <col style="width: 11%;" />
-            <col style="width: 11%;" />
+            <col style="width: 10%;" />
+            <col style="width: 8%;" />
+            <col style="width: 10%;" />
+            <col style="width: 12%;" />
           </colgroup>
           <thead>
             <tr>
-              <th>S.No</th>
-              <th>Description</th>
-              <th>Batch #</th>
-              <th>Expiry Date</th>
-              <th style="text-align: right;">Qty</th>
-              <th style="text-align: right;">Unit Price (ETB)</th>
-              <th style="text-align: right;">Total (ETB)</th>
+              <th style="white-space:nowrap;">S.No</th>
+              <th style="white-space:nowrap;">Description</th>
+              <th style="white-space:nowrap;">Batch #</th>
+              <th style="white-space:nowrap; text-align:center;">Unit</th>
+              <th style="white-space:nowrap; text-align:center;">Exp.</th>
+              <th style="white-space:nowrap; text-align:center;">Qty</th>
+              <th style="white-space:nowrap; text-align:right;">Price</th>
+              <th style="white-space:nowrap; text-align:right;">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -647,14 +673,15 @@ export function MultiItemOrderCart({
               .map((item, index) => {
                 const expiry = formatInvoiceExpiryDate(item.expiryDate);
                 return `
-              <tr>
-                <td>${index + 1}</td>
-                <td>${item.medicineName}</td>
-                <td>${item.batchNumber}</td>
-                <td>${expiry}</td>
-                <td style="text-align: right;">${item.quantity}</td>
-                <td style="text-align: right;">${item.pricePerUnit.toFixed(2)}</td>
-                <td style="text-align: right;">${(item.quantity * item.pricePerUnit).toFixed(2)}</td>
+              <tr style="height:auto;">
+                <td style="padding:4px 6px; text-align:center;">${index + 1}</td>
+                <td class="description-cell" style="padding:4px 6px;">${item.medicineName}</td>
+                <td style="padding:4px 6px;">${item.batchNumber}</td>
+                <td style="padding:4px 6px; text-align:center;">${item.unit || "-"}</td>
+                <td style="padding:4px 6px; text-align:center;">${expiry}</td>
+                <td style="padding:4px 6px; text-align:center;">${item.quantity}</td>
+                <td style="padding:4px 6px; text-align:right;">${item.pricePerUnit.toFixed(2)}</td>
+                <td style="padding:4px 6px; text-align:right;">${(item.quantity * item.pricePerUnit).toFixed(2)}</td>
               </tr>
             `;
               })
@@ -663,7 +690,7 @@ export function MultiItemOrderCart({
         </table>
         </div>
 
-        <div style="margin-top: 10px; padding-top: 12px; border-top: 2px solid #111;">
+        <div style="margin-top: 8px; padding-top: 10px; border-top: 2px solid #111;">
           <div style="width: 260px; margin-left: auto;">
             <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 6px;">
               <span style="color: #374151;">total</span>
@@ -696,7 +723,7 @@ export function MultiItemOrderCart({
           </div>
         </div>
 
-        <div class="invoice-fixed-footer legal-disclaimer">
+        <div class="invoice-footer legal-disclaimer" style="margin-top: auto; padding-bottom: 4px;">
           INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
         </div>
 
@@ -1059,6 +1086,19 @@ export function MultiItemOrderCart({
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
                   />
                   <input
+                    type="text"
+                    placeholder="Unit (e.g. PKT, BOT, VIAL)"
+                    value={editableForm.unit}
+                    onChange={(e) =>
+                      setEditableForm((current) => ({
+                        ...current,
+                        unit: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    disabled={isProcessing}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
+                  />
+                  <input
                     type="date"
                     placeholder="Expiry Date"
                     value={editableForm.expiryDate}
@@ -1153,7 +1193,7 @@ export function MultiItemOrderCart({
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                           <div>
                             <label className="text-xs text-gray-600 block mb-1">
                               Expiry Date
@@ -1166,6 +1206,24 @@ export function MultiItemOrderCart({
                                   item.id,
                                   "expiryDate",
                                   e.target.value,
+                                )
+                              }
+                              disabled={isProcessing}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600 block mb-1">
+                              Unit
+                            </label>
+                            <input
+                              type="text"
+                              value={item.unit || ""}
+                              onChange={(e) =>
+                                updateCartItem(
+                                  item.id,
+                                  "unit",
+                                  e.target.value.toUpperCase(),
                                 )
                               }
                               disabled={isProcessing}
@@ -1330,6 +1388,7 @@ export function MultiItemOrderCart({
                 <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-sm font-bold text-[#64748B]">
                   <div className="col-span-4">Description</div>
                   <div className="col-span-2">Batch #</div>
+                  <div className="col-span-1">Unit</div>
                   <div className="col-span-2">Expiry Date</div>
                   <div className="col-span-1 text-right">Qty</div>
                   <div className="col-span-1 text-right">Unit Price</div>
@@ -1348,6 +1407,9 @@ export function MultiItemOrderCart({
                         </div>
                         <div className="col-span-2 text-[#64748B]">
                           {item.batchNumber}
+                        </div>
+                        <div className="col-span-1 text-[#64748B]">
+                          {item.unit || "-"}
                         </div>
                         <div className="col-span-2 text-[#64748B]">
                           {formatInvoiceExpiryDate(item.expiryDate)}

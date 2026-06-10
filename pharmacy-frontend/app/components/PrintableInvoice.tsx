@@ -21,6 +21,7 @@ export type CartItem = {
   quantity: number;
   pricePerUnit: number;
   expiryDate: string;
+  unit?: string;
   availableStock?: number;
 };
 
@@ -360,9 +361,11 @@ export function PrintableInvoice({
           }
 
           #invoice-container {
-            position: absolute;
-            inset: 0;
+            position: relative !important;
+            inset: auto !important;
             width: 100%;
+            min-height: auto !important;
+            height: auto !important;
             padding: 20mm;
             box-sizing: border-box;
           }
@@ -434,6 +437,15 @@ export function PrintableInvoice({
           #invoice-table {
             border: none !important;
             border-collapse: collapse !important;
+            table-layout: fixed !important;
+            width: 100% !important;
+            height: auto !important;
+          }
+
+          #invoice-table tr,
+          #invoice-table th,
+          #invoice-table td {
+            height: auto !important;
           }
 
           /* CRITICAL: Keep signature footer horizontal in print */
@@ -454,6 +466,9 @@ export function PrintableInvoice({
           }
 
           .invoice-signoff {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 150mm !important;
             margin-top: 28mm !important;
             padding-top: 8mm !important;
           }
@@ -481,7 +496,7 @@ export function PrintableInvoice({
       {/* DOCUMENT WRAPPER - Only this renders in print mode */}
       <div
         id="invoice-container"
-        className="relative w-full bg-white p-0 pb-16"
+        className="h-auto w-full bg-white p-0 pb-16 print:m-8 print:p-8"
       >
         {/* ========== HEADER SECTION ========== */}
         <div className="invoice-header pb-4 mb-6">
@@ -496,62 +511,71 @@ export function PrintableInvoice({
               <p className="text-base text-[#64748B] mt-1">
                 Pharmaceutical Wholesale & Distribution
               </p>
-
-              {/* METADATA TABLE: Positioned beneath Pharmacy Name */}
-              <div className="mt-4">
-                <table
-                  className="border-collapse"
-                  cellPadding={0}
-                  cellSpacing={0}
-                >
-                  <tbody>
-                    {/* Row 1: Invoice No */}
-                    <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50 w-20">
-                        Invoice No
-                      </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
-                        {invoiceNo}
-                      </td>
-                    </tr>
-
-                    {/* Row 2: S.No (Customer) - moved here per spec (replaces FS No) */}
-                    <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
-                        FS.No
-                      </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
-                        {customerSNo || "-"}
-                      </td>
-                    </tr>
-
-                    {/* Row 3: Reference - Can be blank/null for manual input */}
-                    <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
-                        Reference
-                      </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono text-gray-900 bg-white">
-                        {reference || ""}
-                      </td>
-                    </tr>
-
-                    {/* Row 4: Date - Dynamic */}
-                    <tr>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-semibold text-gray-700 bg-gray-50">
-                        Date
-                      </td>
-                      <td className="border border-gray-900 px-3 py-1.5 text-base font-mono font-bold text-gray-900 bg-gray-50">
-                        {invoiceDate}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              {/* Company contact sits below the name */}
+              <div className="mt-4 text-sm text-[#64748B]">
+                <div>Address: Addis Ababa (registered)</div>
+                <div>Phone: +251981798081</div>
+                <div>Email: epharm38@gmail.com</div>
               </div>
             </div>
 
             {/* Right: Invoice Title */}
-            <div className="text-right">
+            <div className="text-right" style={{ minWidth: 240 }}>
               <h2 className="text-5xl font-extrabold text-gray-900">INVOICE</h2>
+
+              {/* METADATA: neat border-box on the right */}
+              <div
+                className="mt-4"
+                style={{
+                  border: "1px solid #E5E7EB",
+                  padding: "8px",
+                  borderRadius: 6,
+                  background: "#fff",
+                }}
+              >
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}
+                  >
+                    Invoice No
+                  </div>
+                  <div style={{ fontSize: 12, fontFamily: "monospace" }}>
+                    {invoiceNo}
+                  </div>
+
+                  <div
+                    style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}
+                  >
+                    FS.No
+                  </div>
+                  <div style={{ fontSize: 12, fontFamily: "monospace" }}>
+                    {customerSNo || "-"}
+                  </div>
+
+                  <div
+                    style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}
+                  >
+                    Reference
+                  </div>
+                  <div style={{ fontSize: 12 }}>{reference || ""}</div>
+
+                  <div
+                    style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}
+                  >
+                    Date
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>
+                    {invoiceDate}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -633,34 +657,41 @@ export function PrintableInvoice({
         */}
         <table
           id="invoice-table"
-          className="w-full"
-          style={{ border: "none", borderCollapse: "collapse" }}
+          className="table-fixed w-full h-auto overflow-hidden"
+          style={{
+            border: "none",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
           cellPadding={0}
           cellSpacing={0}
         >
           {/* TABLE HEADER */}
           <thead>
-            <tr className="bg-gray-900 text-white">
-              <th className="border border-gray-900 px-2 py-2 text-center font-semibold text-base w-[6%]">
+            <tr className="h-auto bg-gray-900 text-white">
+              <th className="w-[5%] whitespace-nowrap border border-gray-900 px-1 py-1 text-center text-[10px] font-semibold uppercase tracking-wide leading-tight">
                 S.No
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-base w-[40%]">
+              <th className="w-[35%] whitespace-nowrap border border-gray-900 px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wide leading-tight">
                 Description
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-left font-semibold text-base">
+              <th className="w-[12%] whitespace-nowrap border border-gray-900 px-2 py-1 text-left text-[10px] font-semibold uppercase tracking-wide leading-tight">
                 Batch #
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-base">
-                Unit Price (ETB)
+              <th className="w-[8%] whitespace-nowrap border border-gray-900 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide leading-tight">
+                Unit
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-base">
-                Exp. Date
+              <th className="w-[10%] whitespace-nowrap border border-gray-900 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide leading-tight">
+                Exp.
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-center font-semibold text-base w-[8%]">
+              <th className="w-[8%] whitespace-nowrap border border-gray-900 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wide leading-tight">
                 Qty
               </th>
-              <th className="border border-gray-900 px-3 py-2 text-right font-semibold text-base">
-                Total (ETB)
+              <th className="w-[10%] whitespace-nowrap border border-gray-900 px-2 py-1 text-right text-[10px] font-semibold uppercase tracking-wide leading-tight">
+                Price
+              </th>
+              <th className="w-[12%] whitespace-nowrap border border-gray-900 px-2 py-1 text-right text-[10px] font-semibold uppercase tracking-wide leading-tight">
+                Total
               </th>
             </tr>
           </thead>
@@ -674,34 +705,36 @@ export function PrintableInvoice({
               );
 
               return (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  {/* S.No: Auto-generated from array index */}
-                  <td className="border border-gray-900 px-2 py-2 text-center font-semibold text-base text-gray-900 w-[6%]">
+                <tr key={item.id} className="h-auto hover:bg-gray-50">
+                  <td className="h-auto w-[5%] border border-gray-900 px-1 py-1 text-center text-[10px] leading-tight font-semibold text-gray-900 align-top whitespace-nowrap">
                     {index + 1}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-base font-medium text-gray-900 w-[40%]">
+                  <td className="h-auto w-[35%] border border-gray-900 px-2 py-1 text-[10px] leading-tight font-medium text-gray-900 align-top break-words">
                     {item.medicineName}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-base text-gray-700">
+                  <td className="h-auto w-[12%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-gray-700 align-top whitespace-nowrap">
                     {item.batchNumber}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-base text-right text-gray-900 font-semibold">
-                    {formatCurrency(item.pricePerUnit)}
+                  <td className="h-auto w-[8%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-gray-700 align-top text-center whitespace-nowrap">
+                    {item.unit || "-"}
                   </td>
 
-                  {/* Expiry Date: Compact DD/MM/YY for a narrow invoice column */}
-                  <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-700 font-medium">
+                  <td className="h-auto w-[10%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-center text-gray-700 font-medium align-top whitespace-nowrap">
                     {formatInvoiceExpiryDate(item.expiryDate)}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-base text-center text-gray-900 font-medium w-[8%]">
+                  <td className="h-auto w-[8%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-center text-gray-900 font-medium align-top whitespace-nowrap">
                     {item.quantity}
                   </td>
 
-                  <td className="border border-gray-900 px-3 py-2 text-base text-right font-bold text-green-600">
+                  <td className="h-auto w-[10%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-right text-gray-900 font-semibold align-top whitespace-nowrap">
+                    {formatCurrency(item.pricePerUnit)}
+                  </td>
+
+                  <td className="h-auto w-[12%] border border-gray-900 px-2 py-1 text-[10px] leading-tight text-right font-bold text-green-600 align-top whitespace-nowrap">
                     {formatCurrency(lineTotal)}
                   </td>
                 </tr>
@@ -719,9 +752,9 @@ export function PrintableInvoice({
           - Pinned to right side using ml-auto
           - Fixed width for consistent decimal alignment
         */}
-        <div className="invoice-summary mt-8 mb-6">
+        <div className="invoice-summary mt-6 mb-4 flex justify-end">
           {/* TOTALS BLOCK: Grouped and positioned to RIGHT */}
-          <div className="invoice-total-box ml-auto w-72 rounded p-4 bg-white">
+          <div className="invoice-total-box w-72 rounded border border-gray-200 p-4 bg-white shadow-sm">
             {/* Totals Group Header */}
             <div className="mb-3">
               <p className="text-base font-semibold text-gray-600 uppercase tracking-wide mb-3">
@@ -758,8 +791,8 @@ export function PrintableInvoice({
         </div>
 
         {/* ========== SIGNATURE + FOOTER SECTION ========== */}
-        <div className="invoice-signoff mt-32 pt-24">
-          <div className="invoice-signoff-lines flex flex-row gap-12 items-end justify-between">
+        <div className="invoice-signoff mt-8 pt-4 pb-8">
+          <div className="invoice-signoff-lines grid grid-cols-3 gap-6 items-end justify-items-stretch">
             <div className="flex-1">
               <div className="text-center">
                 <div
@@ -806,8 +839,13 @@ export function PrintableInvoice({
             </div>
           </div>
 
-          <div className="mt-8 text-center font-bold uppercase text-xs text-gray-900">
-            INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
+          <div className="mt-auto w-full text-center pt-8 print:mt-36">
+            <div
+              className="w-full text-center text-xs font-black uppercase tracking-[0.35em] text-gray-900"
+              style={{ fontWeight: 900 }}
+            >
+              INVALID WITHOUT FISCAL OR REFUND RECEIPT ATTACHED
+            </div>
           </div>
         </div>
       </div>

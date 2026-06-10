@@ -38,6 +38,7 @@ type InventoryItem = {
   quantity: number;
   expiry_date: string | null;
   price_per_unit: number | null;
+  unit?: string | null;
 };
 
 type CategoryOption = {
@@ -337,6 +338,7 @@ export default function HomePage() {
             quantity: item.quantity,
             price_per_unit: item.pricePerUnit,
             expiry_date: item.expiryDate,
+            unit: item.unit || "",
           })),
           seller_name: sellerName?.trim() || undefined,
           receiver_name: customerName.trim(),
