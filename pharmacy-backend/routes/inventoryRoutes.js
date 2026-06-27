@@ -18,6 +18,7 @@ router.get("/inventory/search", inventoryController.searchInventory);
 // Dynamic stock items mutation actions
 router.post("/inventory/stock-in", inventoryController.stockIn);
 router.post("/inventory/sell", inventoryController.sellMedicine);
+router.put("/inventory/:id", requireAuth, inventoryController.updateStockInline);
 
 // Crucial target point for destructive purging actions
 router.delete(

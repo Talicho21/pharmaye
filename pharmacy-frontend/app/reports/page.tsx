@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/app/components/AppShell";
@@ -54,8 +55,12 @@ export default function ReportsPage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [profileName, setProfileName] = useState("Guest user");
+  const [userRole, setUserRole] = useState<"admin" | "staff">("staff");
+  const router = useRouter();
   const [profileEmail, setProfileEmail] = useState("guest@expresspharma.local");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const refreshReports = useCallback(async () => {
     setLoading(true);
@@ -121,6 +126,7 @@ export default function ReportsPage() {
             setAuthToken(cookieToken);
             setProfileName(payload.user.username);
             setProfileEmail(`${payload.user.username}@expresspharma.local`);
+            setUserRole("admin");
             window.localStorage.setItem(
               SESSION_STORAGE_KEY,
               JSON.stringify({ token: cookieToken, user: payload.user }),
@@ -140,6 +146,7 @@ export default function ReportsPage() {
         };
         if (parsed?.token && parsed?.user?.role === "admin") {
           setAuthToken(parsed.token);
+          setUserRole("admin");
         }
 
         const parsedUser = JSON.parse(storedSession) as {
@@ -160,12 +167,17 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
+    if (userRole === "staff") {
+      router.push("/");
+      return;
+    }
+
     if (!sessionReady) {
       return;
     }
 
     void refreshReports();
-  }, [refreshReports, sessionReady]);
+  }, [refreshReports, router, sessionReady, userRole]);
 
   const handleSignOut = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -174,6 +186,15 @@ export default function ReportsPage() {
     clearSessionCookie();
     window.location.href = "/";
   };
+
+  const reportItems = inactiveData?.medicines ?? [];
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentReportItems = reportItems.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(reportItems.length / itemsPerPage);
 
   if (!sessionReady || loading) {
     return (
@@ -190,7 +211,7 @@ export default function ReportsPage() {
       <AppShell
         profileName={profileName}
         profileEmail={profileEmail}
-        userRole="admin"
+        userRole={userRole}
         onSignOut={handleSignOut}
       >
         <div className="flex flex-col gap-8">
@@ -333,7 +354,7 @@ export default function ReportsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                      {inactiveData.medicines.map((medicine) => (
+                      {currentReportItems.map((medicine) => (
                         <tr key={medicine.medicineId}>
                           <td className="px-4 py-3 font-medium text-slate-950">
                             {medicine.medicineName}
@@ -356,6 +377,37 @@ export default function ReportsPage() {
                       ))}
                     </tbody>
                   </table>
+                  <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage((page) => Math.max(1, page - 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <div className="text-sm font-semibold text-slate-600">
+                        Page {currentPage} of {totalPages || 1}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentPage((page) =>
+                            Math.min(totalPages, page + 1),
+                          )
+                        }
+                        disabled={
+                          currentPage === totalPages || totalPages === 0
+                        }
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-slate-500">

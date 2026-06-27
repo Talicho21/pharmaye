@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { AlertTriangle, Flag, Menu, Moon, RotateCw, Sun } from "lucide-react";
 import { AppShell } from "@/app/components/AppShell";
 import {
   MultiItemOrderCart,
@@ -62,12 +63,17 @@ export default function HomePage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [inventoryQuery, setInventoryQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [isSellOutOpen, setIsSellOutOpen] = useState(false);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({});
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const pageClassName =
     theme === "dark"
@@ -141,8 +147,159 @@ export default function HomePage() {
     void loadInventory(false);
   }, [loadInventory]);
 
+  const formatDateForInput = (date: string | null | undefined): string => {
+    if (!date) return "";
+    return date.split("T")[0];
+  };
+
   const toggleTheme = useCallback(() => {
     setTheme((previous) => (previous === "dark" ? "light" : "dark"));
+  }, []);
+
+  const handleViewDetails = useCallback((item: InventoryItem) => {
+    setSelectedItem(item);
+    setEditFormData({
+      name: item.name,
+      batchNumber: item.batch_number,
+      expiryDate: item.expiry_date || "",
+      quantity: item.quantity,
+      unit: item.unit || "",
+      price: item.price_per_unit || "",
+    });
+    setShowModal(true);
+  }, []);
+
+  const handleSaveSubmit = useCallback(async () => {
+    if (!selectedItem) return;
+    try {
+      const parsedQuantity = parseInt(editFormData.quantity, 10);
+      const parsedPrice = parseFloat(editFormData.price);
+
+      if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
+        throw new Error("Quantity must be a positive number");
+      }
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        throw new Error("Price must be a valid non-negative number");
+      }
+
+      const payload = {
+        name: editFormData.name?.trim() || "",
+        batchNumber: editFormData.batchNumber?.trim() || "",
+        expiryDate: editFormData.expiryDate || "",
+        quantity: parsedQuantity,
+        unit: editFormData.unit?.trim() || "",
+        price: parsedPrice,
+      };
+
+      console.log("Sending update payload:", payload);
+      console.log(
+        "Update endpoint:",
+        `${API_BASE}/api/inventory/${selectedItem.id}`,
+      );
+
+      const response = await fetch(
+        `${API_BASE}/api/inventory/${selectedItem.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      console.log("Response status:", response.status);
+      const responseText = await response.text();
+      console.log("Response body:", responseText);
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status} - ${responseText}`);
+      }
+
+      setShowModal(false);
+      setSelectedItem(null);
+      setEditFormData({});
+      setToast({
+        title: "Success",
+        description: "Inventory item updated successfully.",
+        tone: "success",
+      });
+      await loadInventory(true);
+    } catch (err) {
+      console.error("Save error:", err);
+      setToast({
+        title: "Update failed",
+        description:
+          err instanceof Error ? err.message : "Failed to update item.",
+        tone: "error",
+      });
+    }
+  }, [editFormData, selectedItem, token, loadInventory, API_BASE]);
+
+  const handleDeleteClick = useCallback(
+    async (id: number) => {
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this inventory item? This action cannot be undone.",
+      );
+      if (!confirmed) return;
+
+      try {
+        const primaryUrl = `${API_BASE}/api/inventory/${id}`;
+        const fallbackUrl = `${API_BASE}/api/inventory/delete/${id}`;
+
+        console.log("Delete endpoint:", primaryUrl);
+        let response = await fetch(primaryUrl, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("Delete response status:", response.status);
+
+        if (!response.ok) {
+          console.warn("Primary delete route failed, retrying fallback route.");
+          response = await fetch(fallbackUrl, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to delete inventory item: ${response.status}`,
+          );
+        }
+
+        setInventory((currentInventory) =>
+          currentInventory.filter((item) => item.id !== id),
+        );
+        setToast({
+          title: "Deleted",
+          description: "Inventory item deleted successfully.",
+          tone: "success",
+        });
+        await loadInventory(true);
+      } catch (err) {
+        console.error("Delete error:", err);
+        setToast({
+          title: "Delete failed",
+          description:
+            err instanceof Error ? err.message : "Failed to delete item.",
+          tone: "error",
+        });
+      }
+    },
+    [token, loadInventory],
+  );
+
+  const handleCloseModal = useCallback(() => {
+    setShowModal(false);
+    setSelectedItem(null);
+    setEditFormData({});
   }, []);
 
   useEffect(() => {
@@ -283,6 +440,19 @@ export default function HomePage() {
       return matchesCategory && matchesQuery;
     });
   }, [inventory, inventoryQuery, selectedCategory]);
+
+  const itemsPerPage = 10;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = visibleInventory.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(visibleInventory.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inventoryQuery, selectedCategory]);
 
   const expiredCount = useMemo(
     () =>
@@ -581,290 +751,458 @@ export default function HomePage() {
   }
 
   return (
-    <AppShell
-      profileName={user.username}
-      profileEmail={`${user.username}@expresspharma.local`}
-      onSignOut={handleLogout}
-    >
-      <div className={dashboardFrameClassName}>
-        <header className={headerClassName}>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-3">
-              <div className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-white/85">
-                Pharmacy dashboard
-              </div>
-              <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
-                Welcome back, {user.username}.
-              </h1>
-              <p className="max-w-3xl text-sm leading-7 text-sky-50/90 sm:text-base">
-                Stock entry and analytics now live on separate pages so the
-                dashboard stays open and readable.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={handleRefreshInventory}
-                disabled={isLoadingInventory}
-                className={
-                  headerButtonClassName +
-                  " disabled:cursor-not-allowed disabled:opacity-70"
-                }
-              >
-                {isLoadingInventory ? "Refreshing..." : "Refresh"}
-              </button>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className={headerButtonClassName}
-              >
-                {theme === "dark" ? "Light mode" : "Night mode"}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {toast ? (
-          <div
-            className={`rounded-4xl border px-5 py-4 text-sm shadow-[0_20px_50px_rgba(15,23,42,0.08)] ${
-              toast.tone === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : toast.tone === "error"
-                  ? "border-rose-200 bg-rose-50 text-rose-800"
-                  : "border-sky-200 bg-sky-50 text-sky-800"
-            }`}
-          >
-            <div className="font-semibold">{toast.title}</div>
-            <div className="mt-1">{toast.description}</div>
-          </div>
-        ) : null}
-
-        <section className="grid gap-4 md:grid-cols-3">
-          <button
-            type="button"
-            onClick={() => setIsSellOutOpen(true)}
-            className="group rounded-3xl border border-emerald-100 bg-emerald-50/60 p-6 text-left shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-emerald-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
-          >
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-700 transition-colors duration-300 group-hover:text-emerald-600">
-              Sell out
-            </div>
-            <div className="mt-3 text-2xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
-              Open sales cart
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700">
-              Use the existing attachment flow to sell one or more medicines.
-            </p>
-          </button>
-          <Link
-            href="/stock-entry"
-            className="group rounded-3xl border border-sky-100 bg-sky-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:bg-sky-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
-          >
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">
-              Stock entry
-            </div>
-            <div className={actionTileTitleClassName}>Add or receive stock</div>
-            <p className={actionTileCaptionClassName}>
-              Use the dedicated stock page for new inventory, optional category
-              entry, and category auto-creation.
-            </p>
-          </Link>
-          <Link
-            href="/analytics"
-            className="group rounded-3xl border border-violet-100 bg-violet-50/60 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.10)] transition-all duration-300 hover:-translate-y-1 hover:border-violet-200 hover:bg-violet-50/80 hover:shadow-[0_24px_70px_rgba(16,24,40,0.14)]"
-          >
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700 transition-colors duration-300 group-hover:text-sky-600">
-              Analytics
-            </div>
-            <div className={actionTileTitleClassName}>
-              View charts and reports
-            </div>
-            <p className={actionTileCaptionClassName}>
-              Inventory trends, inactivity, and sales reporting now have their
-              own page.
-            </p>
-          </Link>
-          <div className="group rounded-3xl border border-slate-100 bg-slate-50/70 p-6 shadow-[0_18px_55px_rgba(16,24,40,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-slate-200 hover:bg-slate-50/90 hover:shadow-[0_24px_70px_rgba(16,24,40,0.12)]">
-            <div className="group inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-slate-700">
-              <span className={titleLineClassName}>Session</span>
-            </div>
-            <div className="mt-3 text-2xl font-black text-slate-950 transition-colors duration-300 group-hover:text-slate-700 group-hover:underline group-hover:decoration-slate-400 group-hover:decoration-2 group-hover:underline-offset-8">
-              {user.role}
-            </div>
-            <p className="mt-2 text-sm leading-6 text-slate-500 transition-colors duration-300 group-hover:text-slate-700">
-              Signed in as {user.username}.
-            </p>
-          </div>
-        </section>
-
-        <MultiItemOrderCart
-          isOpen={isSellOutOpen}
-          onClose={() => setIsSellOutOpen(false)}
-          onSubmit={handleSellOutSubmit}
-          isProcessing={isProcessingSale}
-        />
-
-        <section className="grid gap-4 sm:grid-cols-3">
-          {[
-            { label: "Items loaded", value: inventory.length },
-            { label: "Low stock", value: lowStockCount },
-            { label: "Expired", value: expiredCount },
-          ].map((item) => (
-            <div key={item.label} className={metricCardClassName}>
-              <div className="group/title inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-emerald-600">
-                <span className={titleLineClassName}>{item.label}</span>
-              </div>
-              <div className="mt-3 text-3xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
-                {item.value}
-              </div>
-              <div className="mt-4 h-px w-full bg-linear-to-r from-emerald-200 via-emerald-100 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
-            </div>
-          ))}
-        </section>
-
-        <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <div className="mb-5 flex items-center justify-between gap-4">
+    <>
+      <AppShell
+        profileName={user.username}
+        profileEmail={`${user.username}@expresspharma.local`}
+        userRole={user.role}
+        onSignOut={handleLogout}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      >
+        <div className={dashboardFrameClassName}>
+          <div className="flex items-center justify-between border-b border-slate-100 bg-white p-4 md:hidden">
             <div>
-              <h2 className={sectionTitleClassName}>
-                <span className={titleLineClassName}>Current inventory</span>
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Search by medicine name or batch number, then filter by
-                category.
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">
+                Menu
+              </p>
+              <p className="text-sm font-semibold text-slate-900">
+                Pharmacy tools
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                value={inventoryQuery}
-                onChange={(event) => setInventoryQuery(event.target.value)}
-                placeholder="Search by name or batch"
-                className="min-w-55 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
-              />
-              <select
-                value={selectedCategory}
-                onChange={(event) => setSelectedCategory(event.target.value)}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
-              >
-                {categoryOptions.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-              {isLoadingInventory ? (
-                <span className="text-sm font-semibold text-slate-500">
-                  Refreshing...
-                </span>
-              ) : null}
-            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Open navigation menu"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-slate-100"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
-          <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Medicine</th>
-                  <th className="px-4 py-3">Category</th>
-                  <th className="px-4 py-3">Batch</th>
-                  <th className="px-4 py-3">Qty</th>
-                  <th className="px-4 py-3">Expiry</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                {visibleInventory.slice(0, 10).map((item) => {
-                  const initialQty =
-                    (item as any).initial_batch_quantity ??
-                    (item as any).initial_quantity ??
-                    item.quantity;
-                  const pct = initialQty > 0 ? item.quantity / initialQty : 1;
-                  const now = new Date();
-                  const expiry = item.expiry_date
-                    ? new Date(item.expiry_date)
-                    : null;
-                  let expiryMessage: {
-                    tone?: "danger" | "warning" | "ok";
-                    text?: string;
-                  } = {};
-
-                  if (expiry) {
-                    const monthsLeft =
-                      (expiry.getTime() - now.getTime()) /
-                      (1000 * 60 * 60 * 24 * 30);
-                    if (expiry.getTime() < now.getTime()) {
-                      expiryMessage = {
-                        tone: "danger",
-                        text: "This medicine is expired — remove from stock",
-                      };
-                    } else if (monthsLeft <= 6) {
-                      expiryMessage = {
-                        tone: "warning",
-                        text: "Expires in under 6 months — sell immediately",
-                      };
-                    }
+          <header className={headerClassName}>
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-3">
+                <div className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.32em] text-white/85">
+                  Pharmacy dashboard
+                </div>
+                <h1 className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">
+                  Welcome back, {user.username}.
+                </h1>
+                <p className="max-w-3xl text-sm leading-7 text-sky-50/90 sm:text-base">
+                  Stock entry and analytics now live on separate pages so the
+                  dashboard stays open and readable.
+                </p>
+              </div>
+              <div className="flex flex-row items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={handleRefreshInventory}
+                  disabled={isLoadingInventory}
+                  aria-label="Refresh inventory"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 p-2.5 text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:shadow-[0_12px_30px_rgba(255,255,255,0.16)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isLoadingInventory ? (
+                    <RotateCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCw className="h-4 w-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label={
+                    theme === "dark"
+                      ? "Switch to light mode"
+                      : "Switch to dark mode"
                   }
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 p-2.5 text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/20 hover:shadow-[0_12px_30px_rgba(255,255,255,0.16)] active:translate-y-0"
+                >
+                  {theme === "dark" ? (
+                    <Sun className="h-4 w-4" />
+                  ) : (
+                    <Moon className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </header>
 
-                  const lowStock = pct <= 0.2;
+          {toast ? (
+            <div
+              className={`rounded-4xl border px-5 py-4 text-sm shadow-[0_20px_50px_rgba(15,23,42,0.08)] ${
+                toast.tone === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : toast.tone === "error"
+                    ? "border-rose-200 bg-rose-50 text-rose-800"
+                    : "border-sky-200 bg-sky-50 text-sky-800"
+              }`}
+            >
+              <div className="font-semibold">{toast.title}</div>
+              <div className="mt-1">{toast.description}</div>
+            </div>
+          ) : null}
 
-                  return (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-slate-950">
-                        <div className="flex flex-col">
-                          <span>{item.name}</span>
-                          <span className="inventory-note mt-1">
-                            Batch {item.batch_number}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {item.category_name ?? "Uncategorized"}
-                      </td>
-                      <td className="px-4 py-3">{item.batch_number}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+          <MultiItemOrderCart
+            isOpen={isSellOutOpen}
+            onClose={() => setIsSellOutOpen(false)}
+            onSubmit={handleSellOutSubmit}
+            isProcessing={isProcessingSale}
+          />
+
+          <section className="grid gap-4 sm:grid-cols-3">
+            {[
+              { label: "Items loaded", value: inventory.length },
+              { label: "Low stock", value: lowStockCount },
+              { label: "Expired", value: expiredCount },
+            ].map((item) => (
+              <div key={item.label} className={metricCardClassName}>
+                <div className="group/title inline-flex items-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 transition-colors duration-300 hover:text-emerald-600">
+                  <span className={titleLineClassName}>{item.label}</span>
+                </div>
+                <div className="mt-3 text-3xl font-black text-slate-950 transition-colors duration-300 group-hover:text-emerald-700 group-hover:underline group-hover:decoration-emerald-400 group-hover:decoration-2 group-hover:underline-offset-8">
+                  {item.value}
+                </div>
+                <div className="mt-4 h-px w-full bg-linear-to-r from-emerald-200 via-emerald-100 to-transparent opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+              </div>
+            ))}
+          </section>
+
+          <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className={sectionTitleClassName}>
+                  <span className={titleLineClassName}>Current inventory</span>
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Search by medicine name or batch number, then filter by
+                  category.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <input
+                  value={inventoryQuery}
+                  onChange={(event) => setInventoryQuery(event.target.value)}
+                  placeholder="Search by name or batch"
+                  className="min-w-55 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
+                />
+                <select
+                  value={selectedCategory}
+                  onChange={(event) => setSelectedCategory(event.target.value)}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-400 focus:bg-white"
+                >
+                  {categoryOptions.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+                {isLoadingInventory ? (
+                  <span className="text-sm font-semibold text-slate-500">
+                    Refreshing...
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+              <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Medicine</th>
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Batch</th>
+                    <th className="px-4 py-3">Qty</th>
+                    <th className="px-4 py-3">Expiry</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                  {currentItems.map((item) => {
+                    const initialQty =
+                      (item as any).initial_batch_quantity ??
+                      (item as any).initial_quantity ??
+                      item.quantity;
+                    const pct = initialQty > 0 ? item.quantity / initialQty : 1;
+                    const now = new Date();
+                    const expiry = item.expiry_date
+                      ? new Date(item.expiry_date)
+                      : null;
+                    const isExpired = Boolean(
+                      expiry && expiry.getTime() < now.getTime(),
+                    );
+                    const isExpiringSoon = Boolean(
+                      expiry &&
+                      !isExpired &&
+                      expiry.getTime() - now.getTime() <=
+                        1000 * 60 * 60 * 24 * 30 * 6,
+                    );
+                    const isLowStock = item.quantity <= 20 || pct <= 0.2;
+
+                    return (
+                      <tr key={item.id}>
+                        <td className="px-4 py-3 font-medium text-slate-950">
+                          <div className="flex flex-col gap-2">
+                            <div>
+                              <span>{item.name}</span>
+                              <span className="inventory-note mt-1 block">
+                                Batch {item.batch_number}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {isLowStock ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                                  <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
+                                  Low Stock
+                                </span>
+                              ) : null}
+                              {isExpiringSoon ? (
+                                <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700 animate-pulse">
+                                  Expiring Soon - Sell Out!
+                                </span>
+                              ) : null}
+                              {isExpired ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-700 animate-pulse">
+                                  <Flag className="h-3.5 w-3.5" />
+                                  Expired!
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {item.category_name ?? "Uncategorized"}
+                        </td>
+                        <td className="px-4 py-3">{item.batch_number}</td>
+                        <td className="px-4 py-3">
                           <span className="text-sm font-semibold">
                             {item.quantity}
                           </span>
-                          {lowStock ? (
-                            <span
-                              className="badge-cool"
-                              title="Low stock — add to stock"
-                            >
-                              This item may disappear — add to stock
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          <span>{item.expiry_date ?? "-"}</span>
-                          {expiryMessage.tone === "danger" ? (
-                            <span className="badge-danger">
-                              {expiryMessage.text}
-                            </span>
-                          ) : expiryMessage.tone === "warning" ? (
-                            <span className="badge-warning">
-                              {expiryMessage.text}
-                            </span>
-                          ) : null}
-                        </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <span>{item.expiry_date ?? "-"}</span>
+                          </div>
+                        </td>
+                        <td className="flex gap-2 px-4 py-3">
+                          <button
+                            onClick={() => handleViewDetails(item)}
+                            className="inline-flex items-center justify-center rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-95"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(item.id)}
+                            className="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-red-700 active:scale-95"
+                            title="Delete this item"
+                          >
+                            🗑
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!visibleInventory.length ? (
+                    <tr>
+                      <td
+                        className="px-4 py-8 text-center text-slate-500"
+                        colSpan={6}
+                      >
+                        No inventory matches the current search and category
+                        filter.
                       </td>
                     </tr>
-                  );
-                })}
-                {!visibleInventory.length ? (
-                  <tr>
-                    <td
-                      className="px-4 py-8 text-center text-slate-500"
-                      colSpan={5}
-                    >
-                      No inventory matches the current search and category
-                      filter.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+                  ) : null}
+                </tbody>
+              </table>
+              <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <div className="text-sm font-semibold text-slate-600">
+                    Page {currentPage} of {totalPages || 1}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
+                    disabled={currentPage === totalPages || totalPages === 0}
+                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* MODAL OVERLAY FOR VIEWING/EDITING DETAILS */}
+        {showModal && selectedItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl border border-white/80 bg-white shadow-2xl">
+              {/* Modal Header */}
+              <div className="sticky top-0 border-b border-slate-200 bg-linear-to-r from-emerald-50 to-slate-50 px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-slate-900">
+                    {selectedItem.name}
+                  </h2>
+                  <button
+                    onClick={handleCloseModal}
+                    className="rounded-full p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">
+                  Batch: {selectedItem.batch_number}
+                </p>
+              </div>
+
+              {/* Modal Body */}
+              <div className="space-y-4 p-6">
+                {/* Medicine Name */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Medicine Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.name || ""}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, name: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Enter medicine name"
+                  />
+                </div>
+
+                {/* Batch Number */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Batch Number
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.batchNumber || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        batchNumber: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Enter batch number"
+                  />
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={editFormData.quantity || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        quantity: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                {/* Unit */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Unit
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.unit || ""}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, unit: e.target.value })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Enter unit (e.g., tablets, bottles)"
+                  />
+                </div>
+
+                {/* Expiry Date */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formatDateForInput(editFormData.expiryDate)}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        expiryDate: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  />
+                </div>
+
+                {/* Price */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Price Per Unit
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editFormData.price || ""}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        price: e.target.value,
+                      })
+                    }
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="Enter price"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t border-slate-200 bg-slate-50 px-6 py-4 flex gap-3">
+                <button
+                  onClick={handleCloseModal}
+                  className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 transition-all duration-300 hover:bg-slate-100 active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSubmit}
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-95"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
-        </section>
-      </div>
-    </AppShell>
+        )}
+      </AppShell>
+      {isMobileMenuOpen ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          role="presentation"
+        />
+      ) : null}
+    </>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/app/components/AppShell";
 import {
@@ -88,6 +89,7 @@ const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [reportRange, setReportRange] =
     useState<SalesReportData["range"]>("24h");
@@ -220,8 +222,13 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    if (userRole === "staff") {
+      router.push("/");
+      return;
+    }
+
     void refreshAnalytics();
-  }, [refreshAnalytics]);
+  }, [refreshAnalytics, router, userRole]);
 
   const categoryData = useMemo<CategoryPoint[]>(() => {
     const map = new Map<string, CategoryPoint>();

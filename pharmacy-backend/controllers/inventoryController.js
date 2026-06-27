@@ -447,3 +447,100 @@ exports.resetSalesHistory = async (req, res) => {
     return res.status(500).json({ message: "Failed to purge operational audit tracking metrics datasets." });
   }
 };
+
+// 12. Inline edit for inventory items
+exports.updateStockInline = async (req, res) => {
+  const { id } = req.params;
+  const { name, batchNumber, expiryDate, quantity, unit, price } = req.body;
+
+  // Validate required fields
+  if (!id || !Number.isFinite(Number.parseInt(id, 10))) {
+    return res.status(400).json({ message: "Valid inventory item ID is required." });
+  }
+
+  // Parse and validate input fields
+  const resolvedName = name && String(name).trim() ? String(name).trim() : null;
+  const resolvedBatchNumber = batchNumber && String(batchNumber).trim() ? String(batchNumber).trim() : null;
+  const resolvedExpiryDate = expiryDate && String(expiryDate).trim() ? String(expiryDate).trim() : null;
+  const resolvedQuantity = Number.isFinite(Number.parseInt(quantity, 10)) ? Number.parseInt(quantity, 10) : null;
+  const resolvedPrice = Number.isFinite(Number.parseFloat(price)) ? Number.parseFloat(price) : null;
+  const resolvedUnit = unit && String(unit).trim() ? String(unit).trim() : null;
+
+  // Ensure at least one field is provided for update
+  if (!resolvedName && !resolvedBatchNumber && !resolvedExpiryDate && resolvedQuantity === null && resolvedPrice === null && !resolvedUnit) {
+    return res.status(400).json({ message: "At least one field must be provided for update." });
+  }
+
+  try {
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramCount = 1;
+
+    if (resolvedName) {
+      updateFields.push(`name = $${paramCount}`);
+      updateValues.push(resolvedName);
+      paramCount++;
+    }
+    if (resolvedBatchNumber) {
+      updateFields.push(`batch_number = $${paramCount}`);
+      updateValues.push(resolvedBatchNumber);
+      paramCount++;
+    }
+    if (resolvedExpiryDate) {
+      updateFields.push(`expiry_date = $${paramCount}`);
+      updateValues.push(resolvedExpiryDate);
+      paramCount++;
+    }
+    if (resolvedQuantity !== null) {
+      updateFields.push(`quantity = $${paramCount}`);
+      updateValues.push(resolvedQuantity);
+      paramCount++;
+    }
+    if (resolvedPrice !== null) {
+      updateFields.push(`price_per_unit = $${paramCount}`);
+      updateValues.push(resolvedPrice);
+      paramCount++;
+    }
+    if (resolvedUnit) {
+      updateFields.push(`unit = $${paramCount}`);
+      updateValues.push(resolvedUnit);
+      paramCount++;
+    }
+
+    // Add the ID as the final parameter
+    updateValues.push(id);
+
+    const updateQuery = `
+      UPDATE inventory
+      SET ${updateFields.join(", ")}
+      WHERE id = $${paramCount}
+      RETURNING id, name, batch_number, expiry_date, quantity, unit, price_per_unit
+    `;
+
+    const result = await db.query(updateQuery, updateValues);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Inventory item not found." });
+    }
+
+    const updatedMedicine = {
+      id: result.rows[0].id,
+      name: result.rows[0].name,
+      batchNumber: result.rows[0].batch_number,
+      expiryDate: result.rows[0].expiry_date,
+      quantity: result.rows[0].quantity,
+      unit: result.rows[0].unit,
+      price: parseFloat(result.rows[0].price_per_unit)
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "Inventory item updated successfully.",
+      data: updatedMedicine
+    });
+  } catch (err) {
+    console.error("Postgres updateStockInline Error:", err);
+    return res.status(500).json({ message: "Failed to update inventory item." });
+  }
+};
