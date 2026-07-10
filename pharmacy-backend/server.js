@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const compression = require("compression");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const authRoutes = require("./routes/authRoutes");
 const { ensureSalesTable } = require("./utils/salesSchema");
@@ -38,6 +39,7 @@ app.use(
   })
 );
 
+app.use(compression());
 app.use(express.json());
 
 // Routes
@@ -53,19 +55,31 @@ app.get("/", (req, res) => {
 });
 
 const PORT = Number(process.env.PORT || 5000);
+const PING_INTERVAL_MINUTES = 14;
+const PING_ENDPOINT = process.env.HEALTH_PING_URL || `http://localhost:${PORT}/`;
+
+async function startServer() {
+  await ensureSalesTable();
+
+  app.listen(PORT, () => {
+    console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
+  });
+
+  setInterval(async () => {
+    try {
+      const response = await fetch(PING_ENDPOINT, { method: "GET" });
+      console.log(`🔁 Self-ping ${PING_ENDPOINT} -> ${response.status}`);
+    } catch (err) {
+      console.warn("⚠️ Self-ping failed:", err?.message || err);
+    }
+  }, PING_INTERVAL_MINUTES * 60 * 1000);
+}
 
 (async () => {
   try {
-    await ensureSalesTable();
-
-    app.listen(PORT, () => {
-      console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
-    });
+    await startServer();
   } catch (err) {
-    console.error(
-      "❌ Failed to initialize PostgreSQL sales schema:",
-      err
-    );
+    console.error("❌ Failed to initialize PostgreSQL sales schema:", err);
     process.exit(1);
   }
 })();

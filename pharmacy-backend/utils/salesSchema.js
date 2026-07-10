@@ -103,6 +103,18 @@ const ensureSalesTable = async () => {
   if (!(await hasIndex("sales", "idx_sales_customer_sno"))) {
     await db.query(`CREATE INDEX idx_sales_customer_sno ON sales(customer_sno)`);
   }
+
+  if (!(await hasIndex("sales", "idx_sales_batch_id"))) {
+    await db.query(`CREATE INDEX idx_sales_batch_id ON sales(batch_id)`);
+  }
+
+  if (!(await hasIndex("inventory", "idx_inventory_lower_name"))) {
+    await db.query(`CREATE INDEX idx_inventory_lower_name ON inventory (LOWER(name))`);
+  }
+
+  if (!(await hasIndex("inventory", "idx_inventory_lower_batch_number"))) {
+    await db.query(`CREATE INDEX idx_inventory_lower_batch_number ON inventory (LOWER(batch_number))`);
+  }
 };
 
 module.exports = {

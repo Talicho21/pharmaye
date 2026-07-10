@@ -3,16 +3,59 @@ const db = require("../config/db");
 
 // 1. Get complete inventory with joined category names
 exports.getInventory = async (req, res) => {
+  const rawSearch = String(req.query.search ?? req.query.q ?? "").trim();
+  const rawCategory = String(req.query.category ?? "all").trim().toLowerCase();
+  const page = Math.max(Number.parseInt(String(req.query.page || "1"), 10) || 1, 1);
+  const pageSize = Math.min(Math.max(Number.parseInt(String(req.query.pageSize || "50"), 10) || 50, 1), 200);
+  const offset = (page - 1) * pageSize;
+
+  const whereClauses = [];
+  const params = [];
+
+  if (rawSearch) {
+    params.push(`%${rawSearch.toLowerCase()}%`);
+    whereClauses.push(
+      `(LOWER(i.name) LIKE $${params.length} OR LOWER(i.batch_number) LIKE $${params.length})`,
+    );
+  }
+
+  if (rawCategory && rawCategory !== "all") {
+    params.push(rawCategory);
+    whereClauses.push(
+      `LOWER(COALESCE(c.category_name, 'Uncategorized')) = $${params.length}`,
+    );
+  }
+
+  const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(" AND ")}` : "";
   const queryText = `
     SELECT i.id, i.name, i.batch_number, i.quantity, i.expiry_date, i.price_per_unit, i.unit, i.initial_batch_quantity,
            c.id AS category_id, c.category_name
     FROM inventory i
     LEFT JOIN categories c ON i.category_id = c.id
+    ${whereSql}
     ORDER BY i.name ASC, i.expiry_date ASC
+    LIMIT $${params.length + 1}
+    OFFSET $${params.length + 2}
   `;
+
   try {
-    const result = await db.query(queryText);
-    return res.status(200).json(result.rows);
+    const result = await db.query(queryText, [...params, pageSize, offset]);
+
+    const countQuery = `
+      SELECT COUNT(*) AS total_count
+      FROM inventory i
+      LEFT JOIN categories c ON i.category_id = c.id
+      ${whereSql}
+    `;
+    const countResult = await db.query(countQuery, params);
+    const totalRecords = parseInt(countResult.rows[0]?.total_count ?? "0", 10);
+
+    return res.status(200).json({
+      page,
+      pageSize,
+      totalRecords,
+      items: result.rows,
+    });
   } catch (err) {
     console.error("Postgres getInventory Error:", err);
     return res.status(500).json({ message: "Failed to retrieve inventory records." });
@@ -21,9 +64,12 @@ exports.getInventory = async (req, res) => {
 
 // 2. Search inventory items dynamically
 exports.searchInventory = async (req, res) => {
-  const searchSource = req.query.q ?? req.query.query ?? "";
-  const searchTerm = searchSource ? `%${String(searchSource).trim().toLowerCase()}%` : "%%";
-  
+  const searchSource = String(req.query.q ?? req.query.query ?? "").trim();
+  if (!searchSource) {
+    return res.status(200).json({ success: true, results: [] });
+  }
+
+  const searchTerm = `%${searchSource.toLowerCase()}%`;
   const queryText = `
     SELECT i.id,
            i.name,
@@ -38,6 +84,7 @@ exports.searchInventory = async (req, res) => {
     LEFT JOIN categories c ON i.category_id = c.id
     WHERE LOWER(i.name) LIKE $1 OR LOWER(i.batch_number) LIKE $1
     ORDER BY i.name ASC
+    LIMIT 25
   `;
   try {
     const result = await db.query(queryText, [searchTerm]);
@@ -349,32 +396,71 @@ exports.getSalesReport = async (req, res) => {
 
 // 9. Fetch comprehensive log ledger between specific calendar filters
 exports.getSalesLog = async (req, res) => {
-  const { startDate, endDate } = req.query;
+  const { startDate, endDate, search, page: rawPage, pageSize: rawPageSize } = req.query;
 
-  const safeEndDate = endDate || new Date().toISOString().slice(0, 10);
+  const safeEndDate = String(endDate || new Date().toISOString().slice(0, 10));
   const defaultStart = new Date();
   defaultStart.setDate(defaultStart.getDate() - 29);
-  const safeStartDate = startDate || defaultStart.toISOString().slice(0, 10);
+  const safeStartDate = String(startDate || defaultStart.toISOString().slice(0, 10));
+  const page = Math.max(Number.parseInt(String(rawPage || "1"), 10) || 1, 1);
+  const pageSize = Math.min(Math.max(Number.parseInt(String(rawPageSize || "10"), 10) || 10, 1), 100);
+  const offset = (page - 1) * pageSize;
+  const normalizedSearch = String(search || "").trim().toLowerCase();
+
+  const params = [safeStartDate, safeEndDate];
+  let searchClause = "";
+
+  if (normalizedSearch) {
+    params.push(`%${normalizedSearch}%`);
+    searchClause = `
+      AND (
+        CAST(s.id AS TEXT) ILIKE $${params.length}
+        OR LOWER(s.medicine_name) LIKE $${params.length}
+        OR LOWER(i.name) LIKE $${params.length}
+        OR LOWER(c.category_name) LIKE $${params.length}
+        OR LOWER(s.seller_name) LIKE $${params.length}
+        OR LOWER(s.receiver_name) LIKE $${params.length}
+      )
+    `;
+  }
 
   try {
     const queryText = `
-      SELECT s.id, s.batch_id, s.sale_date, s.quantity_sold, s.unit_price, s.total_price, s.seller_name, s.receiver_name,
+      SELECT s.id,
+             s.batch_id,
+             s.sale_date,
+             s.quantity_sold,
+             s.unit_price,
+             s.total_price,
+             s.seller_name,
+             s.receiver_name,
              COALESCE(s.medicine_name, i.name, 'Purged Item') AS medicine_name,
              COALESCE(i.unit, '') AS unit,
-             COALESCE(c.category_name, 'General') AS category
+             COALESCE(c.category_name, 'General') AS category,
+             COUNT(*) OVER() AS total_count
       FROM sales s
       LEFT JOIN inventory i ON s.batch_id = i.id
       LEFT JOIN categories c ON i.category_id = c.id
-      WHERE s.sale_date::date >= $1::date AND s.sale_date::date <= $2::date
+      WHERE s.sale_date::date >= $1::date
+        AND s.sale_date::date <= $2::date
+        ${searchClause}
       ORDER BY s.sale_date DESC
+      LIMIT $${params.length + 1}
+      OFFSET $${params.length + 2}
     `;
-    const result = await db.query(queryText, [safeStartDate, safeEndDate]);
-    
+
+    const result = await db.query(queryText, [...params, pageSize, offset]);
+    const totalRecords = result.rows[0]?.total_count
+      ? parseInt(result.rows[0].total_count, 10)
+      : 0;
+
     return res.status(200).json({
       startDate: safeStartDate,
       endDate: safeEndDate,
-      totalRecords: result.rows.length,
-      records: result.rows.map(row => ({
+      page,
+      pageSize,
+      totalRecords,
+      records: result.rows.map((row) => ({
         id: row.id,
         batchId: row.batch_id,
         saleDate: row.sale_date,
@@ -385,8 +471,8 @@ exports.getSalesLog = async (req, res) => {
         unitPrice: parseFloat(row.unit_price),
         totalPrice: parseFloat(row.total_price),
         sellerName: row.seller_name,
-        receiverName: row.receiver_name
-      }))
+        receiverName: row.receiver_name,
+      })),
     });
   } catch (err) {
     console.error("Postgres getSalesLog Error:", err);
