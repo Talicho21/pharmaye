@@ -212,8 +212,8 @@ export function AppShell({
           </div>
         ) : null}
 
-        <main className="flex-1 overflow-hidden bg-slate-50/50">
-          <div className="mx-auto w-full max-w-5xl px-3 py-4 sm:px-4 lg:px-5 lg:py-5">
+        <main className="flex-1 min-w-0 overflow-y-auto bg-slate-50/50">
+          <div className="mx-auto w-full max-w-5xl px-4 py-4 md:px-8 lg:py-5">
             {children}
           </div>
         </main>

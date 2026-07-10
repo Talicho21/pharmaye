@@ -34,6 +34,29 @@ type AuthUser = {
 const SESSION_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
+function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
+  if (Array.isArray(payload)) {
+    return payload as InventoryItem[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as {
+      items?: unknown;
+      results?: unknown;
+    };
+
+    if (Array.isArray(record.items)) {
+      return record.items as InventoryItem[];
+    }
+
+    if (Array.isArray(record.results)) {
+      return record.results as InventoryItem[];
+    }
+  }
+
+  return [];
+}
+
 export default function SellOutPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -122,7 +145,7 @@ export default function SellOutPage() {
         }
 
         const data = await response.json();
-        setInventory(Array.isArray(data) ? data : []);
+        setInventory(normalizeInventoryPayload(data));
       } catch (error) {
         setToast({
           title: "Inventory unavailable",
@@ -239,7 +262,7 @@ export default function SellOutPage() {
         },
       });
       const refreshData = await refreshResponse.json();
-      setInventory(Array.isArray(refreshData) ? refreshData : []);
+      setInventory(normalizeInventoryPayload(refreshData));
     } catch (error) {
       setToast({
         title: "Sale failed",
@@ -309,7 +332,7 @@ export default function SellOutPage() {
                       },
                     });
                     const data = await response.json();
-                    setInventory(Array.isArray(data) ? data : []);
+                    setInventory(normalizeInventoryPayload(data));
                   } catch {
                     setToast({
                       title: "Refresh failed",
@@ -374,44 +397,48 @@ export default function SellOutPage() {
           {isLoadingInventory ? (
             <p className="text-sm text-slate-500">Loading inventory...</p>
           ) : inventory.length > 0 ? (
-            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                <thead className="bg-slate-100 text-xs uppercase tracking-[0.2em] text-slate-600">
-                  <tr>
-                    <th className="px-4 py-3">Medicine Name</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Batch</th>
-                    <th className="px-4 py-3">Available Qty</th>
-                    <th className="px-4 py-3">Price/Unit</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
-                  {inventory.slice(0, 10).map((item) => (
-                    <tr key={item.id}>
-                      <td className="px-4 py-3 font-medium text-slate-950">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-3">
-                        {item.category_name || "Uncategorized"}
-                      </td>
-                      <td className="px-4 py-3 text-sm">{item.batch_number}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-semibold text-emerald-800">
-                          {item.quantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        ETB {item.price_per_unit?.toLocaleString() || "N/A"}
-                      </td>
+            <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+              <div className="min-w-[800px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm">
+                <table className="w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-100 text-xs uppercase tracking-[0.2em] text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3">Medicine Name</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Batch</th>
+                      <th className="px-4 py-3">Available Qty</th>
+                      <th className="px-4 py-3">Price/Unit</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {inventory.length > 10 && (
-                <div className="bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
-                  Showing 10 of {inventory.length} items
-                </div>
-              )}
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+                    {inventory.slice(0, 10).map((item) => (
+                      <tr key={item.id}>
+                        <td className="px-4 py-3 font-medium text-slate-950">
+                          {item.name}
+                        </td>
+                        <td className="px-4 py-3">
+                          {item.category_name || "Uncategorized"}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {item.batch_number}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-sm font-semibold text-emerald-800">
+                            {item.quantity}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          ETB {item.price_per_unit?.toLocaleString() || "N/A"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {inventory.length > 10 && (
+                  <div className="bg-slate-50 px-4 py-3 text-center text-xs text-slate-500">
+                    Showing 10 of {inventory.length} items
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-slate-500">No inventory loaded.</p>

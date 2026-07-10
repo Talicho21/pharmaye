@@ -1,7 +1,14 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
 import { AppShell } from "@/app/components/AppShell";
 import { ProtectedRoute } from "@/app/components/ProtectedRoute";
@@ -22,25 +29,21 @@ type SalesReportData = {
   }>;
 };
 
-type InactivityData = {
-  thresholdMonths: number;
-  medicines: Array<{
-    medicineId: number;
+type SalesLogData = {
+  startDate: string;
+  endDate: string;
+  totalRecords: number;
+  records: Array<{
+    id: number;
+    batchId: number;
+    saleDate: string;
     medicineName: string;
-    categoryName: string;
-    lastSaleDate: string | null;
-    daysSinceLastSale: number | null;
-    totalSales: number;
-    totalQuantitySold: number;
-  }>;
-  categories: Array<{
-    categoryId: number;
-    categoryName: string;
-    medicineCount: number;
-    lastSaleDate: string | null;
-    daysSinceLastSale: number | null;
-    totalSales: number;
-    totalQuantitySold: number;
+    category: string;
+    quantitySold: number;
+    unitPrice: number;
+    totalPrice: number;
+    sellerName: string;
+    receiverName: string;
   }>;
 };
 
@@ -51,49 +54,91 @@ export default function ReportsPage() {
   const [reportRange, setReportRange] =
     useState<SalesReportData["range"]>("monthly");
   const [reportData, setReportData] = useState<SalesReportData | null>(null);
-  const [inactiveData, setInactiveData] = useState<InactivityData | null>(null);
+  const [salesLogData, setSalesLogData] = useState<SalesLogData | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [profileName, setProfileName] = useState("Guest user");
-  const [userRole, setUserRole] = useState<"admin" | "staff">("staff");
-  const router = useRouter();
   const [profileEmail, setProfileEmail] = useState("guest@expresspharma.local");
+  const [userRole, setUserRole] = useState<"admin" | "staff">("staff");
   const [loading, setLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [startDate, setStartDate] = useState(() => {
+    const defaultStart = new Date();
+    defaultStart.setDate(defaultStart.getDate() - 29);
+    return defaultStart.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
+  const router = useRouter();
 
-  const refreshReports = useCallback(async () => {
-    setLoading(true);
+  const preventFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+  };
 
-    try {
-      if (!authToken) {
-        return;
+  const handleStartDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    setStartDate(event.target.value);
+  };
+
+  const handleEndDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
+    setEndDate(event.target.value);
+  };
+
+  const refreshReports = useCallback(
+    async ({ useFiltering = false }: { useFiltering?: boolean } = {}) => {
+      if (useFiltering) {
+        setIsFiltering(true);
+      } else {
+        setLoading(true);
       }
 
-      const [reportResponse, inactiveResponse] = await Promise.all([
-        fetch(`${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`, {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }),
-        fetch(`${API_BASE}/reports/inactive?thresholdMonths=3`, {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }),
-      ]);
+      try {
+        if (!authToken) {
+          return;
+        }
 
-      const [reportPayload, inactivePayload] = await Promise.all([
-        reportResponse.json(),
-        inactiveResponse.json(),
-      ]);
+        const [reportResponse, logResponse] = await Promise.all([
+          fetch(
+            `${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` },
+            },
+          ),
+          fetch(
+            `${API_BASE}/reports/sales-log?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`,
+            {
+              headers: { Authorization: `Bearer ${authToken}` },
+            },
+          ),
+        ]);
 
-      setReportData(reportPayload as SalesReportData);
-      setInactiveData(inactivePayload as InactivityData);
-    } catch (error) {
-      console.error("Failed to fetch reports:", error);
-      setReportData(null);
-      setInactiveData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [authToken, reportRange]);
+        const [reportPayload, logPayload] = await Promise.all([
+          reportResponse.json(),
+          logResponse.json(),
+        ]);
+
+        setReportData(reportPayload as SalesReportData);
+        setSalesLogData(logPayload as SalesLogData);
+      } catch (error) {
+        console.error("Failed to fetch reports:", error);
+        setReportData(null);
+        setSalesLogData(null);
+      } finally {
+        if (useFiltering) {
+          setIsFiltering(false);
+        } else {
+          setLoading(false);
+        }
+      }
+    },
+    [authToken, reportRange, startDate, endDate],
+  );
 
   useEffect(() => {
     const hydrateSession = async () => {
@@ -134,6 +179,7 @@ export default function ReportsPage() {
             setSessionCookie(cookieToken);
           } else {
             window.location.replace("/");
+            return;
           }
 
           setSessionReady(true);
@@ -142,23 +188,21 @@ export default function ReportsPage() {
 
         const parsed = JSON.parse(storedSession) as {
           token?: string;
-          user?: { role?: string };
+          user?: { username?: string; role?: string };
         };
         if (parsed?.token && parsed?.user?.role === "admin") {
           setAuthToken(parsed.token);
           setUserRole("admin");
         }
 
-        const parsedUser = JSON.parse(storedSession) as {
-          user?: { username?: string };
-        };
-        if (parsedUser?.user?.username) {
-          setProfileName(parsedUser.user.username);
-          setProfileEmail(`${parsedUser.user.username}@expresspharma.local`);
+        if (parsed?.user?.username) {
+          setProfileName(parsed.user.username);
+          setProfileEmail(`${parsed.user.username}@expresspharma.local`);
         }
 
         setSessionReady(true);
-      } catch {
+      } catch (error) {
+        console.error("Session hydration failed:", error);
         window.location.replace("/");
       }
     };
@@ -167,17 +211,174 @@ export default function ReportsPage() {
   }, []);
 
   useEffect(() => {
+    if (!sessionReady) {
+      return;
+    }
+
     if (userRole === "staff") {
       router.push("/");
       return;
     }
 
-    if (!sessionReady) {
+    const fetchData = async () => {
+      if (!hasLoadedOnce) {
+        await refreshReports();
+        setHasLoadedOnce(true);
+      } else {
+        await refreshReports({ useFiltering: true });
+      }
+    };
+
+    void fetchData();
+  }, [refreshReports, router, sessionReady, userRole, hasLoadedOnce]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, startDate, endDate]);
+
+  const filteredRecords = useMemo(() => {
+    const records = salesLogData?.records ?? [];
+    const normalized = searchTerm.trim().toLowerCase();
+    if (!normalized) {
+      return records;
+    }
+
+    return records.filter((record) =>
+      [
+        String(record.id),
+        record.medicineName,
+        record.category,
+        record.sellerName,
+        record.receiverName,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized),
+    );
+  }, [salesLogData, searchTerm]);
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentPageRecords = filteredRecords.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRecords.length / itemsPerPage),
+  );
+
+  const exportToExcel = () => {
+    if (!filteredRecords.length) {
       return;
     }
 
-    void refreshReports();
-  }, [refreshReports, router, sessionReady, userRole]);
+    const headers = [
+      "Date/Time",
+      "Invoice ID",
+      "Medicine Name",
+      "Quantity Sold",
+      "Total Revenue",
+      "Served By",
+    ];
+
+    const csvRows = [headers.join(",")];
+    filteredRecords.forEach((record) => {
+      const row = [
+        new Date(record.saleDate).toLocaleString("en-GB", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        `INV-${record.id}`,
+        record.medicineName,
+        String(record.quantitySold),
+        record.totalPrice.toFixed(2),
+        record.sellerName || record.receiverName || "N/A",
+      ];
+      csvRows.push(
+        row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","),
+      );
+    });
+
+    const blob = new Blob([csvRows.join("\r\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `sales-history-${startDate}-to-${endDate}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrint = () => {
+    const ledgerElement = document.getElementById("printable-ledger-table");
+    if (!ledgerElement) {
+      return;
+    }
+
+    const printContent = ledgerElement.innerHTML;
+    const originalContent = document.body.innerHTML;
+
+    document.body.innerHTML = `
+      <html>
+        <head>
+          <title>Express Pharmaceutical Wholesale - Transaction Ledger</title>
+          <style>
+            body {
+              font-family: sans-serif;
+              padding: 20px;
+              color: #333;
+              margin: 0;
+            }
+            .no-print,
+            .quick-links,
+            .back-to-dashboard,
+            footer {
+              display: none !important;
+            }
+            table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin-top: 15px;
+            }
+            th,
+            td {
+              border-bottom: 1px solid #ddd !important;
+              padding: 12px !important;
+              text-align: left !important;
+              font-size: 14px !important;
+            }
+            th {
+              background-color: #f8fafc !important;
+              font-weight: 600 !important;
+              color: #475569 !important;
+              text-transform: uppercase !important;
+            }
+            thead {
+              display: table-header-group;
+            }
+            tbody {
+              display: table-row-group;
+            }
+          </style>
+        </head>
+        <body>
+          <h2 style="margin-bottom: 5px;">Express Pharmaceutical Wholesale</h2>
+          <p style="font-size: 12px; color: #64748b; margin-top: 0;">Transaction History Ledger Report</p>
+          <div id="printable-ledger-table">${printContent}</div>
+        </body>
+      </html>
+    `;
+
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+  };
 
   const handleSignOut = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -187,16 +388,7 @@ export default function ReportsPage() {
     window.location.href = "/";
   };
 
-  const reportItems = inactiveData?.medicines ?? [];
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentReportItems = reportItems.slice(
-    indexOfFirstItem,
-    indexOfLastItem,
-  );
-  const totalPages = Math.ceil(reportItems.length / itemsPerPage);
-
-  if (!sessionReady || loading) {
+  if (!sessionReady || (loading && !hasLoadedOnce)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50/50">
         <div className="rounded-4xl border border-white/80 bg-white/90 px-8 py-10 text-sm font-semibold text-slate-500 shadow-[0_25px_80px_rgba(15,23,42,0.12)] backdrop-blur">
@@ -222,202 +414,190 @@ export default function ReportsPage() {
             <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-white">
-                  Sales & Activity Reports
+                  Transaction history ledger
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-tight tracking-tight text-sky-50/85">
-                  Detailed sales analysis, revenue trends, and product
-                  inactivity monitoring. Admin-only access.
+                  Filter, print, and export sales activity logs in a dedicated
+                  reporting view.
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <select
-                  value={reportRange}
-                  onChange={(e) =>
-                    setReportRange(e.target.value as SalesReportData["range"])
-                  }
-                  className="inline-flex rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:border-white/40 hover:bg-white/20"
-                >
-                  <option value="24h">Last 24 hours</option>
-                  <option value="monthly">Last month</option>
-                  <option value="6months">Last 6 months</option>
-                  <option value="yearly">Last year</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => void refreshReports()}
-                  className="inline-flex rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:border-white/40 hover:bg-white/20"
-                >
-                  Refresh
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => void refreshReports()}
+                className="inline-flex rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:border-white/40 hover:bg-white/20"
+              >
+                Refresh
+              </button>
             </div>
           </header>
 
-          {/* Sales Report Card */}
-          <section className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-              <div className="mb-6 inline-flex items-center gap-2">
-                <h2 className="text-xl font-bold text-slate-950">
-                  Sales Summary
-                </h2>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {reportRange}
-                </span>
+          <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
+            <form
+              onSubmit={preventFormSubmit}
+              className="mb-6 grid gap-4 lg:grid-cols-[1fr_1fr_1.1fr] no-print"
+            >
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={handleStartDateChange}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                />
               </div>
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={handleEndDateChange}
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
+                  Search logs
+                </label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search by invoice, medicine, seller..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                />
+              </div>
+            </form>
 
-              {reportData ? (
-                <div className="space-y-4">
-                  <div className="rounded-3xl border border-emerald-100 bg-emerald-50/60 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-700">
-                      Total Revenue
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-slate-950">
-                      ETB {reportData.totalRevenue?.toLocaleString() || "0"}
-                    </div>
-                  </div>
-                  <div className="rounded-3xl border border-sky-100 bg-sky-50/60 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700">
-                      Items Sold
-                    </div>
-                    <div className="mt-2 text-3xl font-black text-slate-950">
-                      {reportData.totalItemsSold?.toLocaleString() || "0"}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  No sales data available.
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
+              <div className="space-y-1">
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">
+                  Ledger snapshot
                 </p>
-              )}
+                <p className="text-sm text-slate-600">
+                  Showing {filteredRecords.length} records from {startDate} to{" "}
+                  {endDate}.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                >
+                  Print PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={exportToExcel}
+                  className="rounded-2xl border border-slate-300 bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
+                  Export to Excel
+                </button>
+              </div>
             </div>
 
-            {/* Top Selling Medicines */}
-            <div className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-              <h2 className="mb-6 text-xl font-bold text-slate-950">
-                Top Selling Medicines
-              </h2>
+            <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+              <div
+                id="printable-ledger-table"
+                className="min-w-[800px] overflow-hidden rounded-4xl border border-slate-200 bg-white shadow-sm"
+              >
+                {isFiltering ? (
+                  <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                    Filtering ledger...
+                  </div>
+                ) : null}
+                <table className="w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                    <tr>
+                      <th className="px-4 py-4">Date/Time</th>
+                      <th className="px-4 py-4">Invoice ID</th>
+                      <th className="px-4 py-4">Medicine Name</th>
+                      <th className="px-4 py-4">Quantity Sold</th>
+                      <th className="px-4 py-4">Total Revenue</th>
+                      <th className="px-4 py-4">Served By</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    className={`divide-y divide-slate-200 bg-white text-slate-700 ${
+                      isFiltering
+                        ? "opacity-50 pointer-events-none transition-opacity duration-200"
+                        : ""
+                    }`}
+                  >
+                    {currentPageRecords.length ? (
+                      currentPageRecords.map((record) => (
+                        <tr key={record.id}>
+                          <td className="px-4 py-4">
+                            {new Date(record.saleDate).toLocaleString("en-GB", {
+                              year: "numeric",
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td className="px-4 py-4">INV-{record.id}</td>
+                          <td className="px-4 py-4 font-semibold text-slate-900">
+                            {record.medicineName}
+                          </td>
+                          <td className="px-4 py-4">{record.quantitySold}</td>
+                          <td className="px-4 py-4">
+                            ETB {record.totalPrice.toFixed(2)}
+                          </td>
+                          <td className="px-4 py-4">
+                            {record.sellerName || record.receiverName || "N/A"}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          className="px-4 py-8 text-center text-sm text-slate-500"
+                          colSpan={6}
+                        >
+                          No records match the selected filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-              {reportData?.topSellingMedicines &&
-              reportData.topSellingMedicines.length > 0 ? (
-                <div className="space-y-3">
-                  {reportData.topSellingMedicines
-                    .slice(0, 5)
-                    .map((medicine, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-2xl border border-slate-200 bg-white/80 p-4"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-bold text-slate-950">
-                              {medicine.medicineName}
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {medicine.quantitySold} units sold
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-emerald-700">
-                              ETB{" "}
-                              {medicine.totalRevenue?.toLocaleString() || "0"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  No sales data available.
-                </p>
-              )}
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
 
-          {/* Inactive Products */}
-          {inactiveData && (
-            <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-              <h2 className="mb-6 text-xl font-bold text-slate-950">
-                Inactive Medicines (No sales in 3+ months)
-              </h2>
-
-              {inactiveData.medicines && inactiveData.medicines.length > 0 ? (
-                <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-                  <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Medicine Name</th>
-                        <th className="px-4 py-3">Category</th>
-                        <th className="px-4 py-3">Last Sale</th>
-                        <th className="px-4 py-3">Days Inactive</th>
-                        <th className="px-4 py-3">Total Sales</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                      {currentReportItems.map((medicine) => (
-                        <tr key={medicine.medicineId}>
-                          <td className="px-4 py-3 font-medium text-slate-950">
-                            {medicine.medicineName}
-                          </td>
-                          <td className="px-4 py-3">{medicine.categoryName}</td>
-                          <td className="px-4 py-3">
-                            {medicine.lastSaleDate
-                              ? new Date(
-                                  medicine.lastSaleDate,
-                                ).toLocaleDateString()
-                              : "Never"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {medicine.daysSinceLastSale !== null
-                              ? `${medicine.daysSinceLastSale} days`
-                              : "N/A"}
-                          </td>
-                          <td className="px-4 py-3">{medicine.totalSales}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCurrentPage((page) => Math.max(1, page - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Previous
-                      </button>
-                      <div className="text-sm font-semibold text-slate-600">
-                        Page {currentPage} of {totalPages || 1}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCurrentPage((page) =>
-                            Math.min(totalPages, page + 1),
-                          )
-                        }
-                        disabled={
-                          currentPage === totalPages || totalPages === 0
-                        }
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Next
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-500">
-                  No inactive medicines found.
-                </p>
-              )}
-            </section>
-          )}
-
-          {/* Navigation */}
           <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
             <h3 className="mb-4 text-lg font-bold text-slate-950">
               Quick Links

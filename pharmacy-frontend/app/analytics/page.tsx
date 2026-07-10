@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,6 +12,9 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -25,6 +28,7 @@ type InventoryItem = {
   category_name?: string | null;
   quantity: number;
   price_per_unit: number;
+  expiry_date?: string | null;
 };
 
 type SalesReportData = {
@@ -38,55 +42,37 @@ type SalesReportData = {
   }>;
 };
 
-type SalesLogData = {
-  startDate: string;
-  endDate: string;
-  totalRecords: number;
-  records: Array<{
-    id: number;
-    batchId: number;
-    saleDate: string;
-    medicineName: string;
-    category: string;
-    quantitySold: number;
-    unitPrice: number;
-    totalPrice: number;
-    sellerName: string;
-    receiverName: string;
-  }>;
-};
-
-type InactivityData = {
-  thresholdMonths: number;
-  medicines: Array<{
-    medicineId: number;
-    medicineName: string;
-    categoryName: string;
-    lastSaleDate: string | null;
-    daysSinceLastSale: number | null;
-    totalSales: number;
-    totalQuantitySold: number;
-  }>;
-  categories: Array<{
-    categoryId: number;
-    categoryName: string;
-    medicineCount: number;
-    lastSaleDate: string | null;
-    daysSinceLastSale: number | null;
-    totalSales: number;
-    totalQuantitySold: number;
-  }>;
-};
-
-type CategoryPoint = {
-  category: string;
-  quantity: number;
-  medicines: number;
+type ExpiryStatusPoint = {
+  name: string;
   value: number;
+  color: string;
 };
 
 const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
+
+function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
+  if (Array.isArray(payload)) {
+    return payload as InventoryItem[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as {
+      items?: unknown;
+      results?: unknown;
+    };
+
+    if (Array.isArray(record.items)) {
+      return record.items as InventoryItem[];
+    }
+
+    if (Array.isArray(record.results)) {
+      return record.results as InventoryItem[];
+    }
+  }
+
+  return [];
+}
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -94,13 +80,12 @@ export default function AnalyticsPage() {
   const [reportRange, setReportRange] =
     useState<SalesReportData["range"]>("24h");
   const [reportData, setReportData] = useState<SalesReportData | null>(null);
-  const [salesLogData, setSalesLogData] = useState<SalesLogData | null>(null);
-  const [inactiveData, setInactiveData] = useState<InactivityData | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [profileName, setProfileName] = useState("Guest user");
   const [profileEmail, setProfileEmail] = useState("guest@expresspharma.local");
   const [userRole, setUserRole] = useState<"admin" | "staff">("staff");
   const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
 
   const refreshAnalytics = useCallback(async () => {
     setLoading(true);
@@ -109,44 +94,21 @@ export default function AnalyticsPage() {
       const inventoryResponse = await fetch(`${API_BASE}/inventory`, {
         cache: "no-store",
       });
-      const inventoryPayload =
-        (await inventoryResponse.json()) as InventoryItem[];
-
-      setInventory(Array.isArray(inventoryPayload) ? inventoryPayload : []);
+      const inventoryPayload = await inventoryResponse.json();
+      setInventory(normalizeInventoryPayload(inventoryPayload));
 
       if (authToken) {
-        const [reportResponse, logResponse, inactiveResponse] =
-          await Promise.all([
-            fetch(
-              `${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`,
-              {
-                headers: { Authorization: `Bearer ${authToken}` },
-              },
-            ),
-            fetch(
-              `${API_BASE}/reports/sales-log?startDate=2026-05-20&endDate=2026-05-26`,
-              { headers: { Authorization: `Bearer ${authToken}` } },
-            ),
-            fetch(`${API_BASE}/reports/inactive?thresholdMonths=3`, {
-              headers: { Authorization: `Bearer ${authToken}` },
-            }),
-          ]);
-
-        const [reportPayload, logPayload, inactivePayload] = await Promise.all([
-          reportResponse.json(),
-          logResponse.json(),
-          inactiveResponse.json(),
-        ]);
-
+        const reportResponse = await fetch(
+          `${API_BASE}/reports?range=${encodeURIComponent(reportRange)}`,
+          { headers: { Authorization: `Bearer ${authToken}` } },
+        );
+        const reportPayload = await reportResponse.json();
         setReportData(reportPayload as SalesReportData);
-        setSalesLogData(logPayload as SalesLogData);
-        setInactiveData(inactivePayload as InactivityData);
       }
-    } catch {
+    } catch (error) {
+      console.error("Failed to refresh analytics:", error);
       setInventory([]);
       setReportData(null);
-      setSalesLogData(null);
-      setInactiveData(null);
     } finally {
       setLoading(false);
     }
@@ -191,6 +153,7 @@ export default function AnalyticsPage() {
               JSON.stringify({ token: cookieToken, user: payload.user }),
             );
             setSessionCookie(cookieToken);
+            setSessionReady(true);
           }
 
           return;
@@ -212,7 +175,10 @@ export default function AnalyticsPage() {
         if (parsed?.user?.role) {
           setUserRole(parsed.user.role);
         }
-      } catch {
+
+        setSessionReady(true);
+      } catch (error) {
+        console.error("Session validation failed:", error);
         setAuthToken(null);
         window.location.replace("/");
       }
@@ -222,44 +188,97 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    if (!sessionReady) {
+      return;
+    }
+
     if (userRole === "staff") {
       router.push("/");
       return;
     }
 
     void refreshAnalytics();
-  }, [refreshAnalytics, router, userRole]);
-
-  const categoryData = useMemo<CategoryPoint[]>(() => {
-    const map = new Map<string, CategoryPoint>();
-
-    inventory.forEach((item) => {
-      const category = item.category_name?.trim() || "Uncategorized";
-      const current = map.get(category) ?? {
-        category,
-        quantity: 0,
-        medicines: 0,
-        value: 0,
-      };
-
-      current.quantity += Number(item.quantity) || 0;
-      current.medicines += 1;
-      current.value +=
-        (Number(item.quantity) || 0) * (Number(item.price_per_unit) || 0);
-      map.set(category, current);
-    });
-
-    return Array.from(map.values()).sort(
-      (left, right) => right.quantity - left.quantity,
-    );
-  }, [inventory]);
+  }, [refreshAnalytics, router, sessionReady, userRole]);
 
   const totalInventoryValue = useMemo(
-    () => categoryData.reduce((sum, entry) => sum + entry.value, 0),
-    [categoryData],
+    () =>
+      inventory.reduce(
+        (sum, item) =>
+          sum + Number(item.quantity || 0) * Number(item.price_per_unit || 0),
+        0,
+      ),
+    [inventory],
   );
 
-  const safeTotalRevenue = Number(reportData?.totalRevenue ?? 0);
+  const outOfStockCount = useMemo(
+    () => inventory.filter((item) => Number(item.quantity) <= 0).length,
+    [inventory],
+  );
+
+  const mostSoldMedicines = useMemo(
+    () =>
+      reportData?.topSellingMedicines
+        ?.slice(0, 3)
+        .map((item) => item.medicineName) ?? [],
+    [reportData],
+  );
+
+  const lowStockData = useMemo(
+    () =>
+      inventory
+        .slice()
+        .sort((left, right) => Number(left.quantity) - Number(right.quantity))
+        .slice(0, 6)
+        .map((item) => ({ name: item.name, quantity: Number(item.quantity) })),
+    [inventory],
+  );
+
+  const expiryStatusData = useMemo<ExpiryStatusPoint[]>(() => {
+    const now = new Date();
+    const sixMonthsFromNow = new Date();
+    sixMonthsFromNow.setMonth(now.getMonth() + 6);
+
+    const counts = {
+      Healthy: 0,
+      "Expiring Soon": 0,
+      Expired: 0,
+    };
+
+    inventory.forEach((item) => {
+      if (!item.expiry_date) {
+        counts.Healthy += 1;
+        return;
+      }
+
+      const expiry = new Date(item.expiry_date);
+      if (Number.isNaN(expiry.getTime())) {
+        counts.Healthy += 1;
+        return;
+      }
+
+      if (expiry < now) {
+        counts.Expired += 1;
+      } else if (expiry <= sixMonthsFromNow) {
+        counts["Expiring Soon"] += 1;
+      } else {
+        counts.Healthy += 1;
+      }
+    });
+
+    return [
+      { name: "Healthy", value: counts.Healthy, color: "#22c55e" },
+      {
+        name: "Expiring Soon",
+        value: counts["Expiring Soon"],
+        color: "#f97316",
+      },
+      { name: "Expired", value: counts.Expired, color: "#ef4444" },
+    ];
+  }, [inventory]);
+
+  const summaryLabel = mostSoldMedicines.length
+    ? mostSoldMedicines.join(", ")
+    : "No sales yet";
 
   const handleSignOut = useCallback(() => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -284,23 +303,20 @@ export default function AnalyticsPage() {
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-white">
-                Graphical stock and sales insights
+                Inventory analytics built for action
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-tight tracking-tight text-sky-50/85">
-                This page holds the charts and operational report tables so the
-                main dashboard stays clean and the stock entry workflow lives
-                separately.
+                Dedicated analytics, separate from the dashboard, with inventory
+                health and sales insights.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={refreshAnalytics}
-                className="rounded-full border-2 border-emerald-500 bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_30px_rgba(16,185,129,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-700"
-              >
-                Refresh
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={refreshAnalytics}
+              className="inline-flex items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-[0_14px_30px_rgba(16,185,129,0.24)] transition duration-300 hover:-translate-y-0.5 hover:bg-emerald-700"
+            >
+              Refresh
+            </button>
           </div>
         </header>
 
@@ -310,98 +326,130 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <>
-            <section className="grid gap-4 md:grid-cols-4">
+            <section className="grid gap-4 xl:grid-cols-3">
               <div className="rounded-[1.75rem] border border-slate-200/60 bg-slate-50/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500 leading-tight">
-                  Inventory Items
+                  Total Inventory Value
                 </p>
-                <p className="mt-3 text-xl font-bold tracking-tight text-slate-800">
-                  {inventory.length}
-                </p>
-              </div>
-              <div className="rounded-[1.75rem] border border-blue-100 bg-blue-50/60 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
-                <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500 leading-tight">
-                  Stock Value
-                </p>
-                <p className="mt-3 flex items-baseline gap-1 whitespace-nowrap text-xl font-bold tracking-tight text-slate-800">
+                <p className="mt-3 flex items-baseline gap-2 text-xl font-bold tracking-tight text-slate-900">
                   <span className="text-xs font-medium text-slate-400">
                     ETB
                   </span>
                   <span>{totalInventoryValue.toFixed(2)}</span>
                 </p>
               </div>
-              <div className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/60 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+
+              <div className="rounded-[1.75rem] border border-amber-200 bg-amber-50/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500 leading-tight">
-                  Revenue Window
+                  Out of Stock Items
                 </p>
-                <p className="mt-3 flex items-baseline gap-1 whitespace-nowrap text-xl font-bold tracking-tight text-slate-800">
-                  {reportData ? (
-                    <>
-                      <span className="text-xs font-medium text-slate-400">
-                        ETB
-                      </span>
-                      <span>{safeTotalRevenue.toFixed(2)}</span>
-                    </>
-                  ) : (
-                    <span>Locked</span>
-                  )}
+                <p className="mt-3 text-xl font-bold tracking-tight text-slate-900">
+                  {outOfStockCount}
                 </p>
               </div>
-              <div className="rounded-[1.75rem] border border-violet-100 bg-violet-50/60 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+
+              <div className="rounded-[1.75rem] border border-slate-200/60 bg-slate-50/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500 leading-tight">
-                  Items Sold
+                  Most Sold Medicines
                 </p>
-                <p className="mt-3 text-xl font-bold tracking-tight text-slate-800">
-                  {reportData ? reportData.totalItemsSold : "Locked"}
+                <p className="mt-3 max-h-24 overflow-hidden text-sm font-semibold leading-snug text-slate-800">
+                  {summaryLabel}
                 </p>
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+            <section className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
               <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
                 <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.3em] text-sky-700">
-                      Graph
+                    <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">
+                      Low-stock chart
                     </p>
-                    <h2 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">
-                      Category distribution
+                    <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+                      Lowest quantity medicines
                     </h2>
                   </div>
-                  <select
-                    value={reportRange}
-                    onChange={(event) =>
-                      setReportRange(
-                        event.target.value as SalesReportData["range"],
-                      )
-                    }
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold outline-none transition focus:border-sky-400 focus:bg-white"
-                  >
-                    <option value="24h">Last 24 Hours</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="6months">6 Months</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                    {lowStockData.length} items
+                  </span>
                 </div>
                 <div className="h-104 rounded-3xl bg-linear-to-b from-slate-50 to-white p-4">
+                  {lowStockData.length ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={lowStockData}
+                        layout="vertical"
+                        margin={{ top: 8, right: 20, left: 0, bottom: 8 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke="#e2e8f0"
+                        />
+                        <XAxis
+                          type="number"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "#64748b", fontSize: 12 }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "#0f172a", fontSize: 12, width: 140 }}
+                          width={140}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(15, 23, 42, 0.05)" }}
+                          contentStyle={{
+                            borderRadius: "16px",
+                            border: "none",
+                            boxShadow: "0 20px 60px rgba(15, 23, 42, 0.12)",
+                          }}
+                        />
+                        <Bar
+                          dataKey="quantity"
+                          fill="#2563eb"
+                          radius={[10, 10, 10, 10]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex min-h-[240px] items-center justify-center text-sm font-semibold text-slate-500">
+                      No low-stock medicines available.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
+                <div className="mb-4">
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-500">
+                    Expiry status
+                  </p>
+                  <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+                    Inventory health breakdown
+                  </h2>
+                </div>
+                <div className="h-80 rounded-3xl bg-linear-to-b from-slate-50 to-white p-4">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="#e2e8f0"
-                      />
-                      <XAxis
-                        dataKey="category"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: "#64748b", fontSize: 12 }}
-                      />
-                      <YAxis
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fill: "#64748b", fontSize: 12 }}
-                      />
+                    <PieChart>
+                      <Pie
+                        data={expiryStatusData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                        outerRadius={96}
+                        paddingAngle={4}
+                        label={({ name, percent }) =>
+                          `${name} ${Math.round((percent || 0) * 100)}%`
+                        }
+                      >
+                        {expiryStatusData.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Pie>
                       <Tooltip
                         contentStyle={{
                           borderRadius: "16px",
@@ -409,152 +457,71 @@ export default function AnalyticsPage() {
                           boxShadow: "0 20px 60px rgba(15, 23, 42, 0.12)",
                         }}
                       />
-                      <Bar
-                        dataKey="quantity"
-                        fill="#2563eb"
-                        radius={[10, 10, 0, 0]}
-                      />
-                    </BarChart>
+                    </PieChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
-                  <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">
-                    Top selling medicines
-                  </h3>
-                  {reportData?.topSellingMedicines?.length ? (
-                    <ul className="mt-4 space-y-3">
-                      {reportData.topSellingMedicines.map((item) => (
-                        <li
-                          key={item.medicineName}
-                          className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-                        >
-                          <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
-                            <span>{item.medicineName}</span>
-                            <span>{item.quantitySold} units</span>
-                          </div>
-                          <p className="mt-1 text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                            ETB {item.totalRevenue.toFixed(2)}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-4 text-sm font-medium text-slate-600">
-                      No sales data is available for the selected window.
-                    </p>
-                  )}
-                </div>
-
-                <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
-                  <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">
-                    Inactive stock history
-                  </h3>
-                  {inactiveData?.medicines?.length ? (
-                    <ul className="mt-4 space-y-3">
-                      {inactiveData.medicines.slice(0, 5).map((item) => (
-                        <li
-                          key={item.medicineId}
-                          className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
-                        >
-                          <div className="flex items-center justify-between gap-3 font-semibold">
-                            <span>{item.medicineName}</span>
-                            <span>
-                              {item.daysSinceLastSale === null
-                                ? "Never"
-                                : `${item.daysSinceLastSale}d`}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs font-black uppercase tracking-[0.25em] text-amber-700">
-                            {item.categoryName}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-4 text-sm font-medium text-slate-600">
-                      No inactive medicines were returned for the current
-                      threshold.
-                    </p>
-                  )}
+                <div className="mt-6 space-y-3">
+                  {expiryStatusData.map((item) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center justify-between rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="h-3 w-3 rounded-full"
+                          style={{ background: item.color }}
+                        />
+                        <span className="text-sm font-semibold text-slate-700">
+                          {item.name}
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold text-slate-900">
+                        {item.value}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-2">
+            <section className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">
-                  Sales log
-                </h3>
-                {salesLogData?.records?.length ? (
-                  <div className="mt-4 space-y-3">
-                    {salesLogData.records.slice(0, 5).map((record) => (
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Top selling medicines
+                  </h2>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                    {reportData?.topSellingMedicines?.length ?? 0}
+                  </span>
+                </div>
+                {reportData?.topSellingMedicines?.length ? (
+                  <div className="space-y-3">
+                    {reportData.topSellingMedicines.map((item) => (
                       <div
-                        key={record.id}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm"
+                        key={item.medicineName}
+                        className="rounded-3xl border border-slate-200 bg-slate-50 p-4"
                       >
-                        <div className="flex items-center justify-between gap-3 font-semibold text-slate-700">
-                          <span>{record.medicineName}</span>
-                          <span>{record.quantitySold} units</span>
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {item.medicineName}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-600">
+                              {item.quantitySold} units sold
+                            </p>
+                          </div>
+                          <p className="text-sm font-bold text-emerald-700">
+                            ETB {item.totalRevenue.toFixed(2)}
+                          </p>
                         </div>
-                        <p className="mt-1 text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                          {new Date(record.saleDate).toLocaleDateString(
-                            "en-GB",
-                          )}
-                        </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-4 text-sm font-medium text-slate-600">
-                    No sales log rows were returned for the selected date range.
+                  <p className="text-sm text-slate-500">
+                    No sales data is available for the selected date range.
                   </p>
                 )}
-              </div>
-
-              <div className="rounded-4xl border border-white/80 bg-white/90 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.12)]">
-                <h3 className="text-lg font-semibold tracking-tight text-slate-900 leading-tight">
-                  Inventory categories
-                </h3>
-                <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-100 text-xs uppercase tracking-[0.2em] text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Category</th>
-                        <th className="px-4 py-3">Items</th>
-                        <th className="px-4 py-3">Qty</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {categoryData.length ? (
-                        categoryData.map((category) => (
-                          <tr
-                            key={category.category}
-                            className="border-t border-slate-200 bg-white"
-                          >
-                            <td className="px-4 py-3 font-semibold text-slate-800">
-                              {category.category}
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">
-                              {category.medicines}
-                            </td>
-                            <td className="px-4 py-3 text-slate-600">
-                              {category.quantity}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td className="px-4 py-6 text-slate-600" colSpan={3}>
-                            No category data available yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </section>
           </>

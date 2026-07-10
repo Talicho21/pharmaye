@@ -17,6 +17,29 @@ import {
 const SESSION_KEY = "pharmacy_auth_session_v1";
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
+function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
+  if (Array.isArray(payload)) {
+    return payload as InventoryItem[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const record = payload as {
+      items?: unknown;
+      results?: unknown;
+    };
+
+    if (Array.isArray(record.items)) {
+      return record.items as InventoryItem[];
+    }
+
+    if (Array.isArray(record.results)) {
+      return record.results as InventoryItem[];
+    }
+  }
+
+  return [];
+}
+
 type UserRole = "admin" | "staff";
 
 type AuthUser = {
@@ -116,7 +139,39 @@ export default function HomePage() {
 
       setIsLoadingInventory(true);
       try {
-        const response = await fetch(`${API_BASE}/api/inventory`, {
+        // Determine date range from URL query params if present
+        const urlParams = new URLSearchParams(window.location.search || "");
+        let startDateParam = urlParams.get("startDate") || "";
+        let endDateParam = urlParams.get("endDate") || "";
+
+        // If either is missing, compute a safe fallback: start = first of current month, end = today
+        if (!startDateParam || !endDateParam) {
+          const today = new Date();
+          const fallbackEnd = today.toISOString().slice(0, 10);
+          const fallbackStart = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            1,
+          )
+            .toISOString()
+            .slice(0, 10);
+
+          // Only set fallback if both weren't provided explicitly
+          if (!startDateParam) startDateParam = fallbackStart;
+          if (!endDateParam) endDateParam = fallbackEnd;
+        }
+
+        // Build request URL: append dates only when both values exist
+        let url = `${API_BASE}/api/inventory`;
+        if (startDateParam && endDateParam) {
+          const p = new URLSearchParams({
+            startDate: startDateParam,
+            endDate: endDateParam,
+          });
+          url += `?${p.toString()}`;
+        }
+
+        const response = await fetch(url, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -127,8 +182,18 @@ export default function HomePage() {
         }
 
         const data = await response.json();
-        setInventory(Array.isArray(data) ? data : []);
-      } catch {
+        // `getInventory` may return either an array or an object with items
+        if (Array.isArray(data)) {
+          setInventory(data);
+        } else if (data && Array.isArray(data.items)) {
+          setInventory(data.items);
+        } else if (data && Array.isArray(data.results)) {
+          setInventory(data.results);
+        } else {
+          setInventory([]);
+        }
+      } catch (err) {
+        console.error("Refresh fetch failure:", err);
         if (!quiet) {
           setToast({
             title: "Inventory unavailable",
@@ -402,6 +467,14 @@ export default function HomePage() {
     void loadInventory(true);
   }, [loadInventory, token, user]);
 
+  // Ensure on a full browser refresh we attempt a quiet initial load
+  // after auth/session hydration completes, using safe date fallbacks.
+  useEffect(() => {
+    if (!authChecked) return;
+    if (!token || !user) return;
+    void loadInventory(true);
+  }, [authChecked, token, user, loadInventory]);
+
   const lowStockCount = useMemo(
     () => inventory.filter((item) => item.quantity <= 10).length,
     [inventory],
@@ -562,13 +635,13 @@ export default function HomePage() {
       );
 
       setIsSellOutOpen(false);
-      await fetch(`${API_BASE}/api/inventory`, {
+      const refreshResponse = await fetch(`${API_BASE}/api/inventory`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      })
-        .then((res) => res.json())
-        .then((data) => setInventory(Array.isArray(data) ? data : []));
+      });
+      const refreshData = await refreshResponse.json();
+      setInventory(normalizeInventoryPayload(refreshData));
     } catch (error) {
       setToast({
         title: "Sale failed",
@@ -903,141 +976,144 @@ export default function HomePage() {
                 ) : null}
               </div>
             </div>
-            <div className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-              <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Medicine</th>
-                    <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3">Batch</th>
-                    <th className="px-4 py-3">Qty</th>
-                    <th className="px-4 py-3">Expiry</th>
-                    <th className="px-4 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
-                  {currentItems.map((item) => {
-                    const initialQty =
-                      (item as any).initial_batch_quantity ??
-                      (item as any).initial_quantity ??
-                      item.quantity;
-                    const pct = initialQty > 0 ? item.quantity / initialQty : 1;
-                    const now = new Date();
-                    const expiry = item.expiry_date
-                      ? new Date(item.expiry_date)
-                      : null;
-                    const isExpired = Boolean(
-                      expiry && expiry.getTime() < now.getTime(),
-                    );
-                    const isExpiringSoon = Boolean(
-                      expiry &&
-                      !isExpired &&
-                      expiry.getTime() - now.getTime() <=
-                        1000 * 60 * 60 * 24 * 30 * 6,
-                    );
-                    const isLowStock = item.quantity <= 20 || pct <= 0.2;
+            <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
+              <div className="min-w-[800px] overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+                <table className="w-full divide-y divide-slate-100 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Medicine</th>
+                      <th className="px-4 py-3">Category</th>
+                      <th className="px-4 py-3">Batch</th>
+                      <th className="px-4 py-3">Qty</th>
+                      <th className="px-4 py-3">Expiry</th>
+                      <th className="px-4 py-3">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white text-slate-700">
+                    {currentItems.map((item) => {
+                      const initialQty =
+                        (item as any).initial_batch_quantity ??
+                        (item as any).initial_quantity ??
+                        item.quantity;
+                      const pct =
+                        initialQty > 0 ? item.quantity / initialQty : 1;
+                      const now = new Date();
+                      const expiry = item.expiry_date
+                        ? new Date(item.expiry_date)
+                        : null;
+                      const isExpired = Boolean(
+                        expiry && expiry.getTime() < now.getTime(),
+                      );
+                      const isExpiringSoon = Boolean(
+                        expiry &&
+                        !isExpired &&
+                        expiry.getTime() - now.getTime() <=
+                          1000 * 60 * 60 * 24 * 30 * 6,
+                      );
+                      const isLowStock = item.quantity <= 20 || pct <= 0.2;
 
-                    return (
-                      <tr key={item.id}>
-                        <td className="px-4 py-3 font-medium text-slate-950">
-                          <div className="flex flex-col gap-2">
-                            <div>
-                              <span>{item.name}</span>
-                              <span className="inventory-note mt-1 block">
-                                Batch {item.batch_number}
-                              </span>
+                      return (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 font-medium text-slate-950">
+                            <div className="flex flex-col gap-2">
+                              <div>
+                                <span>{item.name}</span>
+                                <span className="inventory-note mt-1 block">
+                                  Batch {item.batch_number}
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                {isLowStock ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                                    <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
+                                    Low Stock
+                                  </span>
+                                ) : null}
+                                {isExpiringSoon ? (
+                                  <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700 animate-pulse">
+                                    Expiring Soon - Sell Out!
+                                  </span>
+                                ) : null}
+                                {isExpired ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-700 animate-pulse">
+                                    <Flag className="h-3.5 w-3.5" />
+                                    Expired!
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {isLowStock ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                  <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
-                                  Low Stock
-                                </span>
-                              ) : null}
-                              {isExpiringSoon ? (
-                                <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-700 animate-pulse">
-                                  Expiring Soon - Sell Out!
-                                </span>
-                              ) : null}
-                              {isExpired ? (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-red-700 animate-pulse">
-                                  <Flag className="h-3.5 w-3.5" />
-                                  Expired!
-                                </span>
-                              ) : null}
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.category_name ?? "Uncategorized"}
+                          </td>
+                          <td className="px-4 py-3">{item.batch_number}</td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-semibold">
+                              {item.quantity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-1">
+                              <span>{item.expiry_date ?? "-"}</span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {item.category_name ?? "Uncategorized"}
-                        </td>
-                        <td className="px-4 py-3">{item.batch_number}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-semibold">
-                            {item.quantity}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1">
-                            <span>{item.expiry_date ?? "-"}</span>
-                          </div>
-                        </td>
-                        <td className="flex gap-2 px-4 py-3">
-                          <button
-                            onClick={() => handleViewDetails(item)}
-                            className="inline-flex items-center justify-center rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-95"
-                          >
-                            View Details
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(item.id)}
-                            className="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-red-700 active:scale-95"
-                            title="Delete this item"
-                          >
-                            🗑
-                          </button>
+                          </td>
+                          <td className="flex gap-2 px-4 py-3">
+                            <button
+                              onClick={() => handleViewDetails(item)}
+                              className="inline-flex items-center justify-center rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-emerald-700 active:scale-95"
+                            >
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(item.id)}
+                              className="inline-flex items-center justify-center rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white transition-all duration-300 hover:bg-red-700 active:scale-95"
+                              title="Delete this item"
+                            >
+                              🗑
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {!visibleInventory.length ? (
+                      <tr>
+                        <td
+                          className="px-4 py-8 text-center text-slate-500"
+                          colSpan={6}
+                        >
+                          No inventory matches the current search and category
+                          filter.
                         </td>
                       </tr>
-                    );
-                  })}
-                  {!visibleInventory.length ? (
-                    <tr>
-                      <td
-                        className="px-4 py-8 text-center text-slate-500"
-                        colSpan={6}
-                      >
-                        No inventory matches the current search and category
-                        filter.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-              <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCurrentPage((page) => Math.max(1, page - 1))
-                    }
-                    disabled={currentPage === 1}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <div className="text-sm font-semibold text-slate-600">
-                    Page {currentPage} of {totalPages || 1}
+                    ) : null}
+                  </tbody>
+                </table>
+                <div className="border-t border-slate-200 bg-slate-50/80 px-4 py-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <div className="text-sm font-semibold text-slate-600">
+                      Page {currentPage} of {totalPages || 1}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((page) => Math.min(totalPages, page + 1))
+                      }
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCurrentPage((page) => Math.min(totalPages, page + 1))
-                    }
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next
-                  </button>
                 </div>
               </div>
             </div>
