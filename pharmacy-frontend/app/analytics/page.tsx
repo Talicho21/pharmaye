@@ -51,29 +51,6 @@ type ExpiryStatusPoint = {
 const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
-function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
-  if (Array.isArray(payload)) {
-    return payload as InventoryItem[];
-  }
-
-  if (payload && typeof payload === "object") {
-    const record = payload as {
-      items?: unknown;
-      results?: unknown;
-    };
-
-    if (Array.isArray(record.items)) {
-      return record.items as InventoryItem[];
-    }
-
-    if (Array.isArray(record.results)) {
-      return record.results as InventoryItem[];
-    }
-  }
-
-  return [];
-}
-
 export default function AnalyticsPage() {
   const router = useRouter();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -94,8 +71,9 @@ export default function AnalyticsPage() {
       const inventoryResponse = await fetch(`${API_BASE}/inventory`, {
         cache: "no-store",
       });
-      const inventoryPayload = await inventoryResponse.json();
-      setInventory(normalizeInventoryPayload(inventoryPayload));
+      const inventoryPayload =
+        (await inventoryResponse.json()) as InventoryItem[];
+      setInventory(Array.isArray(inventoryPayload) ? inventoryPayload : []);
 
       if (authToken) {
         const reportResponse = await fetch(

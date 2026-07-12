@@ -84,6 +84,7 @@ export default function HomePage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [inventoryTotal, setInventoryTotal] = useState(0);
   const [inventoryQuery, setInventoryQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -139,39 +140,11 @@ export default function HomePage() {
 
       setIsLoadingInventory(true);
       try {
-        // Determine date range from URL query params if present
-        const urlParams = new URLSearchParams(window.location.search || "");
-        let startDateParam = urlParams.get("startDate") || "";
-        let endDateParam = urlParams.get("endDate") || "";
+        const url = new URL(`${API_BASE}/api/inventory`);
+        url.searchParams.set("page", "1");
+        url.searchParams.set("pageSize", "200");
 
-        // If either is missing, compute a safe fallback: start = first of current month, end = today
-        if (!startDateParam || !endDateParam) {
-          const today = new Date();
-          const fallbackEnd = today.toISOString().slice(0, 10);
-          const fallbackStart = new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            1,
-          )
-            .toISOString()
-            .slice(0, 10);
-
-          // Only set fallback if both weren't provided explicitly
-          if (!startDateParam) startDateParam = fallbackStart;
-          if (!endDateParam) endDateParam = fallbackEnd;
-        }
-
-        // Build request URL: append dates only when both values exist
-        let url = `${API_BASE}/api/inventory`;
-        if (startDateParam && endDateParam) {
-          const p = new URLSearchParams({
-            startDate: startDateParam,
-            endDate: endDateParam,
-          });
-          url += `?${p.toString()}`;
-        }
-
-        const response = await fetch(url, {
+        const response = await fetch(url.toString(), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -182,16 +155,17 @@ export default function HomePage() {
         }
 
         const data = await response.json();
-        // `getInventory` may return either an array or an object with items
-        if (Array.isArray(data)) {
-          setInventory(data);
-        } else if (data && Array.isArray(data.items)) {
-          setInventory(data.items);
-        } else if (data && Array.isArray(data.results)) {
-          setInventory(data.results);
-        } else {
-          setInventory([]);
-        }
+        const normalizedItems = normalizeInventoryPayload(data);
+        const totalRecords = Number(
+          typeof data === "object" && data !== null && "totalRecords" in data
+            ? data.totalRecords
+            : normalizedItems.length,
+        );
+
+        setInventory(normalizedItems);
+        setInventoryTotal(
+          Number.isFinite(totalRecords) ? totalRecords : normalizedItems.length,
+        );
       } catch (err) {
         console.error("Refresh fetch failure:", err);
         if (!quiet) {
@@ -924,7 +898,10 @@ export default function HomePage() {
 
           <section className="grid gap-4 sm:grid-cols-3">
             {[
-              { label: "Items loaded", value: inventory.length },
+              {
+                label: "Items loaded",
+                value: inventoryTotal || inventory.length,
+              },
               { label: "Low stock", value: lowStockCount },
               { label: "Expired", value: expiredCount },
             ].map((item) => (

@@ -59,7 +59,13 @@ const PING_INTERVAL_MINUTES = 14;
 const PING_ENDPOINT = process.env.HEALTH_PING_URL || `http://localhost:${PORT}/`;
 
 async function startServer() {
-  await ensureSalesTable();
+  try {
+    await ensureSalesTable();
+    console.log("✅ PostgreSQL sales schema bootstrap completed.");
+  } catch (err) {
+    console.error("⚠️ PostgreSQL sales schema bootstrap failed during startup:", err?.message || err);
+    console.warn("⚠️ Continuing to start the HTTP server without DB-ready schema initialization.");
+  }
 
   app.listen(PORT, () => {
     console.log(`💊 Pharmacy Backend is Running on Port ${PORT}`);
@@ -79,7 +85,7 @@ async function startServer() {
   try {
     await startServer();
   } catch (err) {
-    console.error("❌ Failed to initialize PostgreSQL sales schema:", err);
+    console.error("❌ Failed to initialize server:", err);
     process.exit(1);
   }
 })();

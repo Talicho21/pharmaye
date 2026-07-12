@@ -4,59 +4,119 @@ require('dotenv').config();
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const databasePoolerUrl = process.env.DATABASE_POOLER_URL?.trim();
-const effectiveDatabaseUrl = databasePoolerUrl || databaseUrl;
-const usingPoolerUrl = Boolean(databasePoolerUrl);
+const directDatabaseUrl = databaseUrl;
+const poolerDatabaseUrl = databasePoolerUrl;
 const hasSupabaseUrl = Boolean(
-  effectiveDatabaseUrl && /supabase\.(com|co)/i.test(effectiveDatabaseUrl)
+  (directDatabaseUrl || poolerDatabaseUrl) &&
+    /supabase\.(com|co)/i.test(directDatabaseUrl || poolerDatabaseUrl)
 );
 const requireSsl = hasSupabaseUrl || process.env.PGSSLMODE === 'require';
 let databaseUrlUsername = '';
 
-if (effectiveDatabaseUrl) {
+const connectionCandidates = [
+  ...(poolerDatabaseUrl ? [{ name: 'DATABASE_POOLER_URL', value: poolerDatabaseUrl }] : []),
+  ...(directDatabaseUrl ? [{ name: 'DATABASE_URL', value: directDatabaseUrl }] : []),
+];
+
+const buildPoolConfig = (connectionString) => ({
+  connectionString,
+  ssl: requireSsl ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+});
+
+const buildLocalPoolConfig = () => ({
+  host: process.env.PGHOST || 'localhost',
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE,
+  port: parseInt(process.env.PGPORT || '5432', 10),
+  ssl: requireSsl ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+});
+
+let pool = null;
+let activeConnectionLabel = 'uninitialized';
+let initializationPromise = null;
+
+if (directDatabaseUrl || poolerDatabaseUrl) {
   try {
-    databaseUrlUsername = new URL(effectiveDatabaseUrl).username;
+    databaseUrlUsername = new URL(directDatabaseUrl || poolerDatabaseUrl).username;
   } catch (_) {
     databaseUrlUsername = '';
   }
 }
 
-// Prefer DATABASE_URL for hosted PostgreSQL (Supabase), with PG* fallback for local/dev.
-const pool = new Pool(
-  effectiveDatabaseUrl
-    ? {
-        connectionString: effectiveDatabaseUrl,
-        ssl: requireSsl ? { rejectUnauthorized: false } : false,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-      }
-    : {
-        host: process.env.PGHOST || 'localhost',
-        user: process.env.PGUSER || 'postgres',
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE,
-        port: parseInt(process.env.PGPORT || '5432', 10),
-        ssl: requireSsl ? { rejectUnauthorized: false } : false,
-        max: 10,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 10000,
-      }
-);
+const registerPoolErrorListener = (poolInstance, label) => {
+  if (!poolInstance) {
+    return;
+  }
 
-  pool.on('error', (err) => {
-    console.error('❌ PostgreSQL pool error:', err);
+  poolInstance.on('error', (err) => {
+    console.error(`❌ PostgreSQL pool error (${label}):`, err);
   });
+};
 
-// Immediately verify connection health on server spin-up
-(async () => {
+const initializeDatabaseConnection = async () => {
+  if (connectionCandidates.length === 0) {
+    const localPool = new Pool(buildLocalPoolConfig());
+    registerPoolErrorListener(localPool, 'local PG fallback');
+    await localPool.query('SELECT 1');
+    pool = localPool;
+    activeConnectionLabel = 'local PG fallback';
+    console.log('✅ Connected to PostgreSQL Database successfully via local fallback.');
+    return;
+  }
+
+  let lastError;
+
+  for (const candidate of connectionCandidates) {
+    const candidatePool = new Pool(buildPoolConfig(candidate.value));
+    registerPoolErrorListener(candidatePool, candidate.name);
+
+    try {
+      await candidatePool.query('SELECT 1');
+      await pool?.end().catch(() => {});
+      pool = candidatePool;
+      activeConnectionLabel = candidate.name;
+      console.log(`✅ Connected to PostgreSQL Database successfully via ${candidate.name}.`);
+      return;
+    } catch (err) {
+      lastError = err;
+      await candidatePool.end().catch(() => {});
+      console.warn(`⚠️ ${candidate.name} connection failed. Trying the next configured URL if available...`);
+    }
+  }
+
   try {
-    await pool.query('SELECT 1');
-    console.log('✅ Connected to PostgreSQL Database successfully.');
+    const localPool = new Pool(buildLocalPoolConfig());
+    registerPoolErrorListener(localPool, 'local PG fallback');
+    await localPool.query('SELECT 1');
+    pool = localPool;
+    activeConnectionLabel = 'local PG fallback';
+    console.log('✅ Connected to PostgreSQL Database successfully via local fallback.');
+    return;
+  } catch (localErr) {
+    console.warn('⚠️ Local PostgreSQL fallback also failed. The backend will continue to boot without a reachable database.');
+    throw lastError || localErr;
+  }
+};
+
+initializationPromise = (async () => {
+  try {
+    await initializeDatabaseConnection();
   } catch (err) {
     const details = {
       hasDatabaseUrl: Boolean(databaseUrl),
       hasDatabasePoolerUrl: Boolean(databasePoolerUrl),
-      usingPoolerUrl,
+      usingPoolerUrl: !databaseUrl && Boolean(databasePoolerUrl),
       usingSupabaseUrl: hasSupabaseUrl,
       sslEnabled: requireSsl,
       pgHostFallback: process.env.PGHOST || 'localhost',
@@ -75,11 +135,31 @@ const pool = new Pool(
       );
       console.error('⚠️ Current URL username (decoded):', databaseUrlUsername || '(empty)');
     }
+
+    throw err;
   }
 })();
 
+const query = async (text, params) => {
+  await initializationPromise;
+  return pool.query(text, params);
+};
+
 // Export clean query wrappers
 module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool // Export raw pool instance if you need transaction utilities
+  query,
+  pool: new Proxy(
+    {},
+    {
+      get(_target, prop) {
+        if (!pool) {
+          throw new Error('Database connection is still initializing. Await db.query or initializeDatabaseConnection before using the pool directly.');
+        }
+
+        return pool[prop];
+      },
+    }
+  ),
+  initializeDatabaseConnection,
+  getActiveConnectionLabel: () => activeConnectionLabel,
 };

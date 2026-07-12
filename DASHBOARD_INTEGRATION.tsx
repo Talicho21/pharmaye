@@ -276,6 +276,18 @@ export default function PharmacyDashboard() {
   );
 }
 
+
+function showToast(arg0: string, arg1: string, arg2: string) {
+  throw new Error("Function not implemented.");
+}
+
+function useState(arg0: boolean): [any, any] {
+  throw new Error("Function not implemented.");
+}
+
+function fetchData() {
+  throw new Error("Function not implemented.");
+}
 // ========== ALTERNATIVE: SIMPLER INTEGRATION ==========
 // If you want to keep it simple without the pre-dialog:
 

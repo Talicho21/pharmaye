@@ -34,29 +34,6 @@ type AuthUser = {
 const SESSION_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
-function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
-  if (Array.isArray(payload)) {
-    return payload as InventoryItem[];
-  }
-
-  if (payload && typeof payload === "object") {
-    const record = payload as {
-      items?: unknown;
-      results?: unknown;
-    };
-
-    if (Array.isArray(record.items)) {
-      return record.items as InventoryItem[];
-    }
-
-    if (Array.isArray(record.results)) {
-      return record.results as InventoryItem[];
-    }
-  }
-
-  return [];
-}
-
 export default function SellOutPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -134,7 +111,8 @@ export default function SellOutPage() {
     const loadInventory = async () => {
       setIsLoadingInventory(true);
       try {
-        const response = await fetch(`${API_BASE}/inventory`, {
+        const url = `${API_BASE}/inventory?page=1&pageSize=200`;
+        const response = await fetch(url, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -145,13 +123,10 @@ export default function SellOutPage() {
         }
 
         const data = await response.json();
-        setInventory(normalizeInventoryPayload(data));
+        setInventory(Array.isArray(data) ? data : []);
       } catch (error) {
-        setToast({
-          title: "Inventory unavailable",
-          description: "The backend did not return inventory data.",
-          tone: "info",
-        });
+        console.error("Inventory fetch failure:", error);
+        setInventory([]);
       } finally {
         setIsLoadingInventory(false);
       }
@@ -262,7 +237,7 @@ export default function SellOutPage() {
         },
       });
       const refreshData = await refreshResponse.json();
-      setInventory(normalizeInventoryPayload(refreshData));
+      setInventory(Array.isArray(refreshData) ? refreshData : []);
     } catch (error) {
       setToast({
         title: "Sale failed",
@@ -332,7 +307,7 @@ export default function SellOutPage() {
                       },
                     });
                     const data = await response.json();
-                    setInventory(normalizeInventoryPayload(data));
+                    setInventory(Array.isArray(data) ? data : []);
                   } catch {
                     setToast({
                       title: "Refresh failed",

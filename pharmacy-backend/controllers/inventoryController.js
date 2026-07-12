@@ -1,12 +1,26 @@
 // backend/controllers/inventoryController.js
 const db = require("../config/db");
 
+const isDatabaseUnavailableError = (error) => {
+  const message = String(error?.message || error || "").toLowerCase();
+  return [
+    "getaddrinfo enotfound",
+    "connection terminated unexpectedly",
+    "connection terminated due to connection timeout",
+    "connection timeout",
+    "connection refused",
+    "connection error",
+    "relation \"inventory\" does not exist",
+    "relation \"categories\" does not exist",
+  ].some((needle) => message.includes(needle));
+};
+
 // 1. Get complete inventory with joined category names
 exports.getInventory = async (req, res) => {
   const rawSearch = String(req.query.search ?? req.query.q ?? "").trim();
   const rawCategory = String(req.query.category ?? "all").trim().toLowerCase();
   const page = Math.max(Number.parseInt(String(req.query.page || "1"), 10) || 1, 1);
-  const pageSize = Math.min(Math.max(Number.parseInt(String(req.query.pageSize || "50"), 10) || 50, 1), 200);
+  const pageSize = Math.min(Math.max(Number.parseInt(String(req.query.pageSize || "200"), 10) || 200, 1), 5000);
   const offset = (page - 1) * pageSize;
 
   const whereClauses = [];
@@ -34,12 +48,12 @@ exports.getInventory = async (req, res) => {
     LEFT JOIN categories c ON i.category_id = c.id
     ${whereSql}
     ORDER BY i.name ASC, i.expiry_date ASC
-    LIMIT $${params.length + 1}
-    OFFSET $${params.length + 2}
+    LIMIT ${pageSize}
+    OFFSET ${offset}
   `;
 
   try {
-    const result = await db.query(queryText, [...params, pageSize, offset]);
+    const result = await db.query(queryText, params);
 
     const countQuery = `
       SELECT COUNT(*) AS total_count
@@ -58,6 +72,16 @@ exports.getInventory = async (req, res) => {
     });
   } catch (err) {
     console.error("Postgres getInventory Error:", err);
+
+    if (isDatabaseUnavailableError(err)) {
+      return res.status(200).json({
+        page,
+        pageSize,
+        totalRecords: 0,
+        items: [],
+      });
+    }
+
     return res.status(500).json({ message: "Failed to retrieve inventory records." });
   }
 };
@@ -91,6 +115,11 @@ exports.searchInventory = async (req, res) => {
     return res.status(200).json({ success: true, results: result.rows });
   } catch (err) {
     console.error("Postgres searchInventory Error:", err);
+
+    if (isDatabaseUnavailableError(err)) {
+      return res.status(200).json({ success: true, results: [] });
+    }
+
     return res.status(500).json({ message: "Error searching inventory records." });
   }
 };
@@ -102,6 +131,11 @@ exports.getCategories = async (req, res) => {
     return res.status(200).json(result.rows);
   } catch (err) {
     console.error("Postgres getCategories Error:", err);
+
+    if (isDatabaseUnavailableError(err)) {
+      return res.status(200).json([]);
+    }
+
     return res.status(500).json({ message: "Failed to retrieve category items." });
   }
 };
@@ -445,11 +479,11 @@ exports.getSalesLog = async (req, res) => {
         AND s.sale_date::date <= $2::date
         ${searchClause}
       ORDER BY s.sale_date DESC
-      LIMIT $${params.length + 1}
-      OFFSET $${params.length + 2}
+      LIMIT ${pageSize}
+      OFFSET ${offset}
     `;
 
-    const result = await db.query(queryText, [...params, pageSize, offset]);
+    const result = await db.query(queryText, params);
     const totalRecords = result.rows[0]?.total_count
       ? parseInt(result.rows[0].total_count, 10)
       : 0;
