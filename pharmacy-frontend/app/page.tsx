@@ -15,7 +15,13 @@ import {
 } from "@/app/utils/session";
 
 const SESSION_KEY = "pharmacy_auth_session_v1";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+const API_BASE = "/api/backend";
+
+const normalizeAuthToken = (value: string | null | undefined): string =>
+  String(value ?? "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
 
 function normalizeInventoryPayload(payload: unknown): InventoryItem[] {
   if (Array.isArray(payload)) {
@@ -134,19 +140,25 @@ export default function HomePage() {
 
   const loadInventory = useCallback(
     async (quiet = false) => {
-      if (!token || !user) {
+      const sessionToken = normalizeAuthToken(
+        readSessionCookie("token") || token,
+      );
+
+      if (!sessionToken || !user) {
         return;
       }
 
+      setToken(sessionToken);
       setIsLoadingInventory(true);
       try {
-        const url = new URL(`${API_BASE}/api/inventory`);
+        const url = new URL(`${API_BASE}/inventory`, window.location.origin);
         url.searchParams.set("page", "1");
         url.searchParams.set("pageSize", "200");
 
         const response = await fetch(url.toString(), {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Accept-Encoding": "identity",
+            Authorization: `Bearer ${sessionToken}`,
           },
         });
 
@@ -221,6 +233,15 @@ export default function HomePage() {
         throw new Error("Price must be a valid non-negative number");
       }
 
+      const sessionToken = normalizeAuthToken(
+        readSessionCookie("token") || token,
+      );
+      const authorizationHeader = sessionToken ? `Bearer ${sessionToken}` : "";
+
+      if (!sessionToken) {
+        throw new Error("Missing auth token");
+      }
+
       const payload = {
         name: editFormData.name?.trim() || "",
         batchNumber: editFormData.batchNumber?.trim() || "",
@@ -233,20 +254,18 @@ export default function HomePage() {
       console.log("Sending update payload:", payload);
       console.log(
         "Update endpoint:",
-        `${API_BASE}/api/inventory/${selectedItem.id}`,
+        `${API_BASE}/inventory/${selectedItem.id}`,
       );
 
-      const response = await fetch(
-        `${API_BASE}/api/inventory/${selectedItem.id}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
+      const response = await fetch(`${API_BASE}/inventory/${selectedItem.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Encoding": "identity",
+          Authorization: authorizationHeader,
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
       console.log("Response status:", response.status);
       const responseText = await response.text();
@@ -284,14 +303,22 @@ export default function HomePage() {
       if (!confirmed) return;
 
       try {
-        const primaryUrl = `${API_BASE}/api/inventory/${id}`;
-        const fallbackUrl = `${API_BASE}/api/inventory/delete/${id}`;
+        const primaryUrl = `${API_BASE}/inventory/${id}`;
+        const fallbackUrl = `${API_BASE}/inventory/delete/${id}`;
 
         console.log("Delete endpoint:", primaryUrl);
+        const sessionToken = normalizeAuthToken(
+          readSessionCookie("token") || token,
+        );
+        const authorizationHeader = sessionToken
+          ? `Bearer ${sessionToken}`
+          : "";
+
         let response = await fetch(primaryUrl, {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Accept-Encoding": "identity",
+            Authorization: authorizationHeader,
           },
         });
 
@@ -302,7 +329,8 @@ export default function HomePage() {
           response = await fetch(fallbackUrl, {
             method: "DELETE",
             headers: {
-              Authorization: `Bearer ${token}`,
+              "Accept-Encoding": "identity",
+              Authorization: authorizationHeader,
             },
           });
         }
@@ -367,8 +395,9 @@ export default function HomePage() {
             return;
           }
 
-          const response = await fetch(`${API_BASE}/api/auth/me`, {
+          const response = await fetch(`${API_BASE}/auth/me`, {
             headers: {
+              "Accept-Encoding": "identity",
               Authorization: `Bearer ${cookieToken}`,
             },
           });
@@ -394,13 +423,42 @@ export default function HomePage() {
         }
 
         const parsed = JSON.parse(raw) as { token?: string; user?: AuthUser };
-        if (parsed?.token && parsed?.user) {
-          setToken(parsed.token);
-          setUser(parsed.user);
-          setSessionCookie(parsed.token);
+        const savedToken = normalizeAuthToken(parsed?.token);
+
+        if (!savedToken || !parsed?.user) {
+          localStorage.removeItem(SESSION_KEY);
+          clearSessionCookie();
+          window.location.replace("/login");
+          return;
+        }
+
+        const response = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            "Accept-Encoding": "identity",
+            Authorization: `Bearer ${savedToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          clearSessionCookie();
+          localStorage.removeItem(SESSION_KEY);
+          window.location.replace("/login");
+          return;
+        }
+
+        const payload = (await response.json()) as { user?: AuthUser };
+        if (payload?.user) {
+          setToken(savedToken);
+          setUser(payload.user);
+          localStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify({ token: savedToken, user: payload.user }),
+          );
+          setSessionCookie(savedToken);
         }
       } catch {
         localStorage.removeItem(SESSION_KEY);
+        clearSessionCookie();
         window.location.replace("/login");
       } finally {
         setAuthChecked(true);
@@ -523,10 +581,15 @@ export default function HomePage() {
     invoiceNo?: string,
     reference?: string,
   ) => {
-    if (!token) {
+    const sessionToken = normalizeAuthToken(
+      readSessionCookie("token") || token,
+    );
+
+    if (!sessionToken) {
       throw new Error("Missing auth token");
     }
 
+    setToken(sessionToken);
     setIsProcessingSale(true);
 
     try {
@@ -540,11 +603,12 @@ export default function HomePage() {
         expiry_date: item.expiryDate,
       }));
 
-      const response = await fetch(`${API_BASE}/api/inventory/bulk-sell`, {
+      const response = await fetch(`${API_BASE}/inventory/bulk-sell`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Accept-Encoding": "identity",
+          Authorization: `Bearer ${sessionToken}`,
         },
         body: JSON.stringify({
           sales: salesPayload,
@@ -562,7 +626,7 @@ export default function HomePage() {
           customer_name: customerName.trim(),
           customer_tin: tinNumber.trim(),
           tin_number: tinNumber.trim(),
-          customer_sno: customerSNo?.trim() || null,
+          customer_sno: customerSNo?.trim() || "",
           payment_method: paymentMethod || "cash",
           invoice_no: invoiceNo || undefined,
           reference: reference || undefined,
@@ -609,18 +673,33 @@ export default function HomePage() {
       );
 
       setIsSellOutOpen(false);
-      const refreshResponse = await fetch(`${API_BASE}/api/inventory`, {
+      const refreshResponse = await fetch(`${API_BASE}/inventory`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Accept-Encoding": "identity",
+          Authorization: `Bearer ${sessionToken}`,
         },
       });
       const refreshData = await refreshResponse.json();
       setInventory(normalizeInventoryPayload(refreshData));
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to process sale.";
+
+      if (
+        /invalid or expired token|missing auth token|authentication required/i.test(
+          message,
+        )
+      ) {
+        clearSessionCookie();
+        localStorage.removeItem(SESSION_KEY);
+        setToken(null);
+        setUser(null);
+        window.location.replace("/login");
+      }
+
       setToast({
         title: "Sale failed",
-        description:
-          error instanceof Error ? error.message : "Unable to process sale.",
+        description: message,
         tone: "error",
       });
       throw error;
@@ -954,7 +1033,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
-              <div className="min-w-[800px] overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+              <div className="min-w-200 overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                 <table className="w-full divide-y divide-slate-100 text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
                     <tr>

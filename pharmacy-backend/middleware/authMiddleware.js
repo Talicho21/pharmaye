@@ -1,15 +1,45 @@
 const { verifyAuthToken } = require("../utils/authToken");
 
-const requireAuth = (req, res, next) => {
-  const authorizationHeader = String(req.headers.authorization || "");
+const normalizeToken = (value) =>
+  String(value ?? "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
 
-  if (!authorizationHeader.startsWith("Bearer ")) {
+const parseCookieToken = (cookieHeader) => {
+  if (!cookieHeader || typeof cookieHeader !== "string") {
+    return "";
+  }
+
+  const cookieEntries = cookieHeader.split(";").map((entry) => entry.trim());
+  for (const entry of cookieEntries) {
+    const [name, ...valueParts] = entry.split("=");
+    const value = valueParts.join("=");
+
+    if (name === "pharmacy_session_token" || name === "token") {
+      return normalizeToken(decodeURIComponent(value));
+    }
+  }
+
+  return "";
+};
+
+const getRequestToken = (req) => {
+  const authorizationHeader = String(req.headers.authorization || "");
+  const headerToken = normalizeToken(authorizationHeader);
+  const cookieToken = parseCookieToken(req.headers.cookie || "");
+
+  return headerToken || cookieToken;
+};
+
+const requireAuth = (req, res, next) => {
+  const token = getRequestToken(req);
+
+  if (!token) {
     return res.status(401).json({ message: "Authentication required." });
   }
 
-  const token = authorizationHeader.slice("Bearer ".length).trim();
   const payload = verifyAuthToken(token);
-
   if (!payload) {
     return res.status(401).json({ message: "Invalid or expired token." });
   }

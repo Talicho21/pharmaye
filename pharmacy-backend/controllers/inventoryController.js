@@ -64,6 +64,7 @@ exports.getInventory = async (req, res) => {
     const countResult = await db.query(countQuery, params);
     const totalRecords = parseInt(countResult.rows[0]?.total_count ?? "0", 10);
 
+    res.set("Content-Encoding", "identity");
     return res.status(200).json({
       page,
       pageSize,
@@ -112,6 +113,7 @@ exports.searchInventory = async (req, res) => {
   `;
   try {
     const result = await db.query(queryText, [searchTerm]);
+    res.set("Content-Encoding", "identity");
     return res.status(200).json({ success: true, results: result.rows });
   } catch (err) {
     console.error("Postgres searchInventory Error:", err);
@@ -285,20 +287,28 @@ exports.sellMedicine = async (req, res) => {
     payment_method = "cash",
   } = req.body;
   const parsedQty = parseInt(quantity_sold, 10);
+  const client = await db.pool.connect();
 
   try {
-    await db.query("BEGIN");
+    await client.query("BEGIN");
 
-    const itemLookup = await db.query("SELECT quantity, price_per_unit, name, unit FROM inventory WHERE id = $1 FOR UPDATE", [batch_id]);
-    if (itemLookup.rows.length === 0) throw new Error("Batch instance not found.");
+    const itemLookup = await client.query(
+      "SELECT quantity, price_per_unit, name, unit FROM inventory WHERE id = $1 FOR UPDATE",
+      [batch_id],
+    );
+
+    if (itemLookup.rows.length === 0) {
+      throw new Error("Batch instance not found.");
+    }
 
     const item = itemLookup.rows[0];
-    if (item.quantity < parsedQty) throw new Error("Requested transaction count exceeds physical shelf availability.");
+    if (item.quantity < parsedQty) {
+      throw new Error("Requested transaction count exceeds physical shelf availability.");
+    }
 
     const totalPrice = parsedQty * parseFloat(item.price_per_unit);
 
-    // Ensure sales.medicine_id references a valid row in medicines.
-    const medicineUpsert = await db.query(
+    const medicineUpsert = await client.query(
       `
         INSERT INTO medicines (name, category_id, price, stock)
         VALUES ($1, NULL, $2, 0)
@@ -318,7 +328,7 @@ exports.sellMedicine = async (req, res) => {
       throw new Error("Unable to resolve medicine reference for sale log entry.");
     }
 
-    await db.query("UPDATE inventory SET quantity = quantity - $1 WHERE id = $2", [parsedQty, batch_id]);
+    await client.query("UPDATE inventory SET quantity = quantity - $1 WHERE id = $2", [parsedQty, batch_id]);
 
     const logInsert = `
       INSERT INTO sales (
@@ -340,7 +350,7 @@ exports.sellMedicine = async (req, res) => {
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
     `;
-    await db.query(logInsert, [
+    await client.query(logInsert, [
       Number(req.auth.id),
       resolvedMedicineId,
       batch_id,
@@ -358,12 +368,21 @@ exports.sellMedicine = async (req, res) => {
       payment_method,
     ]);
 
-    await db.query("COMMIT");
+    await client.query("COMMIT");
     return res.status(200).json({ message: "Transaction completed successfully." });
   } catch (err) {
-    await db.query("ROLLBACK");
-    console.error("Postgres sellMedicine Error:", err.message);
-    return res.status(400).json({ message: err.message || "Failed to finalize single sale log transaction." });
+    try {
+      await client.query("ROLLBACK");
+    } catch {
+      // No active transaction to roll back.
+    }
+
+    console.error("Postgres sellMedicine Error:", err?.message || err);
+    return res.status(400).json({
+      message: err?.message || "Failed to finalize single sale log transaction.",
+    });
+  } finally {
+    client.release();
   }
 };
 

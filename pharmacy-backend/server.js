@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const compression = require("compression");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const authRoutes = require("./routes/authRoutes");
 const { ensureSalesTable } = require("./utils/salesSchema");
@@ -14,8 +13,21 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
   "https://express-pharmaceutical-wholesale.vercel.app",
 ];
+
+const isLoopbackOrigin = (origin) => {
+  if (!origin || typeof origin !== "string") {
+    return false;
+  }
+
+  const normalizedOrigin = origin.trim().toLowerCase();
+  return /^(https?:\/\/)(localhost|127\.0\.0\.1|::1)(?::\d+)?$/i.test(
+    normalizedOrigin,
+  );
+};
 
 app.use(
   cors({
@@ -25,8 +37,8 @@ app.use(
         return callback(null, true);
       }
 
-      // Allow localhost and the deployed Vercel frontend
-      if (allowedOrigins.includes(origin)) {
+      // Allow localhost, loopback dev origins, and the deployed Vercel frontend
+      if (allowedOrigins.includes(origin) || isLoopbackOrigin(origin)) {
         return callback(null, true);
       }
 
@@ -35,11 +47,10 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept-Encoding"],
   })
 );
 
-app.use(compression());
 app.use(express.json());
 
 // Routes

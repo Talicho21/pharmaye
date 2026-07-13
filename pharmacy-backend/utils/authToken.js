@@ -1,9 +1,12 @@
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 const AUTH_TOKEN_SECRET =
-  process.env.AUTH_TOKEN_SECRET || "pharmacy-rbac-dev-secret-change-this";
+  process.env.AUTH_TOKEN_SECRET ||
+  process.env.JWT_SECRET ||
+  "pharmacy-rbac-dev-secret-change-this";
 
-const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
+const TOKEN_TTL_SECONDS = 12 * 60 * 60;
 
 const encodeBase64Url = (input) =>
   Buffer.from(input)
@@ -18,43 +21,45 @@ const decodeBase64Url = (input) => {
   return Buffer.from(padded, "base64").toString("utf8");
 };
 
-const sign = (payloadPart) =>
+const signLegacyToken = (payloadPart) =>
   encodeBase64Url(
     crypto.createHmac("sha256", AUTH_TOKEN_SECRET).update(payloadPart).digest(),
   );
 
-const createAuthToken = (payload) => {
-  const issuedAt = Date.now();
-  const tokenPayload = {
-    ...payload,
-    iat: issuedAt,
-    exp: issuedAt + TOKEN_TTL_MS,
-  };
-
-  const payloadPart = encodeBase64Url(JSON.stringify(tokenPayload));
-  const signaturePart = sign(payloadPart);
-
-  return `${payloadPart}.${signaturePart}`;
-};
+const createAuthToken = (payload) =>
+  jwt.sign(payload, AUTH_TOKEN_SECRET, {
+    expiresIn: TOKEN_TTL_SECONDS,
+  });
 
 const verifyAuthToken = (token) => {
-  if (!token || typeof token !== "string") return null;
-
-  const [payloadPart, signaturePart] = token.split(".");
-  if (!payloadPart || !signaturePart) return null;
-
-  const expectedSignature = sign(payloadPart);
-  if (expectedSignature !== signaturePart) return null;
+  if (!token || typeof token !== "string") {
+    return null;
+  }
 
   try {
-    const payload = JSON.parse(decodeBase64Url(payloadPart));
-    if (!payload?.exp || Date.now() > Number(payload.exp)) {
+    return jwt.verify(token, AUTH_TOKEN_SECRET);
+  } catch (_jwtError) {
+    const [payloadPart, signaturePart] = token.split(".");
+
+    if (!payloadPart || !signaturePart) {
       return null;
     }
 
-    return payload;
-  } catch (_error) {
-    return null;
+    const expectedSignature = signLegacyToken(payloadPart);
+    if (expectedSignature !== signaturePart) {
+      return null;
+    }
+
+    try {
+      const payload = JSON.parse(decodeBase64Url(payloadPart));
+      if (!payload?.exp || Date.now() > Number(payload.exp)) {
+        return null;
+      }
+
+      return payload;
+    } catch (_legacyError) {
+      return null;
+    }
   }
 };
 

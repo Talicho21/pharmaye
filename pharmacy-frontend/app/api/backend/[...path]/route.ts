@@ -14,6 +14,9 @@ async function proxy(request: NextRequest, path: string[]) {
 
     const headers = new Headers(request.headers);
     headers.delete("host");
+    headers.delete("origin");
+    headers.delete("referer");
+    headers.delete("content-length");
 
     const method = request.method.toUpperCase();
     const shouldSendBody = method !== "GET" && method !== "HEAD";
@@ -26,9 +29,15 @@ async function proxy(request: NextRequest, path: string[]) {
       cache: "no-store",
     });
 
-    return new NextResponse(upstreamResponse.body, {
+    const bufferedBody = await upstreamResponse.arrayBuffer();
+    const responseHeaders = new Headers(upstreamResponse.headers);
+    responseHeaders.delete("content-encoding");
+    responseHeaders.delete("content-length");
+    responseHeaders.delete("transfer-encoding");
+
+    return new NextResponse(bufferedBody, {
       status: upstreamResponse.status,
-      headers: upstreamResponse.headers,
+      headers: responseHeaders,
     });
   } catch {
     return NextResponse.json(

@@ -34,6 +34,12 @@ type AuthUser = {
 const SESSION_KEY = "pharmacy_auth_session_v1";
 const API_BASE = "/api/backend";
 
+const normalizeAuthToken = (value: string | null | undefined): string =>
+  String(value ?? "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
+
 export default function SellOutPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -62,6 +68,7 @@ export default function SellOutPage() {
 
           const response = await fetch(`${API_BASE}/auth/me`, {
             headers: {
+              "Accept-Encoding": "identity",
               Authorization: `Bearer ${cookieToken}`,
             },
           });
@@ -87,13 +94,42 @@ export default function SellOutPage() {
         }
 
         const parsed = JSON.parse(raw) as { token?: string; user?: AuthUser };
-        if (parsed?.token && parsed?.user) {
-          setToken(parsed.token);
-          setUser(parsed.user);
-          setSessionCookie(parsed.token);
+        const savedToken = normalizeAuthToken(parsed?.token);
+
+        if (!savedToken || !parsed?.user) {
+          localStorage.removeItem(SESSION_KEY);
+          clearSessionCookie();
+          router.replace("/");
+          return;
+        }
+
+        const response = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            "Accept-Encoding": "identity",
+            Authorization: `Bearer ${savedToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          clearSessionCookie();
+          localStorage.removeItem(SESSION_KEY);
+          router.replace("/");
+          return;
+        }
+
+        const payload = (await response.json()) as { user?: AuthUser };
+        if (payload?.user) {
+          setToken(savedToken);
+          setUser(payload.user);
+          localStorage.setItem(
+            SESSION_KEY,
+            JSON.stringify({ token: savedToken, user: payload.user }),
+          );
+          setSessionCookie(savedToken);
         }
       } catch {
         localStorage.removeItem(SESSION_KEY);
+        clearSessionCookie();
         router.replace("/");
       } finally {
         setAuthChecked(true);
@@ -109,12 +145,23 @@ export default function SellOutPage() {
     }
 
     const loadInventory = async () => {
+      const sessionToken = normalizeAuthToken(
+        readSessionCookie("token") || token,
+      );
+      const authorizationHeader = sessionToken ? `Bearer ${sessionToken}` : "";
+
+      if (!sessionToken) {
+        return;
+      }
+
+      setToken(sessionToken);
       setIsLoadingInventory(true);
       try {
         const url = `${API_BASE}/inventory?page=1&pageSize=200`;
         const response = await fetch(url, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            "Accept-Encoding": "identity",
+            Authorization: authorizationHeader,
           },
         });
 
@@ -123,7 +170,13 @@ export default function SellOutPage() {
         }
 
         const data = await response.json();
-        setInventory(Array.isArray(data) ? data : []);
+        const nextInventory = Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data)
+            ? data
+            : [];
+
+        setInventory(nextInventory);
       } catch (error) {
         console.error("Inventory fetch failure:", error);
         setInventory([]);
@@ -145,13 +198,48 @@ export default function SellOutPage() {
     invoiceNo?: string,
     reference?: string,
   ) => {
-    if (!token) {
+    const sessionToken = normalizeAuthToken(
+      readSessionCookie("token") || token,
+    );
+    const authorizationHeader = sessionToken ? `Bearer ${sessionToken}` : "";
+
+    if (!sessionToken) {
       throw new Error("Missing auth token");
     }
 
+    setToken(sessionToken);
     setIsProcessingSale(true);
 
     try {
+      const sessionCheckResponse = await fetch(`${API_BASE}/auth/me`, {
+        headers: {
+          "Accept-Encoding": "identity",
+          Authorization: authorizationHeader,
+        },
+      });
+
+      if (!sessionCheckResponse.ok) {
+        clearSessionCookie();
+        localStorage.removeItem(SESSION_KEY);
+        setToken(null);
+        setUser(null);
+        router.replace("/");
+        throw new Error("Invalid or expired token.");
+      }
+
+      const sessionPayload = (await sessionCheckResponse.json()) as {
+        user?: AuthUser;
+      };
+
+      if (!sessionPayload?.user) {
+        clearSessionCookie();
+        localStorage.removeItem(SESSION_KEY);
+        setToken(null);
+        setUser(null);
+        router.replace("/");
+        throw new Error("Invalid or expired token.");
+      }
+
       const salesPayload = items.map((item) => ({
         batch_id: item.medicineId,
         quantity_sold: item.quantity,
@@ -166,7 +254,8 @@ export default function SellOutPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Accept-Encoding": "identity",
+          Authorization: authorizationHeader,
         },
         body: JSON.stringify({
           sales: salesPayload,
@@ -184,7 +273,7 @@ export default function SellOutPage() {
           customer_name: customerName.trim(),
           customer_tin: tinNumber.trim(),
           tin_number: tinNumber.trim(),
-          customer_sno: customerSNo?.trim() || null,
+          customer_sno: customerSNo?.trim() || "",
           payment_method: paymentMethod || "cash",
           invoice_no: invoiceNo || undefined,
           reference: reference || undefined,
@@ -233,16 +322,30 @@ export default function SellOutPage() {
       // Refresh inventory from server
       const refreshResponse = await fetch(`${API_BASE}/inventory`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: authorizationHeader,
         },
       });
       const refreshData = await refreshResponse.json();
       setInventory(Array.isArray(refreshData) ? refreshData : []);
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to process sale.";
+
+      if (
+        /invalid or expired token|missing auth token|authentication required/i.test(
+          message,
+        )
+      ) {
+        clearSessionCookie();
+        localStorage.removeItem(SESSION_KEY);
+        setToken(null);
+        setUser(null);
+        router.replace("/");
+      }
+
       setToast({
         title: "Sale failed",
-        description:
-          error instanceof Error ? error.message : "Unable to process sale.",
+        description: message,
         tone: "error",
       });
       throw error;
@@ -298,12 +401,21 @@ export default function SellOutPage() {
               type="button"
               onClick={() =>
                 void (async () => {
-                  if (!token) return;
+                  const sessionToken = normalizeAuthToken(
+                    readSessionCookie("token") || token,
+                  );
+                  const authorizationHeader = sessionToken
+                    ? `Bearer ${sessionToken}`
+                    : "";
+
+                  if (!sessionToken) return;
+                  setToken(sessionToken);
                   setIsLoadingInventory(true);
                   try {
                     const response = await fetch(`${API_BASE}/inventory`, {
                       headers: {
-                        Authorization: `Bearer ${token}`,
+                        "Accept-Encoding": "identity",
+                        Authorization: authorizationHeader,
                       },
                     });
                     const data = await response.json();
@@ -373,7 +485,7 @@ export default function SellOutPage() {
             <p className="text-sm text-slate-500">Loading inventory...</p>
           ) : inventory.length > 0 ? (
             <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
-              <div className="min-w-[800px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm">
+              <div className="min-w-200 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 shadow-sm">
                 <table className="w-full divide-y divide-slate-200 text-left text-sm">
                   <thead className="bg-slate-100 text-xs uppercase tracking-[0.2em] text-slate-600">
                     <tr>

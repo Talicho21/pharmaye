@@ -1,20 +1,34 @@
 export const SESSION_STORAGE_KEY = "pharmacy_auth_session_v1";
 export const SESSION_COOKIE_KEY = "pharmacy_session_token";
 
-export function readSessionCookie(): string {
+const normalizeSessionValue = (value: string): string =>
+  String(value ?? "")
+    .replace(/^Bearer\s+/i, "")
+    .replace(/^[\s"'`]+|[\s"'`]+$/g, "")
+    .trim();
+
+export function readSessionCookie(cookieName = SESSION_COOKIE_KEY): string {
   if (typeof document === "undefined") {
     return "";
   }
 
+  const candidateCookieNames = Array.from(
+    new Set([cookieName, SESSION_COOKIE_KEY].filter(Boolean)),
+  );
+
   const cookieEntry = document.cookie
-    .split("; ")
-    .find((entry) => entry.startsWith(`${SESSION_COOKIE_KEY}=`));
+    .split(";")
+    .map((entry) => entry.trim())
+    .find((entry) =>
+      candidateCookieNames.some((name) => entry.startsWith(`${name}=`)),
+    );
 
   if (!cookieEntry) {
     return "";
   }
 
-  return decodeURIComponent(cookieEntry.split("=")[1] ?? "");
+  const rawValue = decodeURIComponent(cookieEntry.split("=")[1] ?? "");
+  return normalizeSessionValue(rawValue);
 }
 
 export function setSessionCookie(token: string) {

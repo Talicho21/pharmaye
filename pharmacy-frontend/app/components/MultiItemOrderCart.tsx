@@ -25,6 +25,47 @@ type EditableMedicineForm = {
   unit: string;
 };
 
+type SearchDropdownItem = {
+  batch_id: number;
+  medicine_id: number;
+  medicine_name: string;
+  batch_number: string;
+  quantity: number;
+  price_per_unit: number;
+  expiry_date?: string | null;
+  category_name?: string | null;
+  unit?: string | null;
+};
+
+const normalizeSearchResults = (data: unknown): SearchDropdownItem[] => {
+  const payload = Array.isArray(data)
+    ? data
+    : Array.isArray((data as { results?: unknown[] } | null)?.results)
+      ? (data as { results: unknown[] }).results
+      : Array.isArray((data as { items?: unknown[] } | null)?.items)
+        ? (data as { items: unknown[] }).items
+        : [];
+
+  return payload.map((raw: any) => ({
+    batch_id: Number(raw.batch_id ?? raw.batchId ?? raw.id ?? 0),
+    medicine_id: Number(
+      raw.medicine_id ?? raw.medicineId ?? raw.id ?? raw.medicine?.id ?? 0,
+    ),
+    medicine_name: String(
+      raw.medicine_name ?? raw.name ?? raw.medicine?.name ?? "",
+    ),
+    batch_number: String(
+      raw.batch_number ?? raw.batchNumber ?? raw.batch_no ?? "",
+    ),
+    quantity: Number(raw.quantity ?? 0),
+    price_per_unit: Number(raw.price_per_unit ?? raw.pricePerUnit ?? 0),
+    expiry_date: raw.expiry_date ?? raw.expiryDate ?? "",
+    unit: String(raw.unit ?? raw.medicine?.unit ?? ""),
+    category_name:
+      raw.category_name ?? raw.categoryName ?? raw.category?.name ?? null,
+  }));
+};
+
 const formatDateForInput = (value?: string | null) => {
   if (!value) return "";
 
@@ -70,19 +111,7 @@ export function MultiItemOrderCart({
 }: MultiItemOrderCartProps) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [medicineSearch, setMedicineSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<
-    Array<{
-      batch_id: number;
-      medicine_id: number;
-      medicine_name: string;
-      batch_number: string;
-      quantity: number;
-      price_per_unit: number;
-      expiry_date?: string | null;
-      category_name?: string | null;
-      unit?: string | null;
-    }>
-  >([]);
+  const [searchResults, setSearchResults] = useState<SearchDropdownItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [editableForm, setEditableForm] = useState<EditableMedicineForm>(
     initialEditableForm(),
@@ -148,46 +177,53 @@ export function MultiItemOrderCart({
     }
 
     let isActive = true;
+    const controller = new AbortController();
     setIsSearching(true);
+    setSearchResults([]);
 
     const API_BASE = "/api/backend";
+    const searchUrl = `${API_BASE}/inventory/search?query=${encodeURIComponent(trimmedQuery)}`;
+    const fallbackUrl = `${API_BASE}/inventory?search=${encodeURIComponent(trimmedQuery)}&page=1&pageSize=25`;
 
     const timeoutId = window.setTimeout(async () => {
       try {
-        const response = await fetch(
-          `${API_BASE}/inventory/search?query=${encodeURIComponent(trimmedQuery)}`,
-        );
-        const data = await response.json();
+        const fetchOptions = {
+          credentials: "include" as const,
+          cache: "no-store" as const,
+          signal: controller.signal,
+          headers: {
+            "Accept-Encoding": "identity",
+            "X-Requested-With": "pharmacy-ui",
+          },
+        };
+
+        const primaryResponse = await fetch(searchUrl, fetchOptions);
+        const primaryData = await primaryResponse.json();
 
         if (!isActive) return;
 
-        if (response.ok) {
-          const rawResults = Array.isArray(data)
-            ? data
-            : Array.isArray(data.results)
-              ? data.results
-              : [];
+        const primaryResults = normalizeSearchResults(primaryData);
+        if (primaryResponse.ok && primaryResults.length > 0) {
+          setSearchResults(primaryResults);
+          return;
+        }
 
-          const normalizedResults = rawResults.map((raw: any) => ({
-            batch_id: Number(raw.batch_id ?? raw.id ?? raw.batchId ?? 0),
-            medicine_id: Number(
-              raw.medicine_id ?? raw.id ?? raw.medicineId ?? 0,
-            ),
-            medicine_name: String(raw.medicine_name ?? raw.name ?? ""),
-            batch_number: String(raw.batch_number ?? raw.batchNumber ?? ""),
-            quantity: Number(raw.quantity ?? 0),
-            price_per_unit: Number(raw.price_per_unit ?? raw.pricePerUnit ?? 0),
-            expiry_date: raw.expiry_date ?? raw.expiryDate ?? "",
-            unit: String(raw.unit ?? ""),
-            category_name: raw.category_name ?? raw.categoryName ?? null,
-          }));
+        const fallbackResponse = await fetch(fallbackUrl, fetchOptions);
+        const fallbackData = await fallbackResponse.json();
 
-          setSearchResults(normalizedResults);
+        if (!isActive) return;
+
+        if (fallbackResponse.ok) {
+          const fallbackResults = normalizeSearchResults(fallbackData);
+          setSearchResults(fallbackResults);
         } else {
           setSearchResults([]);
         }
       } catch (error) {
         if (!isActive) return;
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         console.error("Inventory search failed:", error);
         setSearchResults([]);
       } finally {
@@ -197,6 +233,7 @@ export function MultiItemOrderCart({
 
     return () => {
       isActive = false;
+      controller.abort();
       window.clearTimeout(timeoutId);
     };
   }, [medicineSearch]);
@@ -279,16 +316,7 @@ export function MultiItemOrderCart({
     setFormValidationError("");
   };
 
-  const handleSelectSearchResult = (item: {
-    batch_id: number;
-    medicine_id: number;
-    medicine_name: string;
-    batch_number: string;
-    quantity: number;
-    price_per_unit: number;
-    expiry_date?: string | null;
-    unit?: string | null;
-  }) => {
+  const handleSelectSearchResult = (item: SearchDropdownItem) => {
     const selectedUnit = String(item.unit ?? "PKT").trim() || "PKT";
 
     setEditableForm({
@@ -777,24 +805,26 @@ export function MultiItemOrderCart({
   const handleSubmit = async () => {
     setFormValidationError("");
 
+    const safeCustomerName = String(customerName ?? "").trim();
+    const safeTinNumber = String(tinNumber ?? "").trim();
+    const safeSellerName = String(sellerName ?? "").trim();
+    const safeCustomerSNo = String(customerSNo ?? "").trim();
+    const safeInvoiceNo = String(invoiceNo ?? "").trim();
+    const safeReference = String(reference ?? "").trim();
+
     if (cartItems.length === 0) {
       setFormValidationError("Please add at least one item to the order.");
       return;
     }
 
-    if (!customerName.trim()) {
+    if (!safeCustomerName) {
       setFormValidationError("Please enter the customer name.");
       return;
     }
 
-    if (!tinNumber.trim()) {
+    if (!safeTinNumber) {
       setFormValidationError("Please enter the TIN number.");
       return;
-    }
-
-    if (!customerSNo.trim()) {
-      // allow blank but warn; optional requirement can be toggled
-      // we'll let it proceed but trim the value
     }
 
     // Validate stock before showing receipt
@@ -802,31 +832,29 @@ export function MultiItemOrderCart({
       if (!validateStock()) {
         return;
       }
-      // Generate dynamic invoice number: INV-[First 3 Letters of Customer Name]-[Last 4 Digits of TIN]
+
       const generatedInvoiceNo =
-        invoiceNo.trim() || generateInvoiceNumber(customerName, tinNumber);
+        safeInvoiceNo || generateInvoiceNumber(safeCustomerName, safeTinNumber);
       setInvoiceNo(generatedInvoiceNo);
       setInvoiceNumber(generatedInvoiceNo);
       setItemSoldOutDate(new Date().toISOString());
-      // Switch to receipt view
       setViewMode("receipt");
       return;
     }
 
-    // Process the sale (only when in receipt view)
     try {
-      // Pass invoice_no and reference (empty string) to backend
       await onSubmit(
         cartItems,
-        customerName.trim(),
-        tinNumber.trim(),
-        sellerName.trim() || undefined,
-        customerSNo.trim() || undefined,
+        safeCustomerName,
+        safeTinNumber,
+        safeSellerName || undefined,
+        safeCustomerSNo || undefined,
         paymentMethod,
-        invoiceNumber || invoiceNo, // Dynamic invoice number
-        reference.trim() || undefined,
+        invoiceNumber || safeInvoiceNo || undefined,
+        safeReference || undefined,
       );
-      setCartItems([]); // Clear cart on success
+
+      setCartItems([]);
       setCustomerName("");
       setTinNumber("");
       setSellerName("");
@@ -836,9 +864,14 @@ export function MultiItemOrderCart({
       setInvoiceNumber("");
       setItemSoldOutDate("");
       setViewMode("cart");
-      onClose(); // Close modal after successful sale
+      onClose();
     } catch (error) {
       console.error("Error processing order:", error);
+      setFormValidationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to process the sale right now.",
+      );
     }
   };
 
