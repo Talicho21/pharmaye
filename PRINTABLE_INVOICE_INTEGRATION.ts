@@ -130,7 +130,7 @@ export function IntegratedCartWithInvoice() {
      - Click "Process Sale"
      - Verify invoice displays with correct:
        • Logo at top
-       • Email address (israelmohamed3@gmail.com)
+       • Email address (getchdr@gmail.com)
        • All cart items in table
        • Correct totals (Subtotal, VAT, Grand Total)
        • Signature lines at bottom

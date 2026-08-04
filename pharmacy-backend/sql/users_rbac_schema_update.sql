@@ -14,6 +14,6 @@ ALTER TABLE users
 
 INSERT IGNORE INTO users (username, password_hash, role)
 VALUES
-  ('eseruadmin', SHA2('eseru16', 256), 'admin'),
+  ('hawanadmin', SHA2('hawan15', 256), 'admin'),
   ('expresstaff1', SHA2('express16', 256), 'staff'),
   ('testers12', SHA2('testersdev1', 256), 'admin');

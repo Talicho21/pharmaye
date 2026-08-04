@@ -1,7 +1,7 @@
 {
   "name": "pharmacy-system",
   "version": "1.0.0",
-  "description": "Express Pharmaceutical Wholesale - Management Suite Portal",
+  "description": "Hawan Drug Store - Management Suite Portal",
   "main": "pharmacy-backend/server.js",
   "type": "commonjs",
   "workspaces": [
@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "install-all": "npm install --workspaces && npm install",
+    "dev": "node server.js",
     "backend-dev": "npm run dev --workspace=pharmacy-backend",
     "backend-start": "npm start --workspace=pharmacy-backend",
     "frontend-dev": "npm run dev --workspace=pharmacy-frontend",

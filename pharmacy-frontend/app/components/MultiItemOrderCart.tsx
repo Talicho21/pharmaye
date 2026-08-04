@@ -1,6 +1,15 @@
-"use client";
+﻿"use client";
 import { useEffect, useState, useMemo } from "react";
 import { generateInvoiceNumber } from "../utils/invoiceUtils";
+import {
+  AlertCircle,
+  Loader2,
+  Plus,
+  Search,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+
 
 export type CartItem = {
   id: string; // Unique ID for this cart item (not batch_id)
@@ -624,7 +633,7 @@ export function MultiItemOrderCart({
         <div class="invoice-header" style="margin-bottom:12px;">
           <div style="display:flex;align-items:center;text-align:left;gap:12px;">
             <div>
-              <div class="company-title">EXPRESS PHARMA ONE ME. PLC</div>
+              <div class="company-title">Hawan Drug Store</div>
               <table style="margin-top:8px;border-collapse:collapse;font-family:Arial,sans-serif;font-size:12px;">
                 <tr>
                   <td style="border:1px solid #111;padding:4px 8px;font-weight:700;background:#f8fafc;font-size:12px;">Invoice No</td>
@@ -649,10 +658,10 @@ export function MultiItemOrderCart({
           <div style="text-align:right;">
             <div class="invoice-title">INVOICE</div>
             <div class="company-contact" style="margin-top:6px;">
-              <div>Express Pharma One Me. PLC</div>
+              <div>Hawan Drug Store</div>
               <div>TIN: 0098248381</div>
-              <div>Tell: 0981798081</div>
-              <div>E-mail: epharm38@gmail.com</div>
+              <div>Tell: 092180070</div>
+              <div>E-mail: getchdr@gmail.com</div>
             </div>
           </div>
         </div>
@@ -875,712 +884,824 @@ export function MultiItemOrderCart({
     }
   };
 
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end bg-[#2563EB]/10 backdrop-blur-sm sm:items-center sm:justify-center">
-      <div className="w-full max-h-[90vh] bg-white rounded-t-lg sm:rounded-lg shadow-2xl flex flex-col max-w-2xl">
-        {/* Header */}
-        <div className="border-b border-[#E2E8F0] px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-[#2563EB]">
-            🛒 Multi-Item Order (General Sale)
+  const getExpiryBadge = (dateStr: string) => {
+    if (!dateStr) return null;
+    const now = new Date();
+    const exp = new Date(dateStr);
+    if (Number.isNaN(exp.getTime())) return null;
+    if (exp < now)
+      return {
+        label: "Expired",
+        cls: "border border-danger/30 bg-red-50 text-accent-red",
+      };
+    const soon = new Date();
+    soon.setMonth(now.getMonth() + 6);
+    if (exp <= soon)
+      return {
+        label: "Expiring Soon",
+        cls: "border border-amber-300 bg-amber-50 text-amber-800",
+      };
+    return {
+      label: "Healthy",
+      cls: "border border-grass-green/20 bg-primary-blue/10 text-dark-charcoal",
+    };
+  };
+
+  const expiryBadge = editableForm.expiryDate
+    ? getExpiryBadge(editableForm.expiryDate)
+    : null;
+  const canAddToCart =
+    editableForm.medicineId > 0 &&
+    editableForm.medicineName.trim().length > 0 &&
+    editableForm.expiryDate.trim().length > 0 &&
+    editableForm.quantity > 0;
+
+  /* ── RECEIPT VIEW ── */
+  if (viewMode === "receipt") {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
+        <div className="border-b border-border-gray bg-off-white px-6 py-4">
+          <h2 className="text-lg font-bold text-dark-charcoal">
+            Sale Receipt — Review Before Confirming
           </h2>
-          <button
-            onClick={onClose}
-            disabled={isProcessing}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
-          >
-            ✕
-          </button>
+          <p className="mt-0.5 text-sm text-dark-charcoal/70">
+            Review all details carefully before confirming the sale.
+          </p>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {viewMode === "cart" ? (
-            <>
-              {formValidationError && (
-                <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800">
-                    {formValidationError}
-                  </p>
-                </div>
-              )}
-
-              {/* Stock Validation Error */}
-              {stockValidationError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-lg">
-                  <p className="text-sm text-red-800 font-medium">
-                    {stockValidationError}
-                  </p>
-                </div>
-              )}
-
-              {/* Customer Details */}
-              <div className="mb-6 p-4 bg-white rounded-lg border border-[#E2E8F0]">
-                <h3 className="mb-4 font-semibold text-[#2563EB]">
-                  👤 Customer Information I{" "}
-                </h3>
-                <div className="grid grid-cols-1 gap-3">
-                  <input
-                    type="text"
-                    placeholder="Customer Name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="TIN Number"
-                    value={tinNumber}
-                    onChange={(e) => setTinNumber(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Invoice No"
-                    value={invoiceNo}
-                    onChange={(e) => setInvoiceNo(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-[#E2E8F0] rounded-lg text-sm text-[#334155] disabled:bg-slate-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="S.No "
-                    value={customerSNo}
-                    onChange={(e) => setCustomerSNo(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Reference (optional)"
-                    value={reference}
-                    onChange={(e) => setReference(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Seller Name"
-                    value={sellerName}
-                    onChange={(e) => setSellerName(e.target.value)}
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-
-                  <div className="flex items-center gap-4 pt-2">
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={paymentMethod === "cash"}
-                        onChange={() => setPaymentMethod("cash")}
-                        disabled={isProcessing}
-                      />
-                      <span className="text-sm">Cash</span>
-                    </label>
-                    <label className="inline-flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={paymentMethod === "credit"}
-                        onChange={() => setPaymentMethod("credit")}
-                        disabled={isProcessing}
-                      />
-                      <span className="text-sm">Credit</span>
-                    </label>
-                  </div>
+        <div className="space-y-4 overflow-y-auto p-6">
+          {/* Receipt Header */}
+          <div className="rounded-lg border border-dark-teal/20 bg-white p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-4 text-left">
+                <div>
+                  <h2 className="text-3xl font-bold leading-tight text-[#2563EB]">
+                    Hawan Drug Store
+                  </h2>
+                  <table className="mt-3 border-collapse font-[Arial] text-sm">
+                    <tbody>
+                      <tr>
+                        <td className="border border-black bg-off-white px-2 py-1.5 font-bold text-slate-700">
+                          Invoice No
+                        </td>
+                        <td className="border border-black px-2 py-1.5 font-mono text-slate-800">
+                          {invoiceNumber || `INV-${Date.now()}`}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="border border-black bg-off-white px-2 py-1.5 font-bold text-slate-700">
+                          FS No
+                        </td>
+                        <td className="border border-black px-2 py-1.5 font-mono text-slate-800">
+                          000000010
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="border border-black bg-off-white px-2 py-1.5 font-bold text-slate-700">
+                          Reference
+                        </td>
+                        <td className="border border-black px-2 py-1.5 font-mono text-slate-800"></td>
+                      </tr>
+                      <tr>
+                        <td className="border border-black bg-off-white px-2 py-1.5 font-bold text-slate-700">
+                          Date
+                        </td>
+                        <td className="border border-black bg-blue-50 px-2 py-1.5 font-mono font-bold text-[#2563EB]">
+                          {formattedSoldOutDate}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-
-              {/* Add Item Form */}
-              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h3 className="font-semibold text-blue-900 mb-4">
-                  ➕ Add Medicine to Order
+              <div className="text-right">
+                <h3 className="text-4xl font-extrabold leading-none text-[#2563EB]">
+                  INVOICE
                 </h3>
-                <div className="relative mb-3">
-                  <input
-                    type="text"
-                    placeholder="Search by medicine name or batch number"
-                    value={medicineSearch}
-                    onChange={(e) => setMedicineSearch(e.target.value)}
-                    disabled={isProcessing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-
-                  {medicineSearch.trim() && (
-                    <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl">
-                      {isSearching ? (
-                        <div className="px-4 py-3 text-sm text-slate-500">
-                          Searching...
-                        </div>
-                      ) : searchResults.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-slate-500">
-                          No matching inventory found.
-                        </div>
-                      ) : (
-                        searchResults.map((item) => (
-                          <button
-                            key={`${item.medicine_id}-${item.batch_id}`}
-                            type="button"
-                            onClick={() => handleSelectSearchResult(item)}
-                            className="flex w-full flex-col gap-1 border-b border-slate-100 px-4 py-3 text-left hover:bg-blue-50"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-semibold text-slate-900">
-                                {item.medicine_name}
-                              </span>
-                              <span className="text-xs font-bold text-emerald-600">
-                                ETB{" "}
-                                {Number(item.price_per_unit || 0).toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-slate-600">
-                              Batch: {item.batch_number} | Stock:{" "}
-                              {item.quantity} | Exp: {item.expiry_date}
-                            </div>
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  )}
+                <div className="mt-2 text-base leading-relaxed text-[#64748B]">
+                  <div>Hawan Drug Store</div>
+                  <div>TIN: 0098248381</div>
+                  <div>Tell: 092180070</div>
+                  <div>E-mail: getchdr@gmail.com</div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    placeholder="Selected Medicine ID"
-                    value={editableForm.medicineId || ""}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        medicineId: Number(e.target.value) || 0,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    min="1"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Selected Medicine Name"
-                    value={editableForm.medicineName}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        medicineName: e.target.value,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Selected Batch Number"
-                    value={editableForm.batchNumber}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        batchNumber: e.target.value,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Quantity"
-                    value={editableForm.quantity}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        quantity: Number(e.target.value) || 0,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    min="1"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Price Per Unit (ETB)"
-                    value={editableForm.pricePerUnit}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        pricePerUnit: Number(e.target.value) || 0,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    step="0.01"
-                    min="0"
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Unit (e.g. PKT, BOT, VIAL)"
-                    value={editableForm.unit}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        unit: e.target.value.toUpperCase(),
-                      }))
-                    }
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                  <input
-                    type="date"
-                    placeholder="Expiry Date"
-                    value={editableForm.expiryDate}
-                    onChange={(e) =>
-                      setEditableForm((current) => ({
-                        ...current,
-                        expiryDate: e.target.value,
-                      }))
-                    }
-                    disabled={isProcessing}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
-                  />
-                </div>
-                <button
-                  onClick={addItemToCart}
-                  disabled={isProcessing}
-                  className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold py-2 rounded-lg transition"
-                >
-                  Add Item to Cart
-                </button>
               </div>
-
-              {/* Cart Items */}
-              {cartItems.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No items added yet. Start by adding medicines above.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-gray-900 mb-3">
-                    📋 Order Items ({cartItems.length})
-                  </h3>
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 border border-gray-200 rounded-lg bg-gray-50"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {item.medicineName}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            Batch: {item.batchNumber} | Expires:{" "}
-                            {item.expiryDate}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeItemFromCart(item.id)}
-                          disabled={isProcessing}
-                          className="text-red-600 hover:text-red-800 disabled:opacity-50 font-bold"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Medicine Name
-                            </label>
-                            <input
-                              type="text"
-                              value={item.medicineName}
-                              onChange={(e) =>
-                                updateCartItem(
-                                  item.id,
-                                  "medicineName",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isProcessing}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Batch Number
-                            </label>
-                            <input
-                              type="text"
-                              value={item.batchNumber}
-                              onChange={(e) =>
-                                updateCartItem(
-                                  item.id,
-                                  "batchNumber",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isProcessing}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Expiry Date
-                            </label>
-                            <input
-                              type="date"
-                              value={item.expiryDate}
-                              onChange={(e) =>
-                                updateCartItem(
-                                  item.id,
-                                  "expiryDate",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isProcessing}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Unit
-                            </label>
-                            <input
-                              type="text"
-                              value={item.unit || ""}
-                              onChange={(e) =>
-                                updateCartItem(
-                                  item.id,
-                                  "unit",
-                                  e.target.value.toUpperCase(),
-                                )
-                              }
-                              disabled={isProcessing}
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Qty
-                            </label>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => {
-                                const qty = Number(e.target.value);
-                                if (qty > 0) {
-                                  updateCartItem(item.id, "quantity", qty);
-                                }
-                              }}
-                              disabled={isProcessing}
-                              min="1"
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Unit Price (ETB)
-                            </label>
-                            <input
-                              type="number"
-                              value={item.pricePerUnit}
-                              onChange={(e) => {
-                                const price = Number(e.target.value);
-                                if (price >= 0) {
-                                  updateCartItem(
-                                    item.id,
-                                    "pricePerUnit",
-                                    price,
-                                  );
-                                }
-                              }}
-                              disabled={isProcessing}
-                              step="0.01"
-                              min="0"
-                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-600 block mb-1">
-                              Subtotal (ETB)
-                            </label>
-                            <div className="px-2 py-1 bg-gray-100 rounded text-sm font-semibold">
-                              {(item.quantity * item.pricePerUnit).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            /* RECEIPT VIEW */
-            <div className="space-y-4">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  📄 SALE RECEIPT
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Review the order details before confirming
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-[#64748B]">
+                  Customer Name:
+                </p>
+                <p className="text-lg font-semibold text-[#334155]">
+                  {customerName}
                 </p>
               </div>
+              <div>
+                <p className="mb-1 text-sm font-semibold uppercase tracking-wide text-[#64748B]">
+                  TIN Number:
+                </p>
+                <p className="text-lg font-semibold text-[#334155]">
+                  {tinNumber}
+                </p>
+              </div>
+            </div>
+          </div>
 
-              {/* Receipt Header */}
-              <div className="p-4 bg-white rounded-lg border border-slate-200">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center text-left gap-4">
-                    {/* <img
-                      src="/Logo.jpg"
-                      alt="Logo"
-                      className="w-20 h-20 object-contain rounded"
-                    /> */}
-                    <div>
-                      <h2 className="text-3xl font-bold text-[#2563EB] leading-tight">
-                        EXPRESS PHARMA ONE ME. PLC
-                      </h2>
-                      <table className="mt-3 border-collapse font-[Arial] text-sm">
-                        <tbody>
-                          <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
-                              Invoice No
-                            </td>
-                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900">
-                              {invoiceNumber || `INV-${Date.now()}`}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
-                              FS No
-                            </td>
-                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900">
-                              000000010
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
-                              Reference
-                            </td>
-                            <td className="border border-black px-2 py-1.5 font-mono text-slate-900"></td>
-                          </tr>
-                          <tr>
-                            <td className="border border-black bg-slate-50 px-2 py-1.5 font-bold text-slate-700">
-                              Date
-                            </td>
-                            <td className="border border-black bg-blue-50 px-2 py-1.5 font-mono font-bold text-[#2563EB]">
-                              {formattedSoldOutDate}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+          {/* Receipt Items */}
+          <div className="overflow-hidden rounded-lg border border-[#E2E8F0] bg-white">
+            <div className="grid grid-cols-12 gap-2 bg-[#F8FAFC] px-4 py-3 text-sm font-bold text-[#64748B]">
+              <div className="col-span-4">Description</div>
+              <div className="col-span-2">Batch #</div>
+              <div className="col-span-1">Unit</div>
+              <div className="col-span-2">Expiry Date</div>
+              <div className="col-span-1 text-right">Qty</div>
+              <div className="col-span-1 text-right">Unit Price</div>
+              <div className="col-span-2 text-right">Total</div>
+            </div>
+            <div className="divide-y">
+              {cartItems.map((item) => {
+                const subtotal = item.quantity * item.pricePerUnit;
+                return (
+                  <div
+                    key={item.id}
+                    className="grid grid-cols-12 gap-2 px-4 py-3 text-sm"
+                  >
+                    <div className="col-span-4 font-semibold text-[#334155]">
+                      {item.medicineName}
+                    </div>
+                    <div className="col-span-2 text-[#64748B]">
+                      {item.batchNumber}
+                    </div>
+                    <div className="col-span-1 text-[#64748B]">
+                      {item.unit || "-"}
+                    </div>
+                    <div className="col-span-2 text-[#64748B]">
+                      {formatInvoiceExpiryDate(item.expiryDate)}
+                    </div>
+                    <div className="col-span-1 text-right text-[#334155]">
+                      {item.quantity}
+                    </div>
+                    <div className="col-span-1 text-right font-semibold text-[#334155]">
+                      ETB {item.pricePerUnit.toFixed(2)}
+                    </div>
+                    <div className="col-span-2 text-right font-bold text-green-600">
+                      ETB {subtotal.toFixed(2)}
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
 
-                  <div className="text-right">
-                    <h3 className="text-4xl font-extrabold text-[#2563EB] leading-none">
-                      INVOICE
-                    </h3>
-                    <div className="mt-2 text-base text-[#64748B] leading-relaxed">
-                      <div>Express Pharma One Me. PLC</div>
-                      <div>TIN: 0098248381</div>
-                      <div>Tell: 0981798081</div>
-                      <div>E-mail: epharm38@gmail.com</div>
-                    </div>
-                  </div>
-                </div>
+          {/* Receipt Summary */}
+          <div className="rounded-lg border border-[#E2E8F0] bg-white p-4">
+            <div className="ml-auto w-64">
+              <div className="mb-2 flex justify-between text-sm">
+                <span className="text-[#64748B]">total</span>
+                <span className="tabular-nums font-semibold text-[#334155]">
+                  ETB {cartTotals.totalPrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="mb-3 flex justify-between text-sm">
+                <span className="text-[#64748B]">Not Taxable</span>
+                <span className="tabular-nums font-semibold text-[#334155]">
+                  ETB 0.00
+                </span>
+              </div>
+              <div className="my-2 border-t border-[#2563EB]" />
+              <div className="flex justify-between text-base font-bold">
+                <span className="text-lg text-[#10B981]">GRAND TOTAL</span>
+                <span className="tabular-nums text-lg text-[#10B981]">
+                  ETB {cartTotals.totalPrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="mt-1 border-b-4 border-[#10B981]" />
+            </div>
+          </div>
+        </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wide mb-1">
-                      Customer Name:
-                    </p>
-                    <p className="text-lg font-semibold text-[#334155]">
-                      {customerName}
-                    </p>
+        {/* Receipt footer actions */}
+        <div className="flex gap-3 border-t border-border-gray bg-off-white/40 px-6 py-4">
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode("cart");
+              setStockValidationError("");
+            }}
+            disabled={isProcessing}
+            className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-2.5 text-sm font-semibold text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            ← Back to Cart
+          </button>
+          <button
+            type="button"
+            onClick={exportReceiptPDF}
+            disabled={isProcessing}
+            className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-2.5 text-sm font-semibold text-dark-charcoal transition duration-150 hover:bg-navy-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+          >
+            Export PDF
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isProcessing}
+            className="flex-[2] rounded-lg bg-grass-green px-4 py-2.5 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 active:translate-y-0"
+          >
+            {isProcessing ? "Processing\u2026" : "\u2713 Confirm & Process Sale"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── CART VIEW — 2-column POS layout ── */
+  return (
+    <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+      {/* ── LEFT COLUMN: Add Items to Order ── */}
+      <div className="flex flex-col gap-5 rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-dark-charcoal/70">
+            Item Search
+          </p>
+          <h2 className="mt-0.5 text-base font-bold tracking-tight text-dark-charcoal">
+            Add Items to Order
+          </h2>
+        </div>
+
+        {/* Form validation error */}
+        {formValidationError && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+            <p className="text-sm font-medium text-amber-800">
+              {formValidationError}
+            </p>
+          </div>
+        )}
+
+        {/* Medicine Search */}
+        <div>
+          <label
+            htmlFor="pos-medicine-search"
+            className="mb-1.5 block text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70"
+          >
+            Search Medicine
+          </label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-charcoal/80" />
+            <input
+              id="pos-medicine-search"
+              type="text"
+              placeholder="Search by medicine name or batch number\u2026"
+              value={medicineSearch}
+              onChange={(e) => setMedicineSearch(e.target.value)}
+              disabled={isProcessing}
+              className="w-full rounded-lg border border-border-gray bg-off-white py-2.5 pl-9 pr-3 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus:ring-1 focus:ring-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+            />
+            {medicineSearch.trim() && (
+              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-border-gray bg-pure-white shadow-lg">
+                {isSearching ? (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-dark-charcoal/70">
+                    <Loader2 className="h-4 w-4 animate-spin text-grass-green" />
+                    Searching\u2026
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#64748B] uppercase tracking-wide mb-1">
-                      TIN Number:
-                    </p>
-                    <p className="text-lg font-semibold text-[#334155]">
-                      {tinNumber}
-                    </p>
+                ) : searchResults.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-dark-charcoal/70">
+                    No matching inventory found.
                   </div>
+                ) : (
+                  searchResults.map((item) => (
+                    <button
+                      key={`${item.medicine_id}-${item.batch_id}`}
+                      type="button"
+                      onClick={() => handleSelectSearchResult(item)}
+                      className="flex w-full flex-col gap-0.5 border-b border-border-gray/50 px-4 py-3 text-left transition duration-150 last:border-0 hover:bg-off-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-blue"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold text-dark-charcoal">
+                          {item.medicine_name}
+                        </span>
+                        <span className="shrink-0 text-xs font-bold text-dark-charcoal">
+                          ETB {Number(item.price_per_unit || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-dark-charcoal/70">
+                        Batch: {item.batch_number} \u00b7 Stock: {item.quantity}{" "}
+                        \u00b7 Exp: {item.expiry_date}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selected Item Details */}
+        {editableForm.medicineId > 0 && (
+          <div className="space-y-4 rounded-lg border border-border-gray bg-off-white/40 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate font-bold text-dark-charcoal">
+                  {editableForm.medicineName}
+                </p>
+                <p className="text-xs text-dark-charcoal/70">
+                  Batch: {editableForm.batchNumber}
+                </p>
+              </div>
+              {expiryBadge && (
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${expiryBadge.cls}`}
+                >
+                  {expiryBadge.label}
+                </span>
+              )}
+            </div>
+
+            {/* Hidden medicine ID field — preserves existing logic */}
+            <input
+              type="number"
+              value={editableForm.medicineId || ""}
+              onChange={(e) =>
+                setEditableForm((c) => ({
+                  ...c,
+                  medicineId: Number(e.target.value) || 0,
+                }))
+              }
+              disabled={isProcessing}
+              min="1"
+              aria-hidden
+              tabIndex={-1}
+              className="sr-only"
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Medicine Name
+                </label>
+                <input
+                  type="text"
+                  value={editableForm.medicineName}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      medicineName: e.target.value,
+                    }))
+                  }
+                  disabled={isProcessing}
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Batch Number
+                </label>
+                <input
+                  type="text"
+                  value={editableForm.batchNumber}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      batchNumber: e.target.value,
+                    }))
+                  }
+                  disabled={isProcessing}
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Quantity
+                </label>
+                <input
+                  type="number"
+                  value={editableForm.quantity}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      quantity: Number(e.target.value) || 0,
+                    }))
+                  }
+                  disabled={isProcessing}
+                  min="1"
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Unit
+                </label>
+                <input
+                  type="text"
+                  value={editableForm.unit}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      unit: e.target.value.toUpperCase(),
+                    }))
+                  }
+                  disabled={isProcessing}
+                  placeholder="PKT"
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Expiry Date
+                </label>
+                <input
+                  type="date"
+                  value={editableForm.expiryDate}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      expiryDate: e.target.value,
+                    }))
+                  }
+                  disabled={isProcessing}
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Unit Price (ETB)
+                </label>
+                <input
+                  type="number"
+                  value={editableForm.pricePerUnit}
+                  onChange={(e) =>
+                    setEditableForm((c) => ({
+                      ...c,
+                      pricePerUnit: Number(e.target.value) || 0,
+                    }))
+                  }
+                  disabled={isProcessing}
+                  step="0.01"
+                  min="0"
+                  className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-dark-charcoal/70">
+                  Line Subtotal
+                </label>
+                <div className="rounded-lg border border-border-gray/50 bg-off-white px-3 py-2 text-sm font-semibold text-dark-charcoal">
+                  ETB{" "}
+                  {(editableForm.quantity * editableForm.pricePerUnit).toFixed(
+                    2,
+                  )}
                 </div>
               </div>
+            </div>
 
-              {/* Receipt Items */}
-              <div className="border border-[#E2E8F0] rounded-lg overflow-hidden bg-white">
-                <div className="bg-[#F8FAFC] px-4 py-3 grid grid-cols-12 gap-2 text-sm font-bold text-[#64748B]">
-                  <div className="col-span-4">Description</div>
-                  <div className="col-span-2">Batch #</div>
-                  <div className="col-span-1">Unit</div>
-                  <div className="col-span-2">Expiry Date</div>
-                  <div className="col-span-1 text-right">Qty</div>
-                  <div className="col-span-1 text-right">Unit Price</div>
-                  <div className="col-span-2 text-right">Total</div>
-                </div>
-                <div className="divide-y">
-                  {cartItems.map((item) => {
-                    const subtotal = item.quantity * item.pricePerUnit;
-                    return (
-                      <div
-                        key={item.id}
-                        className="px-4 py-3 grid grid-cols-12 gap-2 text-sm"
-                      >
-                        <div className="col-span-4 font-semibold text-[#334155]">
-                          {item.medicineName}
-                        </div>
-                        <div className="col-span-2 text-[#64748B]">
-                          {item.batchNumber}
-                        </div>
-                        <div className="col-span-1 text-[#64748B]">
-                          {item.unit || "-"}
-                        </div>
-                        <div className="col-span-2 text-[#64748B]">
-                          {formatInvoiceExpiryDate(item.expiryDate)}
-                        </div>
-                        <div className="col-span-1 text-right text-[#334155]">
-                          {item.quantity}
-                        </div>
-                        <div className="col-span-1 text-right font-semibold text-[#334155]">
-                          ETB {item.pricePerUnit.toFixed(2)}
-                        </div>
-                        <div className="col-span-2 text-right font-bold text-green-600">
-                          ETB {subtotal.toFixed(2)}
+            {newAvailableStock !== null && (
+              <p className="text-xs text-dark-charcoal/70">
+                Available stock:{" "}
+                <span className="font-bold text-dark-charcoal">
+                  {newAvailableStock}
+                </span>{" "}
+                units
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Add Medicine to Order button */}
+        <button
+          type="button"
+          onClick={addItemToCart}
+          disabled={isProcessing || !canAddToCart}
+          className="mt-auto w-full rounded-lg bg-grass-green px-4 py-3 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0"
+        >
+          <Plus className="-mt-0.5 mr-1.5 inline-block h-4 w-4" />
+          Add Medicine to Order
+        </button>
+      </div>
+
+      {/* ── RIGHT COLUMN: Order Summary & Checkout ── */}
+      <div className="flex flex-col gap-5 rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-dark-charcoal/70">
+            Checkout
+          </p>
+          <h2 className="mt-0.5 text-base font-bold tracking-tight text-dark-charcoal">
+            Order Summary
+          </h2>
+        </div>
+
+        {/* Stock validation error */}
+        {stockValidationError && (
+          <div className="flex items-start gap-3 rounded-lg border border-danger/30 bg-red-50 px-4 py-3">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-red" />
+            <p className="text-sm font-medium text-accent-red">
+              {stockValidationError}
+            </p>
+          </div>
+        )}
+
+        {/* Customer Information */}
+        <div>
+          <p className="mb-3 text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70">
+            Customer Information
+          </p>
+          <div className="space-y-2.5">
+            <input
+              type="text"
+              placeholder="Customer Name *"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              disabled={isProcessing}
+              className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+            />
+            <input
+              type="text"
+              placeholder="TIN Number *"
+              value={tinNumber}
+              onChange={(e) => setTinNumber(e.target.value)}
+              disabled={isProcessing}
+              className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              <input
+                type="text"
+                placeholder="Invoice No"
+                value={invoiceNo}
+                onChange={(e) => setInvoiceNo(e.target.value)}
+                disabled={isProcessing}
+                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+              />
+              <input
+                type="text"
+                placeholder="S.No"
+                value={customerSNo}
+                onChange={(e) => setCustomerSNo(e.target.value)}
+                disabled={isProcessing}
+                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <input
+                type="text"
+                placeholder="Reference"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                disabled={isProcessing}
+                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+              />
+              <input
+                type="text"
+                placeholder="Seller Name"
+                value={sellerName}
+                onChange={(e) => setSellerName(e.target.value)}
+                disabled={isProcessing}
+                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+              />
+            </div>
+            {/* Payment method pill buttons */}
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cash")}
+                disabled={isProcessing}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue ${
+                  paymentMethod === "cash"
+                    ? "bg-primary-blue text-white"
+                    : "bg-off-white text-dark-charcoal/80 hover:bg-navy-border hover:text-dark-charcoal"
+                }`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("credit")}
+                disabled={isProcessing}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue ${
+                  paymentMethod === "credit"
+                    ? "bg-primary-blue text-white"
+                    : "bg-off-white text-dark-charcoal/80 hover:bg-navy-border hover:text-dark-charcoal"
+                }`}
+              >
+                Credit
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Cart Items */}
+        <div>
+          <p className="mb-2 text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70">
+            Cart Items ({cartTotals.itemCount})
+          </p>
+          {cartItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border-gray/50 bg-off-white/30 py-10 text-center">
+              <ShoppingCart className="h-8 w-8 text-border-gray" />
+              <p className="text-sm font-semibold text-dark-charcoal/70">
+                Cart is empty. Search medicines on the left to start.
+              </p>
+            </div>
+          ) : (
+            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {cartItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-border-gray bg-off-white/30 p-3"
+                >
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-dark-charcoal">
+                        {item.medicineName}
+                      </p>
+                      <p className="text-xs text-dark-charcoal/70">
+                        Batch: {item.batchNumber} \u00b7 Exp: {item.expiryDate}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeItemFromCart(item.id)}
+                      disabled={isProcessing}
+                      aria-label={`Remove ${item.medicineName}`}
+                      className="shrink-0 rounded p-0.5 text-dark-charcoal/70 transition duration-150 hover:bg-red-50 hover:text-accent-red focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {/* Inline-editable cart item fields */}
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Medicine Name
+                        </label>
+                        <input
+                          type="text"
+                          value={item.medicineName}
+                          onChange={(e) =>
+                            updateCartItem(
+                              item.id,
+                              "medicineName",
+                              e.target.value,
+                            )
+                          }
+                          disabled={isProcessing}
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Batch Number
+                        </label>
+                        <input
+                          type="text"
+                          value={item.batchNumber}
+                          onChange={(e) =>
+                            updateCartItem(
+                              item.id,
+                              "batchNumber",
+                              e.target.value,
+                            )
+                          }
+                          disabled={isProcessing}
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Expiry
+                        </label>
+                        <input
+                          type="date"
+                          value={item.expiryDate}
+                          onChange={(e) =>
+                            updateCartItem(
+                              item.id,
+                              "expiryDate",
+                              e.target.value,
+                            )
+                          }
+                          disabled={isProcessing}
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Unit
+                        </label>
+                        <input
+                          type="text"
+                          value={item.unit || ""}
+                          onChange={(e) =>
+                            updateCartItem(
+                              item.id,
+                              "unit",
+                              e.target.value.toUpperCase(),
+                            )
+                          }
+                          disabled={isProcessing}
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Qty
+                        </label>
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const qty = Number(e.target.value);
+                            if (qty > 0)
+                              updateCartItem(item.id, "quantity", qty);
+                          }}
+                          disabled={isProcessing}
+                          min="1"
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Unit Price (ETB)
+                        </label>
+                        <input
+                          type="number"
+                          value={item.pricePerUnit}
+                          onChange={(e) => {
+                            const p = Number(e.target.value);
+                            if (p >= 0)
+                              updateCartItem(item.id, "pricePerUnit", p);
+                          }}
+                          disabled={isProcessing}
+                          step="0.01"
+                          min="0"
+                          className="w-full rounded border border-border-gray bg-pure-white px-2 py-1 text-xs text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:bg-off-white disabled:opacity-70"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs text-dark-charcoal/70">
+                          Subtotal (ETB)
+                        </label>
+                        <div className="rounded border border-border-gray/50 bg-off-white px-2 py-1 text-xs font-semibold text-dark-charcoal">
+                          {(item.quantity * item.pricePerUnit).toFixed(2)}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-
-              {/* Receipt Summary */}
-              <div className="p-4 bg-white rounded-lg border border-[#E2E8F0]">
-                {/* <div className="text-[11px] font-bold uppercase tracking-wide text-[#2563EB]">
-                    Order Summary
-                  </div> */}
-                {/* <div className="flex justify-between gap-4">
-                      <span>Total Items</span>
-                      <span className="font-semibold">
-                        {cartTotals.itemCount}
-                      </span>
-                    </div> */}
-                {/* <div className="flex justify-between gap-4">
-                      <span>Total Quantity</span>
-                      <span className="font-semibold">
-                        {cartTotals.totalQuantity}
-                      </span>
-                    </div> */}
-
-                <div className="ml-auto w-64">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-[#64748B]">total</span>
-                    <span className="font-semibold tabular-nums text-[#334155]">
-                      ETB {cartTotals.totalPrice.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm mb-3">
-                    <span className="text-[#64748B]">Not Taxable</span>
-                    <span className="font-semibold tabular-nums text-[#334155]">
-                      ETB 0.00
-                    </span>
-                  </div>
-                  <div className="border-t border-[#2563EB] my-2" />
-                  <div className="flex justify-between text-base font-bold">
-                    <span className="text-[#10B981] text-lg">GRAND TOTAL</span>
-                    <span className="tabular-nums text-[#10B981] text-lg">
-                      ETB {cartTotals.totalPrice.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="border-b-4 border-[#10B981] mt-1" />
-                </div>
-              </div>
-
-              <div className="text-center text-xs text-[#64748B] italic py-2">
-                Please review all details carefully before confirming the sale.
-              </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Footer / Summary & Actions */}
-        <div className="border-t border-[#E2E8F0] px-6 py-4 bg-white">
-          {viewMode === "cart" ? (
-            <>
-              <div className="mb-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#64748B]">Items in Cart:</span>
-                  <span className="font-semibold">{cartTotals.itemCount}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[#64748B]">Total Quantity:</span>
-                  <span className="font-semibold">
-                    {cartTotals.totalQuantity}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold">
-                  <span className="text-[#2563EB]">Total Price (ETB):</span>
-                  <span className="text-[#10B981]">
-                    {cartTotals.totalPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
+        {/* Totals Box */}
+        <div className="rounded-xl bg-primary-blue p-4 text-white">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white/60">Items in cart</span>
+              <span className="font-semibold">{cartTotals.itemCount}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white/60">Total quantity</span>
+              <span className="font-semibold">{cartTotals.totalQuantity}</span>
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3">
+            <span className="text-xs font-black uppercase tracking-[0.2em] text-white/50">
+              Grand Total
+            </span>
+            <span className="tabular-nums text-2xl font-black text-grass-green">
+              ETB {cartTotals.totalPrice.toFixed(2)}
+            </span>
+          </div>
+        </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#64748B] font-semibold rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isProcessing || cartItems.length === 0}
-                  className="flex-1 px-4 py-2 bg-[#10B981] hover:bg-[#059669] disabled:bg-green-300 text-white font-semibold rounded-lg transition"
-                >
-                  {isProcessing ? "Processing..." : "📋 Review & Continue"}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setViewMode("cart");
-                    setStockValidationError("");
-                  }}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-[#E2E8F0] text-[#64748B] font-semibold rounded-lg hover:bg-[#F8FAFC] disabled:opacity-50"
-                >
-                  ← Back to Cart
-                </button>
-                <button
-                  onClick={exportReceiptPDF}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-2 border border-blue-300 text-blue-700 font-semibold rounded-lg hover:bg-blue-50 disabled:opacity-50"
-                >
-                  📥 Export to PDF
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isProcessing}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-300 text-white font-semibold rounded-lg transition"
-                >
-                  {isProcessing ? "Processing..." : "✓ Confirm & Process Sale"}
-                </button>
-              </div>
-            </>
-          )}
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isProcessing}
+            className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-2.5 text-sm font-semibold text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear Order
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isProcessing || cartItems.length === 0}
+            className="flex-[2] rounded-lg bg-grass-green px-4 py-2.5 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0"
+          >
+            {isProcessing ? "Processing\u2026" : "Review & Continue \u2192"}
+          </button>
         </div>
       </div>
     </div>

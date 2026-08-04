@@ -184,7 +184,7 @@ return (
 6. Click "Confirm & Process Sale"
 7. **Expected**: PrintableInvoice appears with:
    - Logo in top left
-   - Email: israelmohamed3@gmail.com
+   - Email: getchdr@gmail.com
    - 1 item in table
    - Signature lines at bottom
 8. Click "Print Invoice"
@@ -293,7 +293,7 @@ Replace `/public/Logo.jpg` with your file:
 ```tsx
 <img
   src="/your-logo.png" // Change this
-  alt="Express Pharmaceutical"
+  alt="Hawan Drug Store"
   className="w-16 h-16"
 />
 ```
@@ -303,14 +303,14 @@ Replace `/public/Logo.jpg` with your file:
 In `PrintableInvoice.tsx`, find:
 
 ```tsx
-<h1 className="text-2xl font-bold text-gray-900">EXPRESS PHARMA ONE ME.PLS</h1>
+<h1 className="text-2xl font-bold text-gray-900">Hawan Drug Store</h1>
 ```
 
 Change to your name.
 
 ### Custom Email Address
 
-Currently: `israelmohamed3@gmail.com`
+Currently: `getchdr@gmail.com`
 Find & replace with your email in PrintableInvoice.tsx:
 
 ```tsx

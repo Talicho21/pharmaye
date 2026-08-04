@@ -13,8 +13,8 @@ const bcrypt = require('bcrypt');
       process.exit(0);
     }
 
-    const username = process.env.SEED_ADMIN_USERNAME || 'eseruadmin';
-    const password = process.env.SEED_ADMIN_PASSWORD || 'eseru16';
+    const username = process.env.SEED_ADMIN_USERNAME || 'hawanadmin';
+    const password = process.env.SEED_ADMIN_PASSWORD || 'hawan15';
     const role = process.env.SEED_ADMIN_ROLE || 'admin';
 
     console.log('Creating admin user:', username);

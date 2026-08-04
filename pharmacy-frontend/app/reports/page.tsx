@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import {
@@ -17,6 +17,18 @@ import {
   readSessionCookie,
   setSessionCookie,
 } from "@/app/utils/session";
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Loader2,
+  Printer,
+  RotateCw,
+  Search,
+  FileText,
+} from "lucide-react";
 
 type SalesReportData = {
   range: "24h" | "monthly" | "6months" | "yearly";
@@ -327,7 +339,7 @@ export default function ReportsPage() {
     document.body.innerHTML = `
       <html>
         <head>
-          <title>Express Pharmaceutical Wholesale - Transaction Ledger</title>
+          <title>Hawan Drug Store - Transaction Ledger</title>
           <style>
             body {
               font-family: sans-serif;
@@ -368,7 +380,7 @@ export default function ReportsPage() {
           </style>
         </head>
         <body>
-          <h2 style="margin-bottom: 5px;">Express Pharmaceutical Wholesale</h2>
+          <h2 style="margin-bottom: 5px;">Hawan Drug Store</h2>
           <p style="font-size: 12px; color: #64748b; margin-top: 0;">Transaction History Ledger Report</p>
           <div id="printable-ledger-table">${printContent}</div>
         </body>
@@ -390,9 +402,10 @@ export default function ReportsPage() {
 
   if (!sessionReady || (loading && !hasLoadedOnce)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50/50">
-        <div className="rounded-4xl border border-white/80 bg-white/90 px-8 py-10 text-sm font-semibold text-slate-500 shadow-[0_25px_80px_rgba(15,23,42,0.12)] backdrop-blur">
-          Loading reports...
+      <div className="flex min-h-screen items-center justify-center bg-off-white">
+        <div className="flex items-center gap-3 rounded-xl border border-border-gray bg-pure-white px-8 py-6 text-sm font-semibold text-dark-charcoal/70 shadow-sm">
+          <Loader2 className="h-5 w-5 animate-spin text-grass-green" />
+          Loading reports…
         </div>
       </div>
     );
@@ -406,217 +419,261 @@ export default function ReportsPage() {
         userRole={userRole}
         onSignOut={handleSignOut}
       >
-        <div className="flex flex-col gap-8">
-          <header className="rounded-4xl bg-linear-to-r from-[#0f172a] via-[#1d4ed8] to-[#0ea5e9] p-8 text-white shadow-[0_30px_90px_rgba(15,23,42,0.18)]">
-            <p className="text-xs font-black uppercase tracking-[0.35em] text-sky-100/80">
+        {/* ── Page Header ── */}
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between no-print">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-dark-charcoal/70">
               Reports
             </p>
-            <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-white">
-                  Transaction history ledger
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-tight tracking-tight text-sky-50/85">
-                  Filter, print, and export sales activity logs in a dedicated
-                  reporting view.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => void refreshReports()}
-                className="inline-flex rounded-2xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:border-white/40 hover:bg-white/20"
-              >
-                Refresh
-              </button>
-            </div>
-          </header>
-
-          <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-            <form
-              onSubmit={preventFormSubmit}
-              className="mb-6 grid gap-4 lg:grid-cols-[1fr_1fr_1.1fr] no-print"
+            <h1 className="mt-1 text-2xl font-black leading-tight tracking-tight text-dark-charcoal">
+              Transaction History Ledger
+            </h1>
+            <p className="mt-1 text-sm text-dark-charcoal/70">
+              Filter, print, and export sales activity logs.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void refreshReports()}
+              className="inline-flex items-center gap-2 rounded-lg bg-grass-green px-4 py-2 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
             >
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                  Start Date
-                </label>
+              <RotateCw className="h-4 w-4" />
+              Refresh Data
+            </button>
+            <button
+              type="button"
+              onClick={exportToExcel}
+              className="inline-flex items-center gap-2 rounded-lg border border-border-gray bg-off-white px-4 py-2 text-sm font-semibold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-lg border border-border-gray bg-off-white px-4 py-2 text-sm font-semibold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+            >
+              <Printer className="h-4 w-4" />
+              Print Report
+            </button>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-lg border border-border-gray bg-off-white px-4 py-2 text-sm font-semibold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Filter Toolbar ── */}
+        <div className="mb-5 rounded-xl border border-border-gray bg-pure-white p-5 shadow-sm no-print">
+          <form
+            onSubmit={preventFormSubmit}
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr]"
+          >
+            {/* Start Date */}
+            <div>
+              <label
+                htmlFor="start-date"
+                className="mb-1.5 block text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70"
+              >
+                Start Date
+              </label>
+              <div className="relative">
+                <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-charcoal/80" />
                 <input
+                  id="start-date"
                   type="date"
                   value={startDate}
                   onChange={handleStartDateChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                  className="w-full rounded-lg border border-border-gray bg-off-white py-2.5 pl-9 pr-3 text-sm text-dark-charcoal outline-none transition duration-150 focus:border-border-gray focus:ring-1 focus:ring-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                  End Date
-                </label>
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label
+                htmlFor="end-date"
+                className="mb-1.5 block text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70"
+              >
+                End Date
+              </label>
+              <div className="relative">
+                <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-charcoal/80" />
                 <input
+                  id="end-date"
                   type="date"
                   value={endDate}
                   onChange={handleEndDateChange}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                  className="w-full rounded-lg border border-border-gray bg-off-white py-2.5 pl-9 pr-3 text-sm text-dark-charcoal outline-none transition duration-150 focus:border-border-gray focus:ring-1 focus:ring-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue"
                 />
               </div>
-              <div>
-                <label className="mb-2 block text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                  Search logs
-                </label>
+            </div>
+
+            {/* Search */}
+            <div>
+              <label
+                htmlFor="search-logs"
+                className="mb-1.5 block text-xs font-black uppercase tracking-[0.22em] text-dark-charcoal/70"
+              >
+                Search Transaction / Invoice ID
+              </label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dark-charcoal/80" />
                 <input
+                  id="search-logs"
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by invoice, medicine, seller..."
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-400"
+                  placeholder="Invoice ID, medicine, seller…"
+                  className="w-full rounded-lg border border-border-gray bg-off-white py-2.5 pl-9 pr-3 text-sm text-dark-charcoal placeholder:text-dark-charcoal/70 outline-none transition duration-150 focus:border-border-gray focus:ring-1 focus:ring-border-gray focus-visible:ring-2 focus-visible:ring-primary-blue"
                 />
               </div>
-            </form>
-
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
-              <div className="space-y-1">
-                <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">
-                  Ledger snapshot
-                </p>
-                <p className="text-sm text-slate-600">
-                  Showing {filteredRecords.length} records from {startDate} to{" "}
-                  {endDate}.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handlePrint}
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
-                >
-                  Print PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={exportToExcel}
-                  className="rounded-2xl border border-slate-300 bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                >
-                  Export to Excel
-                </button>
-              </div>
             </div>
+          </form>
 
-            <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200">
-              <div
-                id="printable-ledger-table"
-                className="min-w-[800px] overflow-hidden rounded-4xl border border-slate-200 bg-white shadow-sm"
+          {/* Summary badge */}
+          <div className="mt-4 inline-flex items-center gap-2 rounded-lg bg-off-white px-4 py-2">
+            <FileText className="h-3.5 w-3.5 shrink-0 text-dark-charcoal/80" />
+            <p className="text-xs font-semibold text-dark-charcoal">
+              Showing{" "}
+              <span className="font-black text-dark-charcoal">
+                {filteredRecords.length}
+              </span>{" "}
+              record{filteredRecords.length !== 1 ? "s" : ""} from{" "}
+              <span className="font-black text-dark-charcoal">{startDate}</span>
+              {" "}to{" "}
+              <span className="font-black text-dark-charcoal">{endDate}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* ── Data Table Card ── */}
+        <div className="rounded-xl border border-border-gray bg-pure-white shadow-sm">
+          {/* Filtering indicator */}
+          {isFiltering && (
+            <div className="flex items-center gap-2 border-b border-border-gray bg-off-white/60 px-5 py-2.5 text-xs font-semibold text-dark-charcoal/70">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-grass-green" />
+              Refreshing ledger…
+            </div>
+          )}
+
+          {/* Scrollable table wrapper */}
+          <div className="w-full overflow-x-auto">
+            <div id="printable-ledger-table" className="min-w-[680px]">
+              <table
+                className={`w-full text-left text-sm transition-opacity duration-200 ${
+                  isFiltering ? "pointer-events-none opacity-50" : ""
+                }`}
               >
-                {isFiltering ? (
-                  <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
-                    Filtering ledger...
-                  </div>
-                ) : null}
-                <table className="w-full divide-y divide-slate-200 text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-[0.2em] text-slate-500">
-                    <tr>
-                      <th className="px-4 py-4">Date/Time</th>
-                      <th className="px-4 py-4">Invoice ID</th>
-                      <th className="px-4 py-4">Medicine Name</th>
-                      <th className="px-4 py-4">Quantity Sold</th>
-                      <th className="px-4 py-4">Total Revenue</th>
-                      <th className="px-4 py-4">Served By</th>
-                    </tr>
-                  </thead>
-                  <tbody
-                    className={`divide-y divide-slate-200 bg-white text-slate-700 ${
-                      isFiltering
-                        ? "opacity-50 pointer-events-none transition-opacity duration-200"
-                        : ""
-                    }`}
-                  >
-                    {currentPageRecords.length ? (
-                      currentPageRecords.map((record) => (
-                        <tr key={record.id}>
-                          <td className="px-4 py-4">
-                            {new Date(record.saleDate).toLocaleString("en-GB", {
-                              year: "numeric",
-                              month: "2-digit",
-                              day: "2-digit",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </td>
-                          <td className="px-4 py-4">INV-{record.id}</td>
-                          <td className="px-4 py-4 font-semibold text-slate-900">
-                            {record.medicineName}
-                          </td>
-                          <td className="px-4 py-4">{record.quantitySold}</td>
-                          <td className="px-4 py-4">
-                            ETB {record.totalPrice.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-4">
-                            {record.sellerName || record.receiverName || "N/A"}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          className="px-4 py-8 text-center text-sm text-slate-500"
-                          colSpan={6}
-                        >
-                          No records match the selected filters.
+                <thead>
+                  <tr className="border-b border-border-gray bg-off-white">
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Date &amp; Time
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Invoice ID
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Medicine Name
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Qty Sold
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Total Price (ETB)
+                    </th>
+                    <th className="px-5 py-3.5 text-xs font-black uppercase tracking-[0.2em] text-dark-charcoal">
+                      Served By
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentPageRecords.length ? (
+                    currentPageRecords.map((record, idx) => (
+                      <tr
+                        key={record.id}
+                        className={`border-b border-border-gray/50 transition duration-150 hover:bg-off-white/70 ${
+                          idx % 2 === 0 ? "bg-pure-white" : "bg-off-white/30"
+                        }`}
+                      >
+                        <td className="whitespace-nowrap px-5 py-3.5 text-sm text-dark-charcoal">
+                          {new Date(record.saleDate).toLocaleString("en-GB", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3.5">
+                          <span className="font-mono text-sm font-semibold text-dark-charcoal">
+                            INV-{record.id}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 font-semibold text-dark-charcoal">
+                          {record.medicineName}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3.5 text-dark-charcoal">
+                          {record.quantitySold}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3.5 font-semibold text-dark-charcoal">
+                          ETB {record.totalPrice.toFixed(2)}
+                        </td>
+                        <td className="px-5 py-3.5 text-dark-charcoal/70">
+                          {record.sellerName || record.receiverName || "N/A"}
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <FileText className="h-10 w-10 text-border-gray" />
+                          <p className="text-sm font-semibold text-dark-charcoal/70">
+                            No transactions found within the selected date range.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
+          </div>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-slate-600">
-                Page {currentPage} of {totalPages}
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.max(1, page - 1))
-                  }
-                  disabled={currentPage === 1}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.min(totalPages, page + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-4xl border border-white/80 bg-slate-50/80 p-6 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur-md">
-            <h3 className="mb-4 text-lg font-bold text-slate-950">
-              Quick Links
-            </h3>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Link
-                href="/"
-                className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-sky-300 hover:bg-sky-50"
+          {/* ── Pagination Footer ── */}
+          <div className="flex items-center justify-between border-t border-border-gray px-5 py-3.5">
+            <p className="text-sm font-semibold text-dark-charcoal/70">
+              Page{" "}
+              <span className="font-black text-dark-charcoal">{currentPage}</span>
+              {" "}of{" "}
+              <span className="font-black text-dark-charcoal">{totalPages}</span>
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-gray bg-off-white text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-off-white disabled:hover:text-dark-charcoal"
               >
-                ← Back to Dashboard
-              </Link>
-              <Link
-                href="/analytics"
-                className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700 transition-all hover:border-sky-300 hover:bg-sky-50"
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                aria-label="Next page"
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-gray bg-off-white text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-off-white disabled:hover:text-dark-charcoal"
               >
-                View Analytics
-              </Link>
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-          </section>
+          </div>
         </div>
       </AppShell>
     </ProtectedRoute>

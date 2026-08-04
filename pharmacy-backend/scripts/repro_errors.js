@@ -2,7 +2,7 @@
 (async () => {
   try {
     const creds = [
-      { username: 'eseruadmin', password: 'eseru16', role: 'admin' },
+      { username: 'hawanadmin', password: 'hawan15', role: 'admin' },
       { username: 'expresstaff', password: 'express16', role: 'staff' },
     ];
 

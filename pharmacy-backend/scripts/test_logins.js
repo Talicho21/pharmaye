@@ -3,7 +3,7 @@
   const url = process.env.BACKEND_URL || 'http://localhost:5000/api/auth/login';
 
   const tests = [
-    { username: 'eseruadmin', password: 'eseru16' },
+    { username: 'hawanadmin', password: 'hawan15' },
     { username: 'expresstaff1', password: 'express16' },
     { username: 'testers12', password: 'testersdev1' },
   ];

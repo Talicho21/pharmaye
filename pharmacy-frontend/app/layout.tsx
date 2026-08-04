@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Express Pharmaceutical Wholesale",
+  title: "Hawan Drug Store",
   description:
-    "Inventory and sales dashboard for Express Pharmaceutical Wholesale.",
+    "Inventory and sales dashboard for Hawan Drug Store.",
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-off-white text-slate-800">
         {children}
       </body>
     </html>

@@ -505,7 +505,7 @@ export function PrintableInvoice({
             {/* Left: Company Name */}
             <div>
               <h1 className="text-4xl font-bold text-[#2563EB]">
-                EXPRESS PHARMA ONE ME. PLC
+                Hawan Drug Store
               </h1>
 
               <p className="text-base text-[#64748B] mt-1">
@@ -514,8 +514,8 @@ export function PrintableInvoice({
               {/* Company contact sits below the name */}
               <div className="mt-4 text-sm text-[#64748B]">
                 <div>Address: Addis Ababa (registered)</div>
-                <div>Phone: +251981798081</div>
-                <div>Email: epharm38@gmail.com</div>
+                <div>Phone: 092180070</div>
+                <div>Email: getchdr@gmail.com</div>
               </div>
             </div>
 
@@ -584,8 +584,8 @@ export function PrintableInvoice({
             <div>
               <p className="font-semibold text-gray-900">Contact Information</p>
               <p className="text-base">TIN: 0098248381</p>
-              <p className="text-base">Phone: +251981798081</p>
-              <p className="text-base">Email: epharm38@gmail.com</p>
+              <p className="text-base">Phone: 092180070</p>
+              <p className="text-base">Email: getchdr@gmail.com</p>
             </div>
             <div className="text-right">
               <p className="font-semibold text-gray-900">Invoice Details</p>

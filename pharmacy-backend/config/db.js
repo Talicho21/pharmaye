@@ -1,7 +1,8 @@
 // backend/config/db.js
 const { Pool } = require('pg');
 require('dotenv').config();
-
+const dns = require('node:dns');
+dns.setDefaultResultOrder('ipv6first');
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const databasePoolerUrl = process.env.DATABASE_POOLER_URL?.trim();
 const directDatabaseUrl = databaseUrl;
