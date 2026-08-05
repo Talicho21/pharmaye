@@ -81,9 +81,13 @@ export default function AnalyticsPage() {
       const inventoryResponse = await fetch(`${API_BASE}/inventory`, {
         cache: "no-store",
       });
-      const inventoryPayload =
-        (await inventoryResponse.json()) as InventoryItem[];
-      setInventory(Array.isArray(inventoryPayload) ? inventoryPayload : []);
+      const rawData = await inventoryResponse.json();
+      const itemsArray = Array.isArray(rawData) 
+        ? rawData 
+        : Array.isArray(rawData?.items) 
+          ? rawData.items 
+          : [];
+      setInventory(itemsArray as InventoryItem[]);
 
       if (authToken) {
         const reportResponse = await fetch(
