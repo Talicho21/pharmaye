@@ -943,7 +943,7 @@ export default function HomePage() {
           />
 
           {/* KPI Row */}
-          <section className="grid gap-4 sm:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-dark-charcoal/70">
@@ -996,7 +996,7 @@ export default function HomePage() {
           </section>
 
           {/* Quick Action Tiles */}
-          <section className="grid gap-4 sm:grid-cols-3">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Link
               href="/sell-out"
               className="group flex flex-col items-center justify-center gap-3 rounded-xl border border-border-gray bg-pure-white p-6 text-center shadow-sm transition duration-150 hover:bg-primary-blue/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"

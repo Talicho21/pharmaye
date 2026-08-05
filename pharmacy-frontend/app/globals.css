@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* ── Responsive drawer transition helpers ── */
+.duration-250 {
+  transition-duration: 250ms;
+}
+
+/* Ensure the right-column of the POS cart doesn't have its sticky footer clipped */
+.pos-right-col {
+  position: relative;
+}
+
 :root {
   /* New Theme Tokens */
   --primary-blue: #1D5FAE;

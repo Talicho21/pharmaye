@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState, useMemo } from "react";
 import { generateInvoiceNumber } from "../utils/invoiceUtils";
 import {
@@ -1662,46 +1662,49 @@ export function MultiItemOrderCart({
           )}
         </div>
 
-        {/* Totals Box */}
-        <div className="rounded-xl bg-primary-blue p-4 text-white">
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-white/60">Items in cart</span>
-              <span className="font-semibold">{cartTotals.itemCount}</span>
+        {/* Totals Box + Actions — sticky on mobile, static on desktop */}
+        <div className="sticky bottom-0 z-10 flex flex-col gap-3 rounded-b-xl border-t border-border-gray bg-pure-white p-4 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] lg:static lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none lg:p-0 lg:gap-5">
+          {/* Totals Box */}
+          <div className="rounded-xl bg-primary-blue p-4 text-white">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Items in cart</span>
+                <span className="font-semibold">{cartTotals.itemCount}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-white/60">Total quantity</span>
+                <span className="font-semibold">{cartTotals.totalQuantity}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-white/60">Total quantity</span>
-              <span className="font-semibold">{cartTotals.totalQuantity}</span>
+            <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-white/50">
+                Grand Total
+              </span>
+              <span className="tabular-nums text-2xl font-black text-grass-green">
+                ETB {cartTotals.totalPrice.toFixed(2)}
+              </span>
             </div>
           </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3">
-            <span className="text-xs font-black uppercase tracking-[0.2em] text-white/50">
-              Grand Total
-            </span>
-            <span className="tabular-nums text-2xl font-black text-grass-green">
-              ETB {cartTotals.totalPrice.toFixed(2)}
-            </span>
-          </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isProcessing}
-            className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-2.5 text-sm font-semibold text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Clear Order
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isProcessing || cartItems.length === 0}
-            className="flex-[2] rounded-lg bg-grass-green px-4 py-2.5 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0"
-          >
-            {isProcessing ? "Processing\u2026" : "Review & Continue \u2192"}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isProcessing}
+              className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-2.5 text-sm font-semibold text-dark-charcoal transition duration-150 hover:bg-navy-border hover:text-dark-charcoal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Clear Order
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isProcessing || cartItems.length === 0}
+              className="flex-[2] rounded-lg bg-grass-green px-4 py-2.5 text-sm font-bold text-dark-charcoal shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0"
+            >
+              {isProcessing ? "Processing\u2026" : "Review & Continue \u2192"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

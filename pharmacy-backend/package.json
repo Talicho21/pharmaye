@@ -1,21 +1,11 @@
 {
-  "name": "pharmacy-system",
+  "name": "pharmacy-backend",
   "version": "1.0.0",
   "description": "Hawan Drug Store - Management Suite Portal",
-  "main": "pharmacy-backend/server.js",
   "type": "commonjs",
-  "workspaces": [
-    "pharmacy-backend",
-    "pharmacy-frontend"
-  ],
   "scripts": {
-    "install-all": "npm install --workspaces && npm install",
-    "dev": "node server.js",
-    "backend-dev": "npm run dev --workspace=pharmacy-backend",
-    "backend-start": "npm start --workspace=pharmacy-backend",
-    "frontend-dev": "npm run dev --workspace=pharmacy-frontend",
-    "frontend-build": "npm run build --workspace=pharmacy-frontend",
-    "frontend-start": "npm start --workspace=pharmacy-frontend"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "keywords": [
     "pharmacy",

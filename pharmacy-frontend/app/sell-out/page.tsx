@@ -7,6 +7,7 @@ import {
   MultiItemOrderCart,
   type CartItem,
 } from "@/app/components/MultiItemOrderCart";
+import { Toast } from "@/app/components/Toast";
 import {
   clearSessionCookie,
   readSessionCookie,
@@ -52,6 +53,7 @@ export default function SellOutPage() {
     description: string;
     tone: "success" | "error" | "info";
   } | null>(null);
+  const [popupToast, setPopupToast] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
   const router = useRouter();
@@ -287,11 +289,7 @@ export default function SellOutPage() {
         throw new Error(payload?.message || "Could not process bulk sale");
       }
 
-      setToast({
-        title: "Sale recorded",
-        description: `Processed ${payload?.data?.total_items_processed ?? items.length} item(s).`,
-        tone: "success",
-      });
+      setPopupToast("Successfully sold out.");
 
       // Update inventory after sale
       const soldById = new Map<number, number>();
@@ -426,11 +424,16 @@ export default function SellOutPage() {
       <MultiItemOrderCart
         isOpen={true}
         onClose={() => {
-          window.location.href = "/";
+          // Stay on the Sell Out page — no redirect after a completed sale
         }}
         onSubmit={handleSellOutSubmit}
         isProcessing={isProcessingSale}
       />
+
+      {/* ── Success popup (mirrors Stock Entry toast) ── */}
+      {popupToast && (
+        <Toast message={popupToast} onClose={() => setPopupToast(null)} />
+      )}
     </AppShell>
   );
 }
