@@ -56,7 +56,9 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
-            'engine' => null,
+            // WAMP's MySQL defaults to MyISAM, whose 1000-byte index limit
+            // breaks utf8mb4 unique indexes; InnoDB is required regardless.
+            'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

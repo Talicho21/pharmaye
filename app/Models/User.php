@@ -2,11 +2,18 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * Deliberately NOT store-scoped with a global scope: the session resolves the
+ * user by primary key before any tenant context exists. Tenant isolation for
+ * authentication is enforced by including store_id in the Auth::attempt()
+ * credentials (see AuthenticatedSessionController).
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -18,9 +25,11 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'store_id',
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -43,6 +52,17 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Admin;
     }
 }

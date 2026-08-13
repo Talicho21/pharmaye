@@ -13,12 +13,17 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('store_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role', 20)->default('staff');
             $table->rememberToken();
             $table->timestamps();
+
+            // Emails may repeat across stores; uniqueness is per store.
+            $table->unique(['store_id', 'email']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
