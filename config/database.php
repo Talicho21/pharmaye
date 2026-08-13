@@ -84,6 +84,23 @@ return [
             ]) : [],
         ],
 
+        // Read-only source for the one-off legacy data migration
+        // (php artisan legacy:migrate / legacy:reconcile).
+        'legacy_pgsql' => [
+            'driver' => 'pgsql',
+            'url' => env('LEGACY_DATABASE_URL'),
+            'host' => env('LEGACY_PGHOST', '127.0.0.1'),
+            'port' => env('LEGACY_PGPORT', '5432'),
+            'database' => env('LEGACY_PGDATABASE', 'postgres'),
+            'username' => env('LEGACY_PGUSER', 'postgres'),
+            'password' => env('LEGACY_PGPASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('LEGACY_PGSSLMODE', 'prefer'),
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),
