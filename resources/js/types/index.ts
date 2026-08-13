@@ -24,6 +24,8 @@ export interface NavItem {
 export interface StoreBranding {
     name: string;
     slug: string;
+    phone: string | null;
+    address: string | null;
     logo_url: string | null;
 }
 

@@ -74,6 +74,8 @@ class HandleInertiaRequests extends Middleware
         return [
             'name' => $store->name,
             'slug' => $store->slug,
+            'phone' => $store->phone,
+            'address' => $store->address,
             'logo_url' => $store->logo_path ? asset('storage/'.$store->logo_path) : null,
         ];
     }
