@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { LoaderCircle, Store } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
+import { SharedData } from '@/types';
 
 interface LoginForm {
     email: string;
@@ -22,6 +23,8 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const { store } = usePage<SharedData>().props;
+
     const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         email: '',
         password: '',
@@ -36,8 +39,26 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
+        <AuthLayout title={store ? `Sign in to ${store.name}` : 'Log in to your account'} description="Enter your email and password below to log in">
             <Head title="Log in" />
+
+            {store && (
+                <div className="flex items-center justify-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3">
+                    {store.logo_url ? (
+                        <img src={store.logo_url} alt={`${store.name} logo`} className="h-10 w-10 rounded-md object-cover" />
+                    ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
+                            <Store className="h-5 w-5 text-primary" />
+                        </div>
+                    )}
+                    <div className="text-left">
+                        <p className="text-sm font-semibold">{store.name}</p>
+                        <Link href={route('store.find')} className="text-muted-foreground text-xs underline underline-offset-2">
+                            Not your pharmacy? Switch store
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             <form className="flex flex-col gap-6" onSubmit={submit}>
                 <div className="grid gap-6">
@@ -80,7 +101,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                     </div>
 
                     <div className="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" tabIndex={3} />
+                        <Checkbox id="remember" name="remember" tabIndex={3} checked={data.remember} onClick={() => setData('remember', !data.remember)} />
                         <Label htmlFor="remember">Remember me</Label>
                     </div>
 
@@ -88,13 +109,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Log in
                     </Button>
-                </div>
-
-                <div className="text-muted-foreground text-center text-sm">
-                    Don't have an account?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Sign up
-                    </TextLink>
                 </div>
             </form>
 

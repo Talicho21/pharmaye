@@ -21,17 +21,26 @@ export interface NavItem {
     isActive?: boolean;
 }
 
+export interface StoreBranding {
+    name: string;
+    slug: string;
+    logo_url: string | null;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    store: StoreBranding | null;
     [key: string]: unknown;
 }
 
 export interface User {
     id: number;
+    store_id: number;
     name: string;
     email: string;
+    role: 'admin' | 'staff';
     avatar?: string;
     email_verified_at: string | null;
     created_at: string;

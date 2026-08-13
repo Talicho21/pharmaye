@@ -41,7 +41,15 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // store_id is part of the credentials, not just email/password:
+        // emails may repeat across stores, so authentication must be scoped
+        // to the store selected on /find-store.
+        $credentials = [
+            ...$this->only('email', 'password'),
+            'store_id' => $this->session()->get('store_id'),
+        ];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

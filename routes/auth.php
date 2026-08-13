@@ -6,20 +6,27 @@ use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
-use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Auth\StoreSelectionController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
-        ->name('register');
+    // Store-selection-first login flow: pick a store, then log in to it.
+    // Public self-registration is intentionally absent (users are provisioned
+    // by their store admin).
+    Route::get('find-store', [StoreSelectionController::class, 'show'])
+        ->name('store.find');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('find-store', [StoreSelectionController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('store.select');
 
-    Route::get('login', [AuthenticatedSessionController::class, 'create'])
-        ->name('login');
+    Route::middleware('store.selected')->group(function () {
+        Route::get('login', [AuthenticatedSessionController::class, 'create'])
+            ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+        Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    });
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Store;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -45,6 +46,31 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Store branding for every page: the login page renders the store
+            // selected via /find-store; authenticated pages render the user's.
+            'store' => fn (): ?array => $this->resolveStoreBranding($request),
         ]);
+    }
+
+    /**
+     * @return array{name: string, slug: string, logo_url: string|null}|null
+     */
+    private function resolveStoreBranding(Request $request): ?array
+    {
+        $store = $request->user()?->store;
+
+        if ($store === null && $request->hasSession() && $request->session()->has('store_id')) {
+            $store = Store::find($request->session()->get('store_id'));
+        }
+
+        if ($store === null) {
+            return null;
+        }
+
+        return [
+            'name' => $store->name,
+            'slug' => $store->slug,
+            'logo_url' => $store->logo_path ? asset('storage/'.$store->logo_path) : null,
+        ];
     }
 }
