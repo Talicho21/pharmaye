@@ -49,6 +49,10 @@ class HandleInertiaRequests extends Middleware
             // Store branding for every page: the login page renders the store
             // selected via /find-store; authenticated pages render the user's.
             'store' => fn (): ?array => $this->resolveStoreBranding($request),
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'receipt' => fn () => $request->session()->get('receipt'),
+            ],
         ]);
     }
 

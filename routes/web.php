@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\AnalyticsController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::get('/', function () {
     return auth()->check()
@@ -10,9 +14,24 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // POS
+    Route::get('sell-out', [SaleController::class, 'create'])->name('sell-out');
+    Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+
+    // Inventory (batches)
+    Route::get('stock-entry', [InventoryController::class, 'create'])->name('stock-entry');
+    Route::post('stock-entry', [InventoryController::class, 'store'])->name('batches.store');
+    Route::put('batches/{batch}', [InventoryController::class, 'update'])->name('batches.update');
+
+    Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+
+    // Admin only
+    Route::middleware('admin')->group(function () {
+        Route::delete('batches/{batch}', [InventoryController::class, 'destroy'])->name('batches.destroy');
+        Route::get('reports', [AnalyticsController::class, 'index'])->name('reports');
+    });
 });
 
 require __DIR__.'/settings.php';
