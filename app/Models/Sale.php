@@ -23,6 +23,7 @@ class Sale extends Model
         'customer_tin',
         'customer_sno',
         'receiver_name',
+        'seller_name',
         'reference',
         'subtotal',
         'tax_amount',

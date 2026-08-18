@@ -13,6 +13,13 @@ class StoreBatchRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('reorder_level') === '') {
+            $this->merge(['reorder_level' => null]);
+        }
+    }
+
     public function rules(): array
     {
         return [
@@ -25,6 +32,7 @@ class StoreBatchRequest extends FormRequest
             'category_id' => ['nullable', 'integer'],
             'new_category_name' => ['nullable', 'string', 'max:255'],
             'default_price' => ['nullable', 'numeric', 'min:0'],
+            'reorder_level' => ['nullable', 'integer', 'min:0'],
 
             'batch_number' => ['required', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'min:1'],

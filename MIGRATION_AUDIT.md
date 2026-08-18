@@ -123,6 +123,19 @@ Reconciliation targets: row counts per table, `SUM(inventory.quantity)`,
 `SUM(inventory.quantity * price_per_unit)` vs new inventory value, `SUM(sales.total_price)` vs
 `SUM(sale_items.total_price)` and `SUM(sales.total_amount)`.
 
+### Running the migration commands on this machine (WAMP)
+
+Keeping `extension=pgsql` / `extension=pdo_pgsql` permanently enabled in WAMP's
+`php.ini` crashes the PHP built-in web server (access violation on every request),
+so they stay disabled. Load them on demand only for the one-off legacy commands:
+
+```powershell
+php -d extension=pdo_pgsql -d extension=pgsql artisan legacy:migrate
+php -d extension=pdo_pgsql -d extension=pgsql artisan legacy:reconcile
+```
+
+Configure `LEGACY_DATABASE_URL` (or the `LEGACY_PG*` variables) in `.env` first.
+
 ## 8. Legacy gaps deliberately fixed in the new system
 
 - Public stock-in / category-create / register / inventory-read endpoints → all auth-gated.

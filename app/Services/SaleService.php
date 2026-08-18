@@ -30,7 +30,7 @@ class SaleService
      * the batches being sold from, so two simultaneous sales cannot oversell.
      *
      * @param  array<int, array{medicine_id: int, quantity: int, batch_id?: int|null, unit_price?: float|null}>  $lines
-     * @param  array{customer_name?: ?string, customer_tin?: ?string, customer_sno?: ?string, receiver_name?: ?string, reference?: ?string, payment_method?: string, discount_amount?: float, tax_amount?: float}  $meta
+     * @param  array{customer_name?: ?string, customer_tin?: ?string, customer_sno?: ?string, invoice_no?: ?string, receiver_name?: ?string, seller_name?: ?string, reference?: ?string, payment_method?: string, discount_amount?: float, tax_amount?: float}  $meta
      *
      * @throws InsufficientStockException
      */
@@ -66,14 +66,17 @@ class SaleService
             $taxAmount = round((float) ($meta['tax_amount'] ?? 0), 2);
             $discountAmount = round((float) ($meta['discount_amount'] ?? 0), 2);
 
+            $invoiceNo = trim((string) ($meta['invoice_no'] ?? ''));
+
             $sale = Sale::query()->create([
                 'store_id' => $store->id,
                 'user_id' => $user->id,
-                'invoice_no' => $this->nextInvoiceNumber($store),
+                'invoice_no' => $invoiceNo !== '' ? $invoiceNo : $this->nextInvoiceNumber($store),
                 'customer_name' => $meta['customer_name'] ?? null,
                 'customer_tin' => $meta['customer_tin'] ?? null,
                 'customer_sno' => $meta['customer_sno'] ?? null,
-                'receiver_name' => $meta['receiver_name'] ?? null,
+                'receiver_name' => $meta['receiver_name'] ?? ($meta['customer_name'] ?? null),
+                'seller_name' => $meta['seller_name'] ?? $user->name,
                 'reference' => $meta['reference'] ?? null,
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,

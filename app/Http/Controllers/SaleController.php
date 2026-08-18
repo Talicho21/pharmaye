@@ -87,7 +87,7 @@ class SaleController extends Controller
             'receiver_name' => $sale->receiver_name,
             'reference' => $sale->reference,
             'payment_method' => $sale->payment_method->value,
-            'seller_name' => $request->user()->name,
+            'seller_name' => $sale->seller_name ?: $request->user()->name,
             'subtotal' => (float) $sale->subtotal,
             'tax_amount' => (float) $sale->tax_amount,
             'discount_amount' => (float) $sale->discount_amount,

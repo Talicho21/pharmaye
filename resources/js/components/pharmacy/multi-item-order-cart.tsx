@@ -1,7 +1,8 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { AlertCircle, Loader2, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import type { SharedData } from '@/types';
 import type { BatchOption, CartItem, MedicineSearchResult, SaleMeta } from '@/types/pharmacy';
 
 type EditableForm = {
@@ -40,15 +41,20 @@ type MultiItemOrderCartProps = {
  * with a per-line manual batch override for edge cases.
  */
 export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, serverError }: MultiItemOrderCartProps) {
+    const inputClass =
+        'w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50';
+
+    const { auth } = usePage<SharedData>().props;
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [editableForm, setEditableForm] = useState<EditableForm>(emptyForm());
     const [customerName, setCustomerName] = useState('');
     const [tinNumber, setTinNumber] = useState('');
+    const [invoiceNo, setInvoiceNo] = useState('');
     const [customerSNo, setCustomerSNo] = useState('');
     const [reference, setReference] = useState('');
-    const [receiverName, setReceiverName] = useState('');
+    const [sellerName, setSellerName] = useState(auth.user?.name ?? '');
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit'>('cash');
     const [viewMode, setViewMode] = useState<'cart' | 'receipt'>('cart');
     const [formValidationError, setFormValidationError] = useState('');
@@ -182,9 +188,10 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
         setCartItems([]);
         setCustomerName('');
         setTinNumber('');
+        setInvoiceNo('');
         setCustomerSNo('');
         setReference('');
-        setReceiverName('');
+        setSellerName(auth.user?.name ?? '');
         setPaymentMethod('cash');
         setViewMode('cart');
         setFormValidationError('');
@@ -215,7 +222,9 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
             customer_name: customerName.trim(),
             customer_tin: tinNumber.trim(),
             customer_sno: customerSNo.trim() || undefined,
-            receiver_name: receiverName.trim() || undefined,
+            invoice_no: invoiceNo.trim() || undefined,
+            seller_name: sellerName.trim() || undefined,
+            receiver_name: customerName.trim(),
             reference: reference.trim() || undefined,
             payment_method: paymentMethod,
         });
@@ -238,7 +247,9 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                 <div className="border-b border-border-gray bg-off-white px-6 py-4">
                     <h2 className="text-lg font-bold text-dark-charcoal">Sale Receipt — Review Before Confirming</h2>
                     <p className="mt-0.5 text-sm text-dark-charcoal/70">
-                        The invoice number is assigned by the system when the sale is confirmed.
+                        {invoiceNo.trim()
+                            ? `Invoice ${invoiceNo.trim()} will be recorded when the sale is confirmed.`
+                            : 'The invoice number is assigned by the system when the sale is confirmed.'}
                     </p>
                 </div>
                 <div className="space-y-4 overflow-y-auto p-6">
@@ -262,6 +273,10 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                             <div>
                                 <p className="mb-1 text-sm font-semibold tracking-wide text-[#64748B] uppercase">Payment:</p>
                                 <p className="text-lg font-semibold text-[#334155] capitalize">{paymentMethod}</p>
+                            </div>
+                            <div>
+                                <p className="mb-1 text-sm font-semibold tracking-wide text-[#64748B] uppercase">Seller Name:</p>
+                                <p className="text-lg font-semibold text-[#334155]">{sellerName || '—'}</p>
                             </div>
                             <div>
                                 <p className="mb-1 text-sm font-semibold tracking-wide text-[#64748B] uppercase">Date:</p>
@@ -514,7 +529,7 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                             value={customerName}
                             onChange={(e) => setCustomerName(e.target.value)}
                             disabled={isProcessing}
-                            className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+                            className={inputClass}
                         />
                         <input
                             type="text"
@@ -522,34 +537,44 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                             value={tinNumber}
                             onChange={(e) => setTinNumber(e.target.value)}
                             disabled={isProcessing}
-                            className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+                            className={inputClass}
                         />
                         <div className="grid grid-cols-2 gap-2.5">
+                            <input
+                                type="text"
+                                placeholder="Invoice No"
+                                value={invoiceNo}
+                                onChange={(e) => setInvoiceNo(e.target.value)}
+                                disabled={isProcessing}
+                                className={inputClass}
+                            />
                             <input
                                 type="text"
                                 placeholder="S.No"
                                 value={customerSNo}
                                 onChange={(e) => setCustomerSNo(e.target.value)}
                                 disabled={isProcessing}
-                                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+                                className={inputClass}
                             />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
                             <input
                                 type="text"
                                 placeholder="Reference"
                                 value={reference}
                                 onChange={(e) => setReference(e.target.value)}
                                 disabled={isProcessing}
-                                className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
+                                className={inputClass}
+                            />
+                            <input
+                                type="text"
+                                placeholder="Seller Name"
+                                value={sellerName}
+                                onChange={(e) => setSellerName(e.target.value)}
+                                disabled={isProcessing}
+                                className={inputClass}
                             />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Receiver Name"
-                            value={receiverName}
-                            onChange={(e) => setReceiverName(e.target.value)}
-                            disabled={isProcessing}
-                            className="w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50"
-                        />
                         {/* Payment method pill buttons */}
                         <div className="flex items-center gap-2 pt-1">
                             {(['cash', 'credit'] as const).map((method) => (

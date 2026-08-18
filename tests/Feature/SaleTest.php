@@ -121,6 +121,26 @@ test('invoice numbers increment per store per day', function () {
     expect($invoices->last())->toBe('INV-'.now()->format('Ymd').'-0002');
 });
 
+test('a provided invoice number and seller name are stored instead of the generated defaults', function () {
+    makeBatch($this->store, $this->medicine, 100, now()->addYear()->toDateString());
+
+    $this->actingAs($this->user)->post(route('sales.store'), [
+        'items' => [['medicine_id' => $this->medicine->id, 'quantity' => 1]],
+        'invoice_no' => 'INV-HAWAN-42',
+        'seller_name' => 'Cashier One',
+        'customer_sno' => 'S-9',
+        'reference' => 'PO-100',
+        'payment_method' => 'cash',
+    ]);
+
+    $sale = Sale::withoutGlobalScopes()->first();
+
+    expect($sale->invoice_no)->toBe('INV-HAWAN-42')
+        ->and($sale->seller_name)->toBe('Cashier One')
+        ->and($sale->customer_sno)->toBe('S-9')
+        ->and($sale->reference)->toBe('PO-100');
+});
+
 test('overselling is rejected and nothing is written', function () {
     $batch = makeBatch($this->store, $this->medicine, 3, now()->addYear()->toDateString());
 

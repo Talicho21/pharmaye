@@ -11,7 +11,7 @@ const UNITS = ['tablet', 'capsule', 'bottle', 'box', 'vial', 'ampoule', 'sachet'
 interface StockEntryProps extends SharedData {
     categories: { id: number; name: string }[];
     suppliers: { id: number; name: string }[];
-    medicines: { id: number; name: string; unit: string; default_price: string | number }[];
+    medicines: { id: number; name: string; unit: string; default_price: string | number; reorder_level: number }[];
     flash: { success?: string };
 }
 
@@ -35,6 +35,7 @@ export default function StockEntry() {
         category_id: '' as string | number,
         new_category_name: '',
         default_price: '' as string | number,
+        reorder_level: 10 as string | number,
         batch_number: '',
         quantity: '' as string | number,
         unit_cost: '' as string | number,
@@ -88,8 +89,12 @@ export default function StockEntry() {
                                     type="button"
                                     onClick={() => {
                                         setMedicineMode(mode);
-                                        form.setData('medicine_id', '');
-                                        form.setData('medicine_name', '');
+                                        form.setData({
+                                            ...form.data,
+                                            medicine_id: '',
+                                            medicine_name: '',
+                                            reorder_level: 10,
+                                        });
                                     }}
                                     className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
                                         medicineMode === mode
@@ -104,21 +109,47 @@ export default function StockEntry() {
                     </div>
 
                     {medicineMode === 'existing' ? (
-                        <div>
-                            <label className={labelClass}>Medicine</label>
-                            <select
-                                value={form.data.medicine_id}
-                                onChange={(e) => form.setData('medicine_id', e.target.value)}
-                                className={inputClass}
-                            >
-                                <option value="">Select a medicine…</option>
-                                {medicines.map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                        {m.name} ({m.unit})
-                                    </option>
-                                ))}
-                            </select>
-                            {form.errors.medicine_id && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.medicine_id}</p>}
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="sm:col-span-2">
+                                <label className={labelClass}>Medicine</label>
+                                <select
+                                    value={form.data.medicine_id}
+                                    onChange={(e) => {
+                                        const selected = medicines.find((m) => String(m.id) === e.target.value);
+                                        form.setData({
+                                            ...form.data,
+                                            medicine_id: e.target.value,
+                                            default_price: selected?.default_price ?? '',
+                                            reorder_level: selected?.reorder_level ?? 10,
+                                        });
+                                    }}
+                                    className={inputClass}
+                                >
+                                    <option value="">Select a medicine…</option>
+                                    {medicines.map((m) => (
+                                        <option key={m.id} value={m.id}>
+                                            {m.name} ({m.unit})
+                                        </option>
+                                    ))}
+                                </select>
+                                {form.errors.medicine_id && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.medicine_id}</p>}
+                            </div>
+                            <div>
+                                <label className={labelClass}>Low Stock Level</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={form.data.reorder_level}
+                                    onChange={(e) => form.setData('reorder_level', e.target.value)}
+                                    className={inputClass}
+                                />
+                                <p className="mt-1 text-xs text-dark-charcoal/60">
+                                    Flagged as low stock when remaining units fall to this number or below.
+                                </p>
+                                {form.errors.reorder_level && (
+                                    <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.reorder_level}</p>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <div className="grid gap-4 sm:grid-cols-2">
@@ -166,6 +197,22 @@ export default function StockEntry() {
                                     placeholder="Optional"
                                     className={inputClass}
                                 />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Low Stock Level</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={form.data.reorder_level}
+                                    onChange={(e) => form.setData('reorder_level', e.target.value)}
+                                    className={inputClass}
+                                />
+                                <p className="mt-1 text-xs text-dark-charcoal/60">
+                                    Flagged as low stock when remaining units fall to this number or below. Default is 10.
+                                </p>
+                                {form.errors.reorder_level && (
+                                    <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.reorder_level}</p>
+                                )}
                             </div>
                             <div>
                                 <label className={labelClass}>Category</label>

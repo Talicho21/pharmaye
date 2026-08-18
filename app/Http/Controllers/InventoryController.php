@@ -30,7 +30,7 @@ class InventoryController extends Controller
         return Inertia::render('stock-entry', [
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
             'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name']),
-            'medicines' => Medicine::query()->orderBy('name')->get(['id', 'name', 'unit', 'default_price']),
+            'medicines' => Medicine::query()->orderBy('name')->get(['id', 'name', 'unit', 'default_price', 'reorder_level']),
         ]);
     }
 
@@ -56,8 +56,15 @@ class InventoryController extends Controller
             if (! empty($validated['medicine_id'])) {
                 $medicine = Medicine::query()->findOrFail($validated['medicine_id']);
 
+                $updates = [];
                 if (isset($validated['default_price'])) {
-                    $medicine->update(['default_price' => $validated['default_price']]);
+                    $updates['default_price'] = $validated['default_price'];
+                }
+                if (array_key_exists('reorder_level', $validated) && $validated['reorder_level'] !== null) {
+                    $updates['reorder_level'] = $validated['reorder_level'];
+                }
+                if ($updates !== []) {
+                    $medicine->update($updates);
                 }
             } else {
                 $medicine = Medicine::query()->create([
@@ -67,6 +74,7 @@ class InventoryController extends Controller
                     'unit' => $validated['unit'],
                     'units_per_box' => $validated['units_per_box'] ?? null,
                     'default_price' => $validated['default_price'] ?? 0,
+                    'reorder_level' => $validated['reorder_level'] ?? 10,
                 ]);
             }
 

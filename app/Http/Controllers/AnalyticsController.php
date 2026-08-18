@@ -131,7 +131,7 @@ class AnalyticsController extends Controller
             'created_at' => $sale->created_at->toIso8601String(),
             'customer_name' => $sale->customer_name,
             'receiver_name' => $sale->receiver_name,
-            'seller_name' => $sale->user?->name,
+            'seller_name' => $sale->seller_name ?: $sale->user?->name,
             'payment_method' => $sale->payment_method->value,
             'total_amount' => (float) $sale->total_amount,
             'items' => $sale->items->map(fn ($item): array => [

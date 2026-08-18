@@ -1,4 +1,0 @@
-◇ injected env (5) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-✅ Connected to PostgreSQL Database successfully.
-💊 Pharmacy Backend is Running on Port 5000
