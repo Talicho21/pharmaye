@@ -65,6 +65,3 @@ Homestead.yaml
 .backup/**/.env.*
 .backup/**/*.log
 .backup/**/*.pem
-
-# Local scratch (old Next.js integration notes)
-/DASHBOARD_INTEGRATION.tsx
