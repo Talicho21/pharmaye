@@ -17,8 +17,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Batch CRUD. All queries are tenant-scoped by the StoreScope global scope
+ * Batch CRUD. All queries are tenant-scoped by the store global scopes
  * on Batch/Medicine/Category — no manual store_id filtering here.
+ * Categories also include shared (store_id null) rows.
  */
 class InventoryController extends Controller
 {

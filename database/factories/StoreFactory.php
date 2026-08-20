@@ -20,6 +20,10 @@ class StoreFactory extends Factory
             'address' => fake()->address(),
             'phone' => fake()->phoneNumber(),
             'logo_path' => null,
+            'subscription_status' => 'trial',
+            'plan' => 'standard',
+            'monthly_fee' => 0,
+            'trial_ends_at' => now()->addDays(14),
         ];
     }
 }

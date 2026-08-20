@@ -3,6 +3,7 @@ import { AlertTriangle, Boxes, CircleDollarSign, PackageSearch, Pencil, RefreshC
 import { FormEventHandler, useEffect, useState } from 'react';
 
 import { AppShell } from '@/components/pharmacy/app-shell';
+import { SearchableSelect } from '@/components/pharmacy/searchable-select';
 import { Toast } from '@/components/pharmacy/toast';
 import type { SharedData } from '@/types';
 import type { InventoryRow, Paginated } from '@/types/pharmacy';
@@ -169,18 +170,17 @@ export default function Dashboard() {
                             className="w-56 rounded-lg border border-border-gray bg-pure-white py-2 pr-3 pl-9 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
                         />
                     </div>
-                    <select
+                    <SearchableSelect
+                        className="w-64"
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
-                    >
-                        <option value="all">All categories</option>
-                        {categories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.name}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={setCategory}
+                        placeholder="Search categories…"
+                        pinValues={['all']}
+                        options={[
+                            { value: 'all', label: 'All categories' },
+                            ...categories.map((c) => ({ value: String(c.id), label: c.name })),
+                        ]}
+                    />
                 </div>
 
                 <div className="overflow-x-auto">

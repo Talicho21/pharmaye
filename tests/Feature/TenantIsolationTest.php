@@ -35,7 +35,8 @@ test('models created while authenticated are automatically stamped with the user
 
     $category = Category::query()->create(['name' => 'Painkillers']);
 
-    expect($category->store_id)->toBe($this->storeA->id);
+    expect($category->store_id)->toBe($this->storeA->id)
+        ->and(Category::query()->whereNull('store_id')->count())->toBe(count(Category::DEFAULTS));
 });
 
 test('the dashboard never lists another stores inventory', function () {
@@ -96,7 +97,11 @@ test('reports only aggregate the authenticated users store', function () {
                 ->component('reports')
                 ->where('overview.totalRevenue', 0)
                 ->where('overview.totalItemsSold', 0)
-                ->has('salesLog.data', 0),
+                ->has('salesLog.data', 0)
+                ->where('expiryHealth.counts.healthy', 0)
+                ->where('expiryHealth.counts.expiring_soon', 0)
+                ->where('expiryHealth.counts.expired', 0)
+                ->has('expiryHealth.items.data', 0),
         );
 });
 

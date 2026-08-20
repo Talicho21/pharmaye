@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Medicine;
+use App\Models\Batch;
 use App\Models\Sale;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
@@ -25,19 +26,18 @@ class AnalyticsController extends Controller
         $endDate = $this->parseDate($request->query('endDate')) ?? now()->endOfDay();
         $startDate = $this->parseDate($request->query('startDate')) ?? now()->subDays(29)->startOfDay();
         $search = trim((string) $request->query('search', ''));
-        $thresholdMonths = max(1, $request->integer('thresholdMonths', 3));
+        $expiryStatus = $this->parseExpiryStatus($request->query('expiryStatus'));
 
         return Inertia::render('reports', [
             'range' => $range,
             'overview' => $this->overview($range),
             'topSelling' => $this->topSelling($range),
             'salesLog' => $this->salesLog($startDate, $endDate->endOfDay(), $search),
-            'inactive' => $this->inactiveMedicines($thresholdMonths),
+            'expiryHealth' => $this->expiryHealth($expiryStatus),
             'filters' => [
                 'startDate' => $startDate->toDateString(),
                 'endDate' => $endDate->toDateString(),
                 'search' => $search,
-                'thresholdMonths' => $thresholdMonths,
             ],
         ]);
     }
@@ -147,39 +147,66 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Legacy "inactive stock": medicines whose last sale is older than the
-     * threshold (or that never sold). EXTRACT/INTERVAL/NULLS FIRST replaced
-     * with a portable aggregate + PHP-side date math.
+     * In-stock batches grouped by expiry: expired (< today), expiring soon
+     * (today through +6 months), and healthy (beyond 6 months). Counts are
+     * per batch, matching the legacy inventory-health pie.
+     *
+     * @return array{counts: array{healthy: int, expiring_soon: int, expired: int}, status: string, items: array<string, mixed>}
      */
-    private function inactiveMedicines(int $thresholdMonths): array
+    private function expiryHealth(string $status): array
     {
-        $cutoff = now()->subMonths($thresholdMonths);
+        $today = now()->toDateString();
+        $soonUntil = now()->addMonths(6)->toDateString();
 
-        $rows = Medicine::query()
-            ->with('category')
-            ->leftJoin('sale_items', 'sale_items.medicine_id', '=', 'medicines.id')
-            ->leftJoin('sales', 'sales.id', '=', 'sale_items.sale_id')
-            ->groupBy('medicines.id')
-            ->havingRaw('max(sales.created_at) is null or max(sales.created_at) < ?', [$cutoff])
-            ->selectRaw('medicines.*, max(sales.created_at) as last_sale_at, coalesce(sum(sale_items.quantity), 0) as total_quantity_sold, count(distinct sales.id) as total_sales')
-            ->get();
+        $inStock = fn (): Builder => Batch::query()->where('quantity', '>', 0);
 
-        return $rows
-            ->map(fn ($row): array => [
-                'medicineId' => $row->id,
-                'medicineName' => $row->name,
-                'categoryName' => $row->category?->name ?? 'General',
-                'lastSaleDate' => $row->last_sale_at,
-                'daysSinceLastSale' => $row->last_sale_at
-                    ? Carbon::parse($row->last_sale_at)->diffInDays(now())
-                    : null,
-                'totalSales' => (int) $row->total_sales,
-                'totalQuantitySold' => (int) $row->total_quantity_sold,
-            ])
-            // Legacy ORDER BY days_since_last_sale DESC NULLS FIRST.
-            ->sortByDesc(fn (array $row) => $row['daysSinceLastSale'] ?? PHP_INT_MAX)
-            ->values()
-            ->all();
+        $counts = [
+            'healthy' => $this->applyExpiryStatus($inStock(), 'healthy', $today, $soonUntil)->count(),
+            'expiring_soon' => $this->applyExpiryStatus($inStock(), 'expiring_soon', $today, $soonUntil)->count(),
+            'expired' => $this->applyExpiryStatus($inStock(), 'expired', $today, $soonUntil)->count(),
+        ];
+
+        $paginator = $this->applyExpiryStatus($inStock(), $status, $today, $soonUntil)
+            ->with(['medicine' => fn ($q) => $q->withTrashed()->with('category')])
+            ->orderBy('expiry_date')
+            ->orderBy('id')
+            ->paginate(10, ['*'], 'healthPage')
+            ->withQueryString();
+
+        $paginator->through(fn (Batch $batch): array => [
+            'id' => $batch->id,
+            'medicine_name' => $batch->medicine->name,
+            'category' => $batch->medicine->category?->name ?? 'General',
+            'batch_number' => $batch->batch_number,
+            'quantity' => $batch->quantity,
+            'unit' => $batch->medicine->unit->value,
+            'price' => (float) $batch->medicine->default_price,
+            'expiry_date' => $batch->expiry_date->toDateString(),
+        ]);
+
+        return [
+            'counts' => $counts,
+            'status' => $status,
+            'items' => $paginator->toArray(),
+        ];
+    }
+
+    private function applyExpiryStatus(Builder $query, string $status, string $today, string $soonUntil): Builder
+    {
+        return match ($status) {
+            'expired' => $query->whereDate('expiry_date', '<', $today),
+            'expiring_soon' => $query
+                ->whereDate('expiry_date', '>=', $today)
+                ->whereDate('expiry_date', '<=', $soonUntil),
+            default => $query->whereDate('expiry_date', '>', $soonUntil),
+        };
+    }
+
+    private function parseExpiryStatus(mixed $value): string
+    {
+        return in_array($value, ['healthy', 'expiring_soon', 'expired'], true)
+            ? $value
+            : 'healthy';
     }
 
     private function parseDate(?string $value): ?Carbon

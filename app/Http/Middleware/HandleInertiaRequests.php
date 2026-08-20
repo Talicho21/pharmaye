@@ -44,7 +44,8 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user('web'),
+                'admin' => $request->user('admin'),
             ],
             // Store branding for every page: the login page renders the store
             // selected via /find-store; authenticated pages render the user's.
@@ -52,6 +53,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'receipt' => fn () => $request->session()->get('receipt'),
+                'generated_password' => fn () => $request->session()->get('generated_password'),
             ],
         ]);
     }
@@ -61,7 +63,7 @@ class HandleInertiaRequests extends Middleware
      */
     private function resolveStoreBranding(Request $request): ?array
     {
-        $store = $request->user()?->store;
+        $store = $request->user('web')?->store;
 
         if ($store === null && $request->hasSession() && $request->session()->has('store_id')) {
             $store = Store::find($request->session()->get('store_id'));

@@ -47,6 +47,7 @@ class LoginRequest extends FormRequest
         $credentials = [
             ...$this->only('email', 'password'),
             'store_id' => $this->session()->get('store_id'),
+            'deactivated_at' => null,
         ];
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {

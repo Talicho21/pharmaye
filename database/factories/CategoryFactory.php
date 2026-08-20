@@ -17,4 +17,11 @@ class CategoryFactory extends Factory
             'name' => fake()->unique()->words(2, true),
         ];
     }
+
+    public function global(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'store_id' => null,
+        ]);
+    }
 }

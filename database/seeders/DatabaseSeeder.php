@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\Category;
+use App\Models\PlatformAdmin;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -15,12 +17,22 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        foreach (Category::DEFAULTS as $name) {
+            Category::query()->firstOrCreate(
+                ['store_id' => null, 'name' => $name],
+            );
+        }
+
         $store = Store::query()->firstOrCreate(
             ['slug' => 'hawan-drug-store'],
             [
                 'name' => 'Hawan Drug Store',
                 'address' => 'Addis Ababa, Ethiopia',
                 'phone' => '092180070',
+                'subscription_status' => 'active',
+                'plan' => 'standard',
+                'monthly_fee' => 1500,
+                'trial_ends_at' => now()->addDays(14),
             ],
         );
 
@@ -41,6 +53,14 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('change-me-now'),
                 'role' => UserRole::Staff,
                 'email_verified_at' => now(),
+            ],
+        );
+
+        PlatformAdmin::query()->firstOrCreate(
+            ['email' => 'owner@pharmaye.local'],
+            [
+                'name' => 'Pharmaye Owner',
+                'password' => Hash::make('change-me-now'),
             ],
         );
     }

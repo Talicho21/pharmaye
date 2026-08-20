@@ -3,6 +3,7 @@ import { Info, PackagePlus } from 'lucide-react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 import { AppShell } from '@/components/pharmacy/app-shell';
+import { SearchableSelect } from '@/components/pharmacy/searchable-select';
 import { Toast } from '@/components/pharmacy/toast';
 import type { SharedData } from '@/types';
 
@@ -216,18 +217,18 @@ export default function StockEntry() {
                             </div>
                             <div>
                                 <label className={labelClass}>Category</label>
-                                <select
-                                    value={form.data.category_id}
-                                    onChange={(e) => form.setData('category_id', e.target.value)}
-                                    className={inputClass}
-                                >
-                                    <option value="">No category / create new below</option>
-                                    {categories.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <SearchableSelect
+                                    className="w-full"
+                                    inputClassName={inputClass}
+                                    value={String(form.data.category_id)}
+                                    onChange={(next) => form.setData('category_id', next)}
+                                    placeholder="Search categories…"
+                                    pinValues={['']}
+                                    options={[
+                                        { value: '', label: 'No category / create new below' },
+                                        ...categories.map((c) => ({ value: String(c.id), label: c.name })),
+                                    ]}
+                                />
                             </div>
                             <div>
                                 <label className={labelClass}>New Category Name</label>
