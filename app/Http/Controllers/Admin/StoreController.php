@@ -78,7 +78,7 @@ class StoreController extends Controller
     public function store(StoreStoreRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        $slug = $validated['slug'] ?: Str::slug($validated['name']);
+        $slug = Str::slug($validated['slug'] ?: $validated['name']);
 
         if (Store::query()->where('slug', $slug)->exists()) {
             $slug .= '-'.Str::lower(Str::random(4));
