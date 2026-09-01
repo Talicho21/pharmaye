@@ -17,7 +17,7 @@ Route::get('/', function () {
         : redirect()->route('store.find');
 })->name('home');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'require.password.change'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // POS

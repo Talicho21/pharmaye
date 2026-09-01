@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Menu, X } from 'lucide-react';
+import { Menu, Settings, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
@@ -10,6 +10,8 @@ type NavItem = {
     label: string;
     description: string;
     adminOnly?: boolean;
+    icon?: React.ElementType;
+    activeBase?: string; // match active state on this prefix instead of href
 };
 
 type AppShellProps = {
@@ -21,6 +23,7 @@ const navItems: NavItem[] = [
     { href: '/stock-entry', label: 'Stock Entry', description: 'Add incoming batches' },
     { href: '/sell-out', label: 'Sell Out', description: 'Process outgoing sales' },
     { href: '/reports', label: 'Reports', description: 'Analytics and sales reports', adminOnly: true },
+    { href: '/settings/profile', label: 'Settings', description: '', icon: Settings, activeBase: '/settings' },
 ];
 
 /**
@@ -72,7 +75,8 @@ export function AppShell({ children }: AppShellProps) {
 
             <nav className="mt-6 space-y-2" aria-label="Main navigation">
                 {visibleNavItems.map((item) => {
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + '?') || pathname.startsWith(item.href + '/');
+                    const base = item.activeBase ?? item.href;
+                    const isActive = pathname === item.href || pathname.startsWith(base + '?') || pathname.startsWith(base + '/') || pathname === base;
 
                     return (
                         <Link

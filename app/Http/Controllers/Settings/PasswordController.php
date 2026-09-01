@@ -21,6 +21,7 @@ class PasswordController extends Controller
         return Inertia::render('settings/password', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'forced' => (bool) $request->user()?->force_password_change,
         ]);
     }
 
@@ -34,10 +35,19 @@ class PasswordController extends Controller
             'password' => ['required', Password::defaults(), 'confirmed'],
         ]);
 
-        $request->user()->update([
-            'password' => Hash::make($validated['password']),
+        $user = $request->user();
+        $wasForced = (bool) $user->force_password_change;
+
+        $user->update([
+            'password' => $validated['password'],
+            'force_password_change' => false,
         ]);
 
-        return back();
+        if ($wasForced) {
+            return redirect()->route('dashboard')
+                ->with('success', 'Password changed successfully. Welcome!');
+        }
+
+        return back()->with('success', 'Password updated successfully.');
     }
 }

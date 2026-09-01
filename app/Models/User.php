@@ -31,6 +31,7 @@ class User extends Authenticatable
         'password',
         'role',
         'deactivated_at',
+        'force_password_change',
     ];
 
     /**
@@ -55,6 +56,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'deactivated_at' => 'datetime',
+            'force_password_change' => 'boolean',
         ];
     }
 

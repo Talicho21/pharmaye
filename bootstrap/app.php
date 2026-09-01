@@ -33,9 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $middleware->alias([
-            'store.selected' => \App\Http\Middleware\EnsureStoreSelected::class,
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
-            'admin.guard' => UseAdminGuard::class,
+            'store.selected'          => \App\Http\Middleware\EnsureStoreSelected::class,
+            'admin'                   => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'admin.guard'             => UseAdminGuard::class,
+            'require.password.change' => \App\Http\Middleware\RequirePasswordChange::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

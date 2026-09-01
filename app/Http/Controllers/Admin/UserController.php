@@ -62,7 +62,10 @@ class UserController extends Controller
     {
         $plain = Str::password(12, symbols: false);
 
-        $user->update(['password' => $plain]);
+        $user->update([
+            'password'               => $plain,
+            'force_password_change'  => true,
+        ]);
 
         $this->logger->record('user.password_reset', $user, [
             'name' => $user->name,

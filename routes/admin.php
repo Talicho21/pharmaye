@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AuthenticatedSessionController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\StoreController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,11 @@ Route::prefix('admin')->name('admin.')->middleware('admin.guard')->group(functio
         Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
 
         Route::get('billing', fn () => inertia('admin/billing'))->name('billing');
-        Route::get('settings', fn () => inertia('admin/settings'))->name('settings');
+
+        // Settings
+        Route::get('settings', [SettingsController::class, 'index'])->name('settings');
+        Route::patch('settings/profile', [SettingsController::class, 'updateProfile'])->name('settings.profile');
+        Route::put('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
     });
 });
+
