@@ -244,3 +244,195 @@ export function printReceipt(receipt: Receipt, store: StoreBranding | null): voi
         printWindow.print();
     }, 250);
 }
+
+/* ── Pre-sale invoice PDF download ─────────────────────────────────────────
+ * Called from the receipt-review / invoice-preview screen BEFORE the sale is
+ * confirmed.  Builds the same A4 invoice HTML as printReceipt() but sources
+ * its data from the live cart state instead of a server Receipt object.
+ * Opening a popup + print() lets the user "Save as PDF" via the browser's
+ * native print dialog (works in every modern browser with no extra deps).
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export interface PreSaleInvoiceData {
+    store: StoreBranding | null;
+    invoiceNo: string;
+    customerSNo: string;
+    reference: string;
+    customerName: string;
+    customerTin: string;
+    paymentMethod: string;
+    sellerName: string;
+    date: string;
+    items: {
+        name: string;
+        batchNumber: string;
+        unit: string;
+        expiryDate: string;
+        quantity: number;
+        unitPrice: number;
+    }[];
+    totalPrice: number;
+}
+
+export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
+    const printWindow = window.open('', '_blank', 'height=700,width=900');
+    if (!printWindow) return;
+
+    const storeName = escapeHtml(data.store?.name ?? 'Pharmacy');
+
+    const contactLines = [
+        `<div>${storeName}</div>`,
+        data.store?.phone ? `<div>Tel: ${escapeHtml(data.store.phone)}</div>` : '',
+        data.store?.address ? `<div>${escapeHtml(data.store.address)}</div>` : '',
+    ].join('');
+
+    const itemRows = data.items
+        .map(
+            (item, i) => `
+      <tr>
+        <td style="text-align:center;border:1px solid #ccc;padding:4px 5px;">${i + 1}</td>
+        <td style="border:1px solid #ccc;padding:4px 5px;white-space:normal;word-break:break-word;">${escapeHtml(item.name)}</td>
+        <td style="border:1px solid #ccc;padding:4px 5px;">${escapeHtml(item.batchNumber)}</td>
+        <td style="text-align:center;border:1px solid #ccc;padding:4px 5px;">${escapeHtml((item.unit ?? '-').toUpperCase())}</td>
+        <td style="text-align:center;border:1px solid #ccc;padding:4px 5px;">${formatExpiry(item.expiryDate)}</td>
+        <td style="text-align:right;border:1px solid #ccc;padding:4px 5px;">${item.quantity}</td>
+        <td style="text-align:right;border:1px solid #ccc;padding:4px 5px;">${item.unitPrice.toFixed(2)}</td>
+        <td style="text-align:right;border:1px solid #ccc;padding:4px 5px;">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+      </tr>`,
+        )
+        .join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice ${escapeHtml(data.invoiceNo || '—')}</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { font-family: Arial, sans-serif; color: #111; }
+    .shell {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 10mm 12mm;
+    }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .company-title { font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -.01em; }
+    .invoice-label { font-size: 28px; font-weight: 900; letter-spacing: .02em; text-align: right; }
+    .contact { font-size: 12px; color: #475569; line-height: 1.5; text-align: right; margin-top: 4px; }
+    .meta-table { margin-top: 10px; border-collapse: collapse; font-size: 11px; }
+    .meta-table td { border: 1px solid #111; padding: 3px 8px; }
+    .meta-table td:first-child { font-weight: 700; background: #f8fafc; white-space: nowrap; }
+    .customer-row { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid #111; margin: 14px 0 10px; }
+    .customer-cell { padding: 6px 10px; border-right: 1px solid #111; }
+    .customer-cell:last-child { border-right: none; }
+    .cell-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+    .cell-value { font-size: 13px; color: #111827; margin-top: 2px; }
+    .items-table { width: 100%; border-collapse: collapse; border: 1px solid #111; table-layout: fixed; font-size: 11px; }
+    .items-table th { background: #f3f4f6; font-weight: 700; border: 1px solid #111; padding: 4px 5px; }
+    .items-table thead th:nth-child(1) { width:5%; }
+    .items-table thead th:nth-child(2) { width:33%; }
+    .items-table thead th:nth-child(3) { width:13%; }
+    .items-table thead th:nth-child(4) { width:8%; text-align:center; }
+    .items-table thead th:nth-child(5) { width:10%; text-align:center; }
+    .items-table thead th:nth-child(6) { width:7%; text-align:right; }
+    .items-table thead th:nth-child(7) { width:11%; text-align:right; }
+    .items-table thead th:nth-child(8) { width:13%; text-align:right; }
+    .totals { width: 220px; margin-left: auto; margin-top: 10px; }
+    .totals-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+    .grand-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 900; color: #10B981; margin-top: 4px; }
+    .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 28px; }
+    .sig-box { text-align: center; }
+    .sig-line { border-bottom: 1px solid #111; height: 40px; display: block; }
+    .sig-label { font-size: 12px; font-weight: 700; margin-top: 4px; display: block; }
+    .legal { margin-top: auto; text-align: center; font-size: 9px; font-weight: 900;
+             text-transform: uppercase; letter-spacing: .8px; color: #9ca3af; padding-top: 16px; }
+    @media print {
+      @page { size: A4; margin: 15mm; }
+      html, body { width: 210mm; margin: 0; padding: 0; }
+      .shell { padding: 0; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        <div class="company-title">${storeName}</div>
+        <table class="meta-table">
+          <tr><td>Invoice No</td><td>${escapeHtml(data.invoiceNo || '—')}</td></tr>
+          <tr><td>FS No</td><td>${escapeHtml(data.customerSNo || '—')}</td></tr>
+          <tr><td>Reference</td><td>${escapeHtml(data.reference || '—')}</td></tr>
+          <tr><td>Date</td><td style="font-weight:700;">${escapeHtml(data.date)}</td></tr>
+        </table>
+      </div>
+      <div>
+        <div class="invoice-label">INVOICE</div>
+        <div class="contact">${contactLines}</div>
+      </div>
+    </div>
+
+    <!-- CUSTOMER ROW -->
+    <div class="customer-row">
+      <div class="customer-cell">
+        <div class="cell-label">Customer Name</div>
+        <div class="cell-value">${escapeHtml(data.customerName || '—')}</div>
+      </div>
+      <div class="customer-cell">
+        <div class="cell-label">TIN Number</div>
+        <div class="cell-value">${escapeHtml(data.customerTin || '—')}</div>
+      </div>
+      <div class="customer-cell">
+        <div class="cell-label">Payment Method</div>
+        <div class="cell-value">${data.paymentMethod === 'cash' ? 'Cash' : 'Credit'}</div>
+      </div>
+    </div>
+
+    <!-- ITEMS TABLE -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>S.No</th><th style="text-align:left;">Description</th><th style="text-align:left;">Batch #</th>
+          <th style="text-align:center;">Unit</th><th style="text-align:center;">Exp.</th>
+          <th style="text-align:right;">Qty</th><th style="text-align:right;">Price</th><th style="text-align:right;">Total</th>
+        </tr>
+      </thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+
+    <!-- TOTALS -->
+    <div style="margin-top:10px;border-top:2px solid #111;padding-top:8px;">
+      <div class="totals">
+        <div class="totals-row"><span style="color:#374151;">total</span><span style="font-weight:700;">ETB ${data.totalPrice.toFixed(2)}</span></div>
+        <div class="totals-row"><span style="color:#374151;">Not Taxable</span><span style="font-weight:700;">ETB 0.00</span></div>
+        <div style="border-top:1px solid #111;margin:4px 0;"></div>
+        <div class="grand-total"><span>GRAND TOTAL</span><span>ETB ${data.totalPrice.toFixed(2)}</span></div>
+        <div style="border-bottom:3px solid #10B981;margin-top:3px;"></div>
+      </div>
+    </div>
+
+    ${data.sellerName ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">Seller: <strong>${escapeHtml(data.sellerName)}</strong></div>` : ''}
+
+    <!-- SIGNATURES -->
+    <div class="sig-grid">
+      ${['Prepared By', 'Received By', 'Approved By']
+          .map(
+              (l) =>
+                  `<div class="sig-box"><span class="sig-line"></span><span class="sig-label">${l}</span></div>`,
+          )
+          .join('')}
+    </div>
+
+    <div class="legal">Invalid without fiscal or refund receipt attached</div>
+  </div>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+    setTimeout(() => {
+        printWindow.print();
+    }, 300);
+}

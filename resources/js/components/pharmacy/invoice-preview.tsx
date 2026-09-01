@@ -1,3 +1,6 @@
+import { Download } from 'lucide-react';
+
+import { downloadInvoicePdf } from '@/lib/receipt-print';
 import type { StoreBranding } from '@/types';
 import type { CartItem } from '@/types/pharmacy';
 
@@ -36,19 +39,55 @@ export function InvoicePreview({
 }: InvoicePreviewProps) {
     const storeName = store?.name ?? 'Pharmacy';
 
+    const handleDownloadPdf = () => {
+        downloadInvoicePdf({
+            store,
+            invoiceNo,
+            customerSNo,
+            reference,
+            customerName,
+            customerTin: tinNumber,
+            paymentMethod,
+            sellerName,
+            date,
+            items: cartItems.map((item) => ({
+                name: item.medicineName,
+                batchNumber: item.batchNumber,
+                unit: item.unit,
+                expiryDate: item.expiryDate,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+            })),
+            totalPrice,
+        });
+    };
+
     return (
-        /* Outer wrapper — "sheet of paper" visual */
+        /* Outer wrapper — relative so the download button can float top-right */
         <div
-            className="relative mx-auto w-full max-w-2xl overflow-hidden rounded-sm bg-white"
+            className="relative mx-auto w-full max-w-2xl overflow-visible rounded-sm bg-white"
             style={{
                 boxShadow:
                     '0 1px 1px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.06), 0 4px 8px rgba(0,0,0,.05), 0 1px 0 rgba(0,0,0,.12)',
                 fontFamily: 'Arial, sans-serif',
             }}
         >
-            {/* Torn-edge tape accent at top */}
+            {/* ── Download PDF button — floats above the top-right corner ── */}
+            <div className="absolute -top-9 right-0">
+                <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-primary-blue px-3 py-1.5 text-xs font-bold text-white shadow-md transition duration-150 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+                    title="Download invoice as PDF"
+                >
+                    <Download className="h-3.5 w-3.5" />
+                    Download PDF
+                </button>
+            </div>
+
+            {/* Torn-edge stripe at top */}
             <div
-                className="h-1.5 w-full"
+                className="h-1.5 w-full rounded-t-sm"
                 style={{
                     background: 'repeating-linear-gradient(90deg,#2563eb 0,#2563eb 18px,#fff 18px,#fff 22px)',
                     opacity: 0.7,
@@ -122,7 +161,7 @@ export function InvoicePreview({
                 </div>
 
                 {/* ── CUSTOMER INFO ROW ── */}
-                <div className="mt-4 grid grid-cols-3 gap-0" style={{ border: '1px solid #111' }}>
+                <div className="mt-4 grid grid-cols-3" style={{ border: '1px solid #111' }}>
                     {[
                         ['Customer Name', customerName || '—'],
                         ['TIN Number', tinNumber || '—'],
@@ -196,7 +235,9 @@ export function InvoicePreview({
                                 >
                                     {item.medicineName}
                                 </td>
-                                <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>{item.batchNumber}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '4px 5px' }}>
+                                    {item.batchNumber}
+                                </td>
                                 <td style={{ border: '1px solid #ccc', padding: '4px 5px', textAlign: 'center' }}>
                                     {item.unit?.toUpperCase() || '-'}
                                 </td>
@@ -240,8 +281,7 @@ export function InvoicePreview({
                 {/* ── SELLER ── */}
                 {sellerName && (
                     <div className="mt-3 text-xs text-gray-500">
-                        Seller:{' '}
-                        <span className="font-semibold text-gray-700">{sellerName}</span>
+                        Seller: <span className="font-semibold text-gray-700">{sellerName}</span>
                     </div>
                 )}
 
@@ -261,9 +301,9 @@ export function InvoicePreview({
                 </div>
             </div>
 
-            {/* Bottom torn-edge accent */}
+            {/* Torn-edge stripe at bottom */}
             <div
-                className="h-1.5 w-full"
+                className="h-1.5 w-full rounded-b-sm"
                 style={{
                     background: 'repeating-linear-gradient(90deg,#2563eb 0,#2563eb 18px,#fff 18px,#fff 22px)',
                     opacity: 0.7,

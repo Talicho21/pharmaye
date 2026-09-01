@@ -332,8 +332,8 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                 </div>
 
                 {/* ── INVOICE ATTACHMENT PREVIEW ── */}
-                <div className="border-t border-border-gray bg-[#f8fafc] px-6 py-5">
-                    <div className="mb-3 flex items-center gap-2">
+                <div className="border-t border-border-gray bg-[#f8fafc] px-6 pb-5 pt-10">
+                    <div className="mb-4 flex items-center gap-2">
                         <Paperclip className="h-4 w-4 text-primary-blue" />
                         <span className="text-xs font-black tracking-[0.2em] text-dark-charcoal/60 uppercase">
                             Invoice Attachment Preview
