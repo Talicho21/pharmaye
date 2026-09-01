@@ -1,7 +1,8 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Loader2, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader2, Paperclip, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { InvoicePreview } from '@/components/pharmacy/invoice-preview';
 import type { SharedData } from '@/types';
 import type { BatchOption, CartItem, MedicineSearchResult, SaleMeta } from '@/types/pharmacy';
 
@@ -44,7 +45,7 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
     const inputClass =
         'w-full rounded-lg border border-border-gray bg-off-white px-3 py-2.5 text-sm text-dark-charcoal transition duration-150 outline-none placeholder:text-dark-charcoal/70 focus-visible:ring-2 focus-visible:ring-primary-blue disabled:opacity-50';
 
-    const { auth } = usePage<SharedData>().props;
+    const { auth, store } = usePage<SharedData>().props;
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [medicineSearch, setMedicineSearch] = useState('');
     const [isSearching, setIsSearching] = useState(false);
@@ -328,6 +329,29 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                             <div className="mt-1 border-b-4 border-[#10B981]" />
                         </div>
                     </div>
+                </div>
+
+                {/* ── INVOICE ATTACHMENT PREVIEW ── */}
+                <div className="border-t border-border-gray bg-[#f8fafc] px-6 py-5">
+                    <div className="mb-3 flex items-center gap-2">
+                        <Paperclip className="h-4 w-4 text-primary-blue" />
+                        <span className="text-xs font-black tracking-[0.2em] text-dark-charcoal/60 uppercase">
+                            Invoice Attachment Preview
+                        </span>
+                    </div>
+                    <InvoicePreview
+                        store={store}
+                        customerName={customerName}
+                        tinNumber={tinNumber}
+                        invoiceNo={invoiceNo}
+                        customerSNo={customerSNo}
+                        reference={reference}
+                        sellerName={sellerName}
+                        paymentMethod={paymentMethod}
+                        cartItems={cartItems}
+                        totalPrice={cartTotals.totalPrice}
+                        date={new Date().toLocaleDateString('en-GB')}
+                    />
                 </div>
 
                 <div className="flex gap-3 border-t border-border-gray bg-off-white/40 px-6 py-4">
