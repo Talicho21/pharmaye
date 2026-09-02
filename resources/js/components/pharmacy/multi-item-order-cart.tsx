@@ -1,8 +1,8 @@
 import { router, usePage } from '@inertiajs/react';
-import { AlertCircle, Loader2, Paperclip, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { AlertCircle, Download, Loader2, Paperclip, Plus, Search, ShoppingCart, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { InvoicePreview } from '@/components/pharmacy/invoice-preview';
+import { downloadInvoicePdf } from '@/lib/receipt-print';
 import type { SharedData } from '@/types';
 import type { BatchOption, CartItem, MedicineSearchResult, SaleMeta } from '@/types/pharmacy';
 
@@ -241,6 +241,29 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
 
     const validationError = formValidationError || serverError || '';
 
+    const handleDownloadPdf = () => {
+        downloadInvoicePdf({
+            store,
+            invoiceNo,
+            customerSNo,
+            reference,
+            customerName,
+            customerTin: tinNumber,
+            paymentMethod,
+            sellerName,
+            date: new Date().toLocaleDateString('en-GB'),
+            items: cartItems.map((item) => ({
+                name: item.medicineName,
+                batchNumber: item.batchNumber,
+                unit: item.unit,
+                expiryDate: item.expiryDate,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+            })),
+            totalPrice: cartTotals.totalPrice,
+        });
+    };
+
     /* ── RECEIPT VIEW (review before confirming) ── */
     if (viewMode === 'receipt') {
         return (
@@ -331,27 +354,23 @@ export function MultiItemOrderCart({ results, onSubmit, isProcessing = false, se
                     </div>
                 </div>
 
-                {/* ── INVOICE ATTACHMENT PREVIEW ── */}
-                <div className="border-t border-border-gray bg-[#f8fafc] px-6 pb-5 pt-10">
-                    <div className="mb-4 flex items-center gap-2">
+                {/* ── INVOICE ATTACHMENT / PDF DOWNLOAD ── */}
+                <div className="flex items-center justify-between border-t border-border-gray bg-[#f8fafc] px-6 py-4">
+                    <div className="flex items-center gap-2">
                         <Paperclip className="h-4 w-4 text-primary-blue" />
                         <span className="text-xs font-black tracking-[0.2em] text-dark-charcoal/60 uppercase">
-                            Invoice Attachment Preview
+                            Invoice Attachment
                         </span>
                     </div>
-                    <InvoicePreview
-                        store={store}
-                        customerName={customerName}
-                        tinNumber={tinNumber}
-                        invoiceNo={invoiceNo}
-                        customerSNo={customerSNo}
-                        reference={reference}
-                        sellerName={sellerName}
-                        paymentMethod={paymentMethod}
-                        cartItems={cartItems}
-                        totalPrice={cartTotals.totalPrice}
-                        date={new Date().toLocaleDateString('en-GB')}
-                    />
+                    <button
+                        type="button"
+                        onClick={handleDownloadPdf}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-primary-blue px-3 py-1.5 text-xs font-bold text-white shadow-md transition duration-150 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+                        title="Download invoice as PDF"
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        Download PDF
+                    </button>
                 </div>
 
                 <div className="flex gap-3 border-t border-border-gray bg-off-white/40 px-6 py-4">

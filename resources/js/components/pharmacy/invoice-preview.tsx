@@ -112,10 +112,8 @@ export function InvoicePreview({
                         >
                             <tbody>
                                 {[
-                                    ['Invoice No', invoiceNo || '—'],
                                     ['FS No', customerSNo || '—'],
                                     ['Reference', reference || '—'],
-                                    ['Date', date],
                                 ].map(([label, value]) => (
                                     <tr key={label}>
                                         <td
@@ -278,12 +276,6 @@ export function InvoicePreview({
                     </div>
                 </div>
 
-                {/* ── SELLER ── */}
-                {sellerName && (
-                    <div className="mt-3 text-xs text-gray-500">
-                        Seller: <span className="font-semibold text-gray-700">{sellerName}</span>
-                    </div>
-                )}
 
                 {/* ── SIGNATURE ROW ── */}
                 <div className="mt-6 grid grid-cols-3 gap-6">

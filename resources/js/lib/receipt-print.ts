@@ -110,8 +110,21 @@ export function printReceipt(receipt: Receipt, store: StoreBranding | null): voi
             padding-top: 12px; padding-bottom: 4px; width: 100%; display: block;
           }
           @media print {
-            @page { size: A4; margin: 20mm; }
-            html, body { width: 210mm; min-height: 297mm; margin: 0; padding: 0; }
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            html, body {
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .receipt-shell {
+              padding: 15mm 20mm !important;
+              box-sizing: border-box;
+            }
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
@@ -240,6 +253,7 @@ export function printReceipt(receipt: Receipt, store: StoreBranding | null): voi
 
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
+    printWindow.document.title = '';
     setTimeout(() => {
         printWindow.print();
     }, 250);
@@ -306,7 +320,7 @@ export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Invoice ${escapeHtml(data.invoiceNo || '—')}</title>
+  <title></title>
   <style>
     html, body { margin: 0; padding: 0; background: #fff; }
     body { font-family: Arial, sans-serif; color: #111; }
@@ -349,9 +363,26 @@ export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
     .legal { margin-top: auto; text-align: center; font-size: 9px; font-weight: 900;
              text-transform: uppercase; letter-spacing: .8px; color: #9ca3af; padding-top: 16px; }
     @media print {
-      @page { size: A4; margin: 15mm; }
-      html, body { width: 210mm; margin: 0; padding: 0; }
-      .shell { padding: 0; min-height: auto; }
+      @page {
+        size: A4;
+        margin: 0;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .shell {
+        padding: 15mm 20mm !important;
+        box-sizing: border-box;
+        min-height: auto;
+      }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
   </style>
 </head>
@@ -362,10 +393,8 @@ export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
       <div>
         <div class="company-title">${storeName}</div>
         <table class="meta-table">
-          <tr><td>Invoice No</td><td>${escapeHtml(data.invoiceNo || '—')}</td></tr>
           <tr><td>FS No</td><td>${escapeHtml(data.customerSNo || '—')}</td></tr>
           <tr><td>Reference</td><td>${escapeHtml(data.reference || '—')}</td></tr>
-          <tr><td>Date</td><td style="font-weight:700;">${escapeHtml(data.date)}</td></tr>
         </table>
       </div>
       <div>
@@ -413,7 +442,6 @@ export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
       </div>
     </div>
 
-    ${data.sellerName ? `<div style="margin-top:8px;font-size:11px;color:#64748b;">Seller: <strong>${escapeHtml(data.sellerName)}</strong></div>` : ''}
 
     <!-- SIGNATURES -->
     <div class="sig-grid">
@@ -432,6 +460,7 @@ export function downloadInvoicePdf(data: PreSaleInvoiceData): void {
 
     printWindow.document.write(html);
     printWindow.document.close();
+    printWindow.document.title = '';
     setTimeout(() => {
         printWindow.print();
     }, 300);
