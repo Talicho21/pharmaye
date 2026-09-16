@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\StoreSelectionController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::middleware('guest')->group(function () {
     // Store-selection-first login flow: pick a store, then log in to it.
@@ -61,3 +62,8 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');
 });
+
+// Publicly accessible — the middleware redirects suspended users here
+// before authentication would normally be checked on subsequent requests.
+Route::get('store-suspended', fn () => Inertia::render('store-suspended'))
+    ->name('store.suspended');

@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\UseAdminGuard;
+use App\Http\Middleware\EnsureStoreNotSuspended;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin'                   => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'admin.guard'             => UseAdminGuard::class,
             'require.password.change' => \App\Http\Middleware\RequirePasswordChange::class,
+            'store.not_suspended'     => EnsureStoreNotSuspended::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

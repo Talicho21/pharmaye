@@ -1,5 +1,5 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { LoaderCircle, Store } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { AlertTriangle, LoaderCircle, LogOut, Mail, Phone, Store } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import InputError from '@/components/input-error';
@@ -25,7 +25,7 @@ interface LoginProps {
 export default function Login({ status, canResetPassword }: LoginProps) {
     const { store } = usePage<SharedData>().props;
 
-    const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
+    const { data, setData, post, processing, errors, reset } = useForm<LoginForm & { suspended?: string }>({
         email: '',
         password: '',
         remember: false,
@@ -37,6 +37,81 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             onFinish: () => reset('password'),
         });
     };
+
+    const handleLogout = () => router.post(route('logout'));
+    const storeName = store?.name ?? 'Your Store';
+
+    // When the backend signals STORE_SUSPENDED, replace the entire form with
+    // the suspended card — same design as /store-suspended.
+    if (errors.suspended === 'STORE_SUSPENDED') {
+        return (
+            <AuthLayout title="" description="">
+                <Head title="Store Suspended" />
+
+                <div className="w-full">
+                    {/* Icon */}
+                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                        <AlertTriangle className="h-8 w-8 text-red-600" aria-hidden="true" />
+                    </div>
+
+                    {/* Heading */}
+                    <h1 className="text-center text-2xl font-black tracking-tight">
+                        Store Suspended
+                    </h1>
+
+                    <p className="mt-3 text-center text-sm leading-relaxed text-muted-foreground">
+                        Access to <span className="font-semibold text-foreground">{storeName}</span> has
+                        been temporarily suspended. Please contact support to resolve this.
+                    </p>
+
+                    {/* Divider */}
+                    <div className="my-6 border-t" />
+
+                    {/* Support contact */}
+                    <div className="rounded-xl bg-muted/50 px-5 py-4">
+                        <p className="mb-3 text-xs font-black tracking-widest text-muted-foreground uppercase">
+                            Need help?
+                        </p>
+                        <div className="space-y-2">
+                            <a
+                                href="mailto:yonatanshitaye@gmail.com"
+                                className="flex items-center gap-3 text-sm font-semibold text-primary hover:underline"
+                            >
+                                <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                yonatanshitaye@gmail.com
+                            </a>
+                            {store?.phone && (
+                                <a
+                                    href={`tel:${store.phone}`}
+                                    className="flex items-center gap-3 text-sm font-semibold text-primary hover:underline"
+                                >
+                                    <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    {store.phone}
+                                </a>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="my-6 border-t" />
+
+                    {/* Back to login */}
+                    <button
+                        type="button"
+                        onClick={() => router.get(route('login'))}
+                        className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition-all duration-200 hover:opacity-90 hover:shadow-md active:scale-95"
+                    >
+                        <LogOut className="h-4 w-4" aria-hidden="true" />
+                        Back to login
+                    </button>
+
+                    <p className="mt-4 text-center text-xs text-muted-foreground">
+                        Once your account is reinstated, try logging in again.
+                    </p>
+                </div>
+            </AuthLayout>
+        );
+    }
 
     return (
         <AuthLayout title={store ? `Sign in to ${store.name}` : 'Log in to your account'} description="Enter your email and password below to log in">

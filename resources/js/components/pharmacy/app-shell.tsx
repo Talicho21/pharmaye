@@ -3,6 +3,7 @@ import { Menu, Settings, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
+import { useStoreSuspensionGuard } from '@/hooks/use-store-suspension-guard';
 import type { SharedData } from '@/types';
 
 type NavItem = {
@@ -34,6 +35,10 @@ export function AppShell({ children }: AppShellProps) {
     const { auth, store } = usePage<SharedData>().props;
     const pathname = usePage().url;
     const [drawerOpen, setDrawerOpen] = useState(false);
+
+    // Redirect to /store-suspended immediately if the store is suspended.
+    // This covers the case where a user types a URL directly.
+    useStoreSuspensionGuard();
 
     const isAdmin = auth.user?.role === 'admin';
     const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);

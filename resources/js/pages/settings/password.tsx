@@ -1,7 +1,7 @@
 import InputError from '@/components/input-error';
 import { AppShell } from '@/components/pharmacy/app-shell';
 import SettingsLayout from '@/layouts/settings/layout';
-import { type BreadcrumbItem } from '@/types';
+
 import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
 import { AlertTriangle, CheckCircle2, KeyRound } from 'lucide-react';
@@ -12,12 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Password settings',
-        href: '/settings/password',
-    },
-];
+
 
 interface Props {
     forced?: boolean;

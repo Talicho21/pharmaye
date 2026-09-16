@@ -35,6 +35,7 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     store: StoreBranding | null;
+    store_suspended: boolean;
     [key: string]: unknown;
 }
 

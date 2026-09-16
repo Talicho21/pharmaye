@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\SubscriptionStatus;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -59,6 +60,18 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        // Block login for suspended stores. We must check after Auth::attempt()
+        // so we have the authenticated user to load their store. If the store is
+        // suspended we log them out immediately — no session is created.
+        $store = Auth::user()?->store;
+        if ($store === null || $store->subscription_status === SubscriptionStatus::Suspended) {
+            Auth::logout();
+
+            throw ValidationException::withMessages([
+                'suspended' => 'STORE_SUSPENDED',
+            ]);
+        }
     }
 
     /**

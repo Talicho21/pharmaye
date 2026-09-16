@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\SaleController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     if (auth('admin')->check()) {
@@ -17,7 +18,7 @@ Route::get('/', function () {
         : redirect()->route('store.find');
 })->name('home');
 
-Route::middleware(['auth', 'require.password.change'])->group(function () {
+Route::middleware(['auth', 'require.password.change', 'store.not_suspended'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // POS

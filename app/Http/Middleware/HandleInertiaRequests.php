@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\SubscriptionStatus;
 use App\Models\Store;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
@@ -55,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                 'receipt' => fn () => $request->session()->get('receipt'),
                 'generated_password' => fn () => $request->session()->get('generated_password'),
             ],
+            'store_suspended' => fn (): bool => $this->isStoreSuspended($request),
         ]);
     }
 
@@ -80,5 +82,22 @@ class HandleInertiaRequests extends Middleware
             'address' => $store->address,
             'logo_url' => $store->logo_path ? asset('storage/'.$store->logo_path) : null,
         ];
+    }
+
+    /**
+     * Returns true when the authenticated store user's store is suspended
+     * (or missing). Always reads from DB — never from a cached value.
+     */
+    private function isStoreSuspended(Request $request): bool
+    {
+        $user = $request->user('web');
+        if ($user === null) {
+            return false;
+        }
+
+        $store = $user->store;
+
+        return $store === null
+            || $store->subscription_status === SubscriptionStatus::Suspended;
     }
 }
