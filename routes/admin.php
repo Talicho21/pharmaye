@@ -35,7 +35,18 @@ Route::prefix('admin')->name('admin.')->middleware('admin.guard')->group(functio
 
         Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
 
-        Route::get('billing', fn () => inertia('admin/billing'))->name('billing');
+        Route::get('billing', function () {
+            $stores = \App\Models\Store::orderBy('name')->get()->map(fn ($store) => [
+                'id' => $store->id,
+                'name' => $store->name,
+                'slug' => $store->slug,
+                'planTier' => $store->plan,
+                'monthlyRate' => (float) $store->monthly_fee,
+                'status' => $store->subscription_status->value,
+                'nextRenewal' => $store->trial_ends_at ? $store->trial_ends_at->toDateString() : 'Active',
+            ]);
+            return inertia('admin/billing', ['stores' => $stores]);
+        })->name('billing');
 
         // Settings
         Route::get('settings', [SettingsController::class, 'index'])->name('settings');
