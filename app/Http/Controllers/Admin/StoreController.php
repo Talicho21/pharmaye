@@ -194,4 +194,37 @@ class StoreController extends Controller
 
         return back()->with('success', "{$store->name} has been activated.");
     }
+
+    public function destroy(Store $store): RedirectResponse
+    {
+        $name = $store->name;
+        $slug = $store->slug;
+
+        DB::transaction(function () use ($store) {
+            // Delete leaf nodes that restrict parent deletion
+            DB::table('stock_movements')->where('store_id', $store->id)->delete();
+            
+            $saleIds = $store->sales()->pluck('id');
+            if ($saleIds->isNotEmpty()) {
+                DB::table('sale_items')->whereIn('sale_id', $saleIds)->delete();
+            }
+            
+            $store->sales()->delete();
+            $store->batches()->delete();
+            $store->medicines()->delete();
+            
+            DB::table('categories')->where('store_id', $store->id)->delete();
+            DB::table('suppliers')->where('store_id', $store->id)->delete();
+            $store->users()->delete();
+            
+            $store->delete();
+        });
+
+        $this->logger->record('store.deleted', null, [
+            'name' => $name,
+            'slug' => $slug,
+        ]);
+
+        return back()->with('success', "{$name} has been successfully deleted.");
+    }
 }

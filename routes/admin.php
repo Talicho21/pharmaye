@@ -27,6 +27,7 @@ Route::prefix('admin')->name('admin.')->middleware('admin.guard')->group(functio
         Route::put('stores/{store}', [StoreController::class, 'update'])->name('stores.update');
         Route::post('stores/{store}/suspend', [StoreController::class, 'suspend'])->name('stores.suspend');
         Route::post('stores/{store}/activate', [StoreController::class, 'activate'])->name('stores.activate');
+        Route::delete('stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::post('users/{user}/password-reset', [UserController::class, 'resetPassword'])->name('users.password-reset');

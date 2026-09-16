@@ -1,7 +1,8 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Search, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
+import { Toast } from '@/components/pharmacy/toast';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,9 +26,16 @@ interface AdminBillingProps {
 }
 
 export default function AdminBilling({ stores }: AdminBillingProps) {
+    const { flash } = usePage<any>().props;
+    const [toastMessage, setToastMessage] = useState('');
+    
     const [showBanner, setShowBanner] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | StoreStatus>('all');
+
+    useEffect(() => {
+        if (flash?.success) setToastMessage(flash.success);
+    }, [flash?.success]);
 
     // KPI Calculations based on the full dataset
     const estimatedMRR = stores
@@ -50,6 +58,12 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-ET', { style: 'currency', currency: 'ETB' }).format(amount);
+    };
+
+    const handleDelete = (store: StoreData) => {
+        if (window.confirm(`Are you sure you want to completely delete "${store.name}"?\n\nThis action cannot be undone and will delete all associated data including users, inventory, and sales.`)) {
+            router.delete(route('admin.stores.destroy', store.id));
+        }
     };
 
     return (
@@ -150,15 +164,25 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
                                         </td>
                                         <td className="px-4 py-3 text-foreground">{store.nextRenewal}</td>
                                         <td className="px-4 py-3">
-                                            <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                asChild
-                                            >
-                                                <Link href={route('admin.stores.show', store.id)}>
-                                                    Manage Plan
-                                                </Link>
-                                            </Button>
+                                            <div className="flex items-center gap-2">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link href={route('admin.stores.show', store.id)}>
+                                                        Manage Plan
+                                                    </Link>
+                                                </Button>
+                                                
+                                                <Button 
+                                                    variant="destructive" 
+                                                    size="sm"
+                                                    onClick={() => handleDelete(store)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -176,6 +200,7 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
                     </table>
                 </div>
             </div>
+            {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage('')} duration={3000} />}
         </AdminLayout>
     );
 }
