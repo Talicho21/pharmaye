@@ -19,19 +19,19 @@ interface UsersIndexProps extends SharedData {
     users: Paginated<UserRow>;
     stores: { id: number; name: string; slug: string }[];
     filters: { search: string; store_id: number | null };
-    generated_password?: string | null;
-    flash: { success?: string; generated_password?: string };
+    flash: { success?: string; error?: string };
 }
 
 export default function UsersIndex() {
-    const { users, stores, filters, generated_password, flash } = usePage<UsersIndexProps>().props;
+    const { users, stores, filters, flash } = usePage<UsersIndexProps>().props;
     const [search, setSearch] = useState(filters.search ?? '');
     const [storeId, setStoreId] = useState(filters.store_id ? String(filters.store_id) : '');
     const [toast, setToast] = useState('');
 
     useEffect(() => {
         if (flash.success) setToast(flash.success);
-    }, [flash.success]);
+        if (flash.error) setToast(flash.error);
+    }, [flash.success, flash.error]);
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -45,18 +45,10 @@ export default function UsersIndex() {
         return () => window.clearTimeout(timeoutId);
     }, [search, storeId]);
 
-    const plaintext = generated_password || flash.generated_password;
-
     return (
         <AdminLayout title="Users">
             <Head title="Users" />
             {toast && <Toast message={toast} onClose={() => setToast('')} />}
-
-            {plaintext && (
-                <div className="mb-4 rounded-xl border border-primary-blue/30 bg-primary-blue/5 px-4 py-3 text-sm">
-                    Temporary password (shown once): <span className="font-mono font-bold">{plaintext}</span>
-                </div>
-            )}
 
             <div className="mb-4 flex flex-wrap gap-2">
                 <input

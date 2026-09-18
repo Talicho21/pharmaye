@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TemporaryPasswordMail;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\AdminActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -54,7 +56,6 @@ class UserController extends Controller
                 'search' => $search,
                 'store_id' => $storeId,
             ],
-            'generated_password' => $request->session()->get('generated_password'),
         ]);
     }
 
@@ -62,21 +63,39 @@ class UserController extends Controller
     {
         $plain = Str::password(12, symbols: false);
 
+        // The User model has 'password' => 'hashed' in its casts(), so the
+        // model will hash $plain automatically — do NOT call Hash::make() here.
         $user->update([
-            'password'               => $plain,
-            'force_password_change'  => true,
+            'password'              => $plain,
+            'force_password_change' => true,
         ]);
 
         $this->logger->record('user.password_reset', $user, [
-            'name' => $user->name,
-            'email' => $user->email,
+            'name'     => $user->name,
+            'email'    => $user->email,
             'store_id' => $user->store_id,
         ]);
 
-        return back()->with([
-            'success' => "Password reset for {$user->email}.",
-            'generated_password' => $plain,
-        ]);
+        try {
+            Mail::to($user->email)->send(
+                new TemporaryPasswordMail($user, $plain)
+            );
+        } catch (\Throwable $e) {
+            // Password was already reset; warn the admin that the email failed
+            // so they can communicate the credentials another way.
+            report($e);
+
+            return back()->with(
+                'error',
+                "Password reset for {$user->email}, but the notification email could not be sent. "
+                . 'Please share the temporary password with the user manually, or reset again once mail is configured.',
+            );
+        }
+
+        return back()->with(
+            'success',
+            "Password reset for {$user->email}. A temporary password has been sent to their email address.",
+        );
     }
 
     public function deactivate(User $user): RedirectResponse
