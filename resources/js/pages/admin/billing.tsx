@@ -105,14 +105,14 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
                 </div>
 
                 {/* 4. SEARCH AND FILTERS */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center">
                     <div className="relative flex-1">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search stores by name or slug..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 w-full shadow-sm"
+                            className="w-full pl-9 shadow-sm"
                         />
                     </div>
                     <select
@@ -130,7 +130,7 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
 
                 {/* 3. STORES TABLE */}
                 <div className="overflow-x-auto rounded-lg border border-border bg-white shadow-sm">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
+                    <table className="w-full min-w-[640px] text-left text-sm whitespace-nowrap">
                         <thead className="border-b bg-gray-50/50 text-muted-foreground">
                             <tr>
                                 <th className="px-4 py-3.5 font-medium">Store</th>

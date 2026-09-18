@@ -50,18 +50,18 @@ export default function StoresIndex() {
             <Head title="Stores" />
             {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap gap-2">
+            <div className="mb-4 flex w-full flex-col gap-2.5 sm:flex-row sm:items-center">
+                <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:flex-1 sm:items-center">
                     <input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search name or slug"
-                        className="rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                        className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
                     />
                     <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        className="rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm sm:w-44"
                     >
                         <option value="">All statuses</option>
                         <option value="trial">Trial</option>
@@ -72,14 +72,14 @@ export default function StoresIndex() {
                 </div>
                 <Link
                     href={route('admin.stores.create')}
-                    className="rounded-lg bg-primary-blue px-4 py-2 text-sm font-bold text-white shadow-sm"
+                    className="w-full rounded-lg bg-primary-blue px-4 py-2 text-center text-sm font-bold text-white shadow-sm sm:w-auto sm:ml-auto"
                 >
                     New store
                 </Link>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
-                <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto w-full rounded-xl border border-border-gray bg-pure-white shadow-sm">
+                <table className="w-full min-w-[560px] text-left text-sm">
                     <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">Store</th>

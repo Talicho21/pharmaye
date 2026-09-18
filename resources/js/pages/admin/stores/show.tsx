@@ -174,7 +174,8 @@ export default function StoreShow() {
 
             <div className="rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
                 <h3 className="mb-4 text-sm font-black tracking-wide text-dark-charcoal/80 uppercase">Users</h3>
-                <table className="w-full text-left text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[440px] text-left text-sm">
                     <thead className="text-xs font-bold text-dark-charcoal/70 uppercase">
                         <tr>
                             <th className="py-2">Name</th>
@@ -194,6 +195,7 @@ export default function StoreShow() {
                         ))}
                     </tbody>
                 </table>
+                </div>
             </div>
         </AdminLayout>
     );

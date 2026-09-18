@@ -50,17 +50,17 @@ export default function UsersIndex() {
             <Head title="Users" />
             {toast && <Toast message={toast} onClose={() => setToast('')} />}
 
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-4 flex w-full flex-col gap-2.5 sm:flex-row sm:items-center">
                 <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search name or email"
-                    className="rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                    className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue sm:w-auto sm:flex-1"
                 />
                 <select
                     value={storeId}
                     onChange={(e) => setStoreId(e.target.value)}
-                    className="rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm sm:w-48"
                 >
                     <option value="">All stores</option>
                     {stores.map((store) => (
@@ -71,8 +71,8 @@ export default function UsersIndex() {
                 </select>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
-                <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto w-full rounded-xl border border-border-gray bg-pure-white shadow-sm">
+                <table className="w-full min-w-[640px] text-left text-sm">
                     <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">User</th>

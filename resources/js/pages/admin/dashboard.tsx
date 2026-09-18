@@ -98,7 +98,8 @@ export default function AdminDashboard() {
                         New store
                     </Link>
                 </div>
-                <table className="w-full text-left text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] text-left text-sm">
                     <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">Store</th>
@@ -134,6 +135,7 @@ export default function AdminDashboard() {
                         )}
                     </tbody>
                 </table>
+                </div>
             </div>
         </AdminLayout>
     );

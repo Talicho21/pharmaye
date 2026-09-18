@@ -160,18 +160,18 @@ export default function Dashboard() {
             <div className="mt-6 overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
                 <div className="flex flex-wrap items-center gap-3 border-b border-border-gray bg-off-white/60 px-4 py-3">
                     <h2 className="text-sm font-black tracking-[0.2em] text-dark-charcoal/80 uppercase">Inventory</h2>
-                    <div className="relative ml-auto">
+                    <div className="relative ml-auto w-full min-w-0 sm:w-56">
                         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-dark-charcoal/60" />
                         <input
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search name or batch…"
-                            className="w-56 rounded-lg border border-border-gray bg-pure-white py-2 pr-3 pl-9 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                            className="w-full rounded-lg border border-border-gray bg-pure-white py-2 pr-3 pl-9 text-sm text-dark-charcoal outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
                         />
                     </div>
                     <SearchableSelect
-                        className="w-64"
+                        className="w-full min-w-0 sm:w-64"
                         value={category}
                         onChange={setCategory}
                         placeholder="Search categories…"
