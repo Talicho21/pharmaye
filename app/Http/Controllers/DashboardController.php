@@ -50,6 +50,13 @@ class DashboardController extends Controller
 
         $today = now()->toDateString();
 
+        // Build analytics props using the shared AnalyticsController helper.
+        // This is admin-only content; the React side guards it with isAdmin.
+        // We pass a fresh request so analytics defaults to 'monthly' / no filters
+        // unless the user arrives from a bookmarked analytics-filtered URL.
+        $analyticsController = new AnalyticsController();
+        $analytics = $analyticsController->analyticsProps($request);
+
         return Inertia::render('dashboard', [
             'batches' => $batches,
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
@@ -67,6 +74,7 @@ class DashboardController extends Controller
                     ->selectRaw('coalesce(sum(batches.quantity * medicines.default_price), 0) as value')
                     ->value('value'),
             ],
+            'analytics' => $analytics,
         ]);
     }
 }

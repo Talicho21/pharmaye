@@ -17,7 +17,12 @@ use Inertia\Response;
  */
 class AnalyticsController extends Controller
 {
-    public function index(Request $request): Response
+    /**
+     * Build all analytics props from the given request.
+     * Called by index() for the Reports page and by DashboardController
+     * to embed analytics in the Dashboard without duplicating any query.
+     */
+    public function analyticsProps(Request $request): array
     {
         $range = in_array($request->query('range'), ['24h', 'monthly', '6months', 'yearly'], true)
             ? $request->query('range')
@@ -28,7 +33,7 @@ class AnalyticsController extends Controller
         $search = trim((string) $request->query('search', ''));
         $expiryStatus = $this->parseExpiryStatus($request->query('expiryStatus'));
 
-        return Inertia::render('reports', [
+        return [
             'range' => $range,
             'overview' => $this->overview($range),
             'topSelling' => $this->topSelling($range),
@@ -39,7 +44,12 @@ class AnalyticsController extends Controller
                 'endDate' => $endDate->toDateString(),
                 'search' => $search,
             ],
-        ]);
+        ];
+    }
+
+    public function index(Request $request): Response
+    {
+        return Inertia::render('reports', $this->analyticsProps($request));
     }
 
     private function rangeStart(string $range): Carbon

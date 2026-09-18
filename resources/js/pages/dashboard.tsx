@@ -2,6 +2,7 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { AlertTriangle, Boxes, CircleDollarSign, PackageSearch, Pencil, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
+import { AnalyticsPanel, type AnalyticsData } from '@/components/pharmacy/analytics-panel';
 import { AppShell } from '@/components/pharmacy/app-shell';
 import { SearchableSelect } from '@/components/pharmacy/searchable-select';
 import { Toast } from '@/components/pharmacy/toast';
@@ -20,11 +21,13 @@ interface DashboardProps extends SharedData {
         inventory_value: number;
     };
     flash: { success?: string };
+    /** Analytics data — present for all users but only rendered for admins. */
+    analytics: AnalyticsData;
 }
 
 export default function Dashboard() {
     const { props } = usePage<DashboardProps>();
-    const { batches, categories, filters, kpis, auth, flash } = props;
+    const { batches, categories, filters, kpis, auth, flash, analytics } = props;
 
     const isAdmin = auth.user?.role === 'admin';
     const [search, setSearch] = useState(filters.search ?? '');
@@ -36,7 +39,9 @@ export default function Dashboard() {
         if (flash.success) setToastMessage(flash.success);
     }, [flash.success]);
 
-    /* Debounced server-side filtering via Inertia partial reloads. */
+    /* Debounced server-side filtering via Inertia partial reloads.
+       only: ['batches', 'filters', 'kpis'] intentionally excludes 'analytics'
+       so the analytics section is not re-queried on every inventory search. */
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
             const params: Record<string, string> = {};
@@ -100,6 +105,20 @@ export default function Dashboard() {
         },
     ];
 
+    /**
+     * applyFilters for the embedded AnalyticsPanel.
+     *
+     * Any filter or pagination interaction in the analytics section navigates
+     * the user to the dedicated Reports page with the selected params applied.
+     * This avoids URL-param conflicts with the inventory filter params and
+     * gives the user the full Reports experience when they want to dig deeper.
+     *
+     * No partial reload is triggered here — no duplicate inventory queries fire.
+     */
+    const analyticsApplyFilters = (params: Record<string, string>) => {
+        router.get(route('reports'), params);
+    };
+
     return (
         <AppShell>
             <Head title="Dashboard" />
@@ -121,7 +140,7 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            {/* KPI cards */}
+            {/* KPI cards — untouched */}
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {kpiCards.map((card) => (
                     <div key={card.label} className="rounded-xl border border-border-gray bg-pure-white p-4 shadow-sm">
@@ -132,31 +151,30 @@ export default function Dashboard() {
                 ))}
             </div>
 
-            {/* Quick links */}
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <Link
-                    href={route('sell-out')}
-                    className="vibrant-btn rounded-xl border border-grass-green/30 bg-grass-green/10 p-4 text-sm font-bold text-dark-charcoal"
-                >
-                    Process Sale →
-                </Link>
-                <Link
-                    href={route('stock-entry')}
-                    className="vibrant-btn rounded-xl border border-primary-blue/30 bg-primary-blue/10 p-4 text-sm font-bold text-dark-charcoal"
-                >
-                    Restock Inventory →
-                </Link>
-                {isAdmin && (
-                    <Link
-                        href={route('reports')}
-                        className="vibrant-btn rounded-xl border border-accent-gold/40 bg-accent-gold/10 p-4 text-sm font-bold text-dark-charcoal"
-                    >
-                        Sales Reports →
-                    </Link>
-                )}
-            </div>
+            {/* Analytics panel — admin only.
+                Replaces the three quick-action tiles that were here before.
+                Uses the shared AnalyticsPanel component; data comes from the server
+                via DashboardController → AnalyticsController.analyticsProps().
+                Interacting with any filter navigates to the Reports page. */}
+            {isAdmin && analytics && (
+                <div className="mt-6">
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-black tracking-[0.3em] text-dark-charcoal/70 uppercase">Analytics</p>
+                            <h2 className="mt-0.5 text-lg font-bold tracking-tight text-dark-charcoal">Sales &amp; Inventory Overview</h2>
+                        </div>
+                        <Link
+                            href={route('reports')}
+                            className="text-xs font-bold text-primary-blue hover:underline"
+                        >
+                            Full Reports →
+                        </Link>
+                    </div>
+                    <AnalyticsPanel data={analytics} applyFilters={analyticsApplyFilters} />
+                </div>
+            )}
 
-            {/* Inventory table */}
+            {/* Inventory table — untouched */}
             <div className="mt-6 overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
                 <div className="flex flex-wrap items-center gap-3 border-b border-border-gray bg-off-white/60 px-4 py-3">
                     <h2 className="text-sm font-black tracking-[0.2em] text-dark-charcoal/80 uppercase">Inventory</h2>
