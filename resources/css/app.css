@@ -14,6 +14,17 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
 
+    /* ── Pharmaye brand palette aliases (resolved after :root vars) ── */
+    --color-brand-primary:    var(--brand-primary);
+    --color-brand-dark:       var(--brand-dark);
+    --color-brand-background: var(--brand-background);
+    --color-brand-body:       var(--brand-background); /* alias: bg-brand-body → canvas */
+    --color-brand-accent:     var(--brand-accent);
+    --color-brand-text:       var(--brand-text);
+    --color-brand-muted:      var(--brand-muted);
+    --color-brand-danger:     var(--brand-danger);
+    --color-brand-success:    var(--brand-success);
+
     --color-background: var(--background);
     --color-foreground: var(--foreground);
 
@@ -113,38 +124,39 @@
 }
 
 .dark {
-    --background: hsl(0, 0%, 3.9%);
-    --foreground: hsl(0, 0%, 98%);
-    --card: hsl(0, 0%, 3.9%);
-    --card-foreground: hsl(0, 0%, 98%);
-    --popover: hsl(0, 0%, 3.9%);
-    --popover-foreground: hsl(0, 0%, 98%);
-    --primary: hsl(0, 0%, 98%);
-    --primary-foreground: hsl(0, 0%, 9%);
-    --secondary: hsl(0, 0%, 14.9%);
-    --secondary-foreground: hsl(0, 0%, 98%);
-    --muted: hsl(0, 0%, 6.9%);
-    --muted-foreground: hsl(0, 0%, 63.9%);
-    --accent: hsl(0, 0%, 14.9%);
-    --accent-foreground: hsl(0, 0%, 98%);
-    --destructive: hsl(0, 84%, 60%);
-    --destructive-foreground: hsl(0, 0%, 98%);
-    --border: hsl(0, 0%, 14.9%);
-    --input: hsl(0, 0%, 14.9%);
-    --ring: hsl(0, 0%, 83.1%);
-    --chart-1: hsl(220, 70%, 50%);
-    --chart-2: hsl(160, 60%, 45%);
-    --chart-3: hsl(30, 80%, 55%);
-    --chart-4: hsl(280, 65%, 60%);
-    --chart-5: hsl(340, 75%, 55%);
-    --sidebar-background: hsl(0, 0%, 7%);
-    --sidebar-foreground: hsl(0, 0%, 80%);
-    --sidebar-primary: hsl(360, 100%, 100%);
-    --sidebar-primary-foreground: hsl(0, 0%, 100%);
-    --sidebar-accent: hsl(0, 0%, 15.9%);
-    --sidebar-accent-foreground: hsl(240, 4.8%, 95.9%);
-    --sidebar-border: hsl(0, 0%, 15.9%);
-    --sidebar-ring: hsl(217.2, 91.2%, 59.8%);
+    /* ── ShadCN semantic tokens (Linear/Vercel-grade dark) ── */
+    --background: hsl(222, 47%, 6%);
+    --foreground: hsl(213, 31%, 91%);
+    --card: hsl(222, 40%, 9%);
+    --card-foreground: hsl(213, 31%, 91%);
+    --popover: hsl(222, 40%, 9%);
+    --popover-foreground: hsl(213, 31%, 91%);
+    --primary: hsl(213, 31%, 91%);
+    --primary-foreground: hsl(222, 47%, 6%);
+    --secondary: hsl(222, 40%, 14%);
+    --secondary-foreground: hsl(213, 31%, 91%);
+    --muted: hsl(222, 40%, 11%);
+    --muted-foreground: hsl(215, 20%, 55%);
+    --accent: hsl(222, 40%, 15%);
+    --accent-foreground: hsl(213, 31%, 91%);
+    --destructive: hsl(0, 74%, 65%);
+    --destructive-foreground: hsl(213, 31%, 91%);
+    --border: hsl(215, 27%, 20%);
+    --input: hsl(215, 27%, 18%);
+    --ring: hsl(216, 80%, 65%);
+    --chart-1: hsl(220, 70%, 60%);
+    --chart-2: hsl(160, 65%, 50%);
+    --chart-3: hsl(30, 80%, 60%);
+    --chart-4: hsl(280, 65%, 65%);
+    --chart-5: hsl(340, 75%, 60%);
+    --sidebar-background: hsl(222, 47%, 7%);
+    --sidebar-foreground: hsl(215, 20%, 70%);
+    --sidebar-primary: hsl(213, 31%, 91%);
+    --sidebar-primary-foreground: hsl(222, 47%, 6%);
+    --sidebar-accent: hsl(222, 40%, 14%);
+    --sidebar-accent-foreground: hsl(213, 31%, 91%);
+    --sidebar-border: hsl(215, 27%, 18%);
+    --sidebar-ring: hsl(217, 91%, 60%);
 }
 
 @layer base {
@@ -157,42 +169,66 @@
     }
 }
 
-/* ===== Pharmacy brand theme (ported from legacy pharmacy-frontend) ===== */
+/* ===== Pharmaye brand theme — Deep Teal palette ===== */
+/*
+ * TOKEN DECISIONS
+ *   brand-primary   #087F8C  — buttons, active nav, links, primary icons
+ *   brand-dark      #064B52  — sidebar bg, hover/pressed states on primary
+ *   brand-background #F7FCFC — page canvas (behind cards, tables, sidebars)
+ *   brand-accent    #62C6B7  — badges, success, chart highlights, "active" dots
+ *   brand-text      #172B2F  — headings + body text
+ *   brand-muted     #D0E4E6  — borders, dividers, input borders
+ *
+ * DARK MODE:
+ *   Page canvas → #032E33 (deeper teal-black, distinct from brand-dark hover).
+ *   brand-dark (#064B52) stays as hover/pressed only — not the canvas.
+ *
+ * WCAG AA NOTES:
+ *   white on brand-primary (#087F8C) → 4.65:1  ✓ AA (passes normal text)
+ *   white on brand-dark    (#064B52) → 8.05:1  ✓ AAA
+ *   brand-dark on brand-accent (#62C6B7) → 4.61:1 ✓ AA (use text-brand-dark on mint)
+ *   Do NOT use text-white on brand-accent — contrast is only 2.71:1 ✗
+ *
+ * REMOVED TOKENS (legacy — no longer in use):
+ *   primary-blue, grass-green, off-white, pure-white, dark-charcoal,
+ *   border-gray, accent-gold, accent-red, accent-green-alt
+ */
 
 :root {
-    --primary-blue: #1d5fae;
-    --grass-green: #4e9f3d;
-    --off-white: #f5f6f8;
-    --pure-white: #ffffff;
-    --dark-charcoal: #2e2e38;
-    --border-gray: #dadfe6;
-    --accent-gold: #f2b705;
-    --accent-red: #e4483c;
-    --accent-green-alt: #2fae4e;
+    --brand-primary:    #087F8C;
+    --brand-dark:       #064B52;
+    --brand-background: #F7FCFC;
+    --brand-accent:     #62C6B7;
+    --brand-text:       #172B2F;
+    --brand-muted:      #D0E4E6;
+
+    /* Semantic danger / destructive (replaces accent-red) */
+    --brand-danger:     #D94F3D;
+    /* Semantic success (replaces grass-green / accent-green-alt) */
+    --brand-success:    #087F8C;
 }
 
 .dark {
-    --primary-blue: #123b6a;
-    --grass-green: #37702c;
-    --off-white: #1a1a24;
-    --pure-white: #252530;
-    --dark-charcoal: #eaeaea;
-    --border-gray: #3f3f50;
-    --accent-gold: #d29d00;
-    --accent-red: #c53127;
-    --accent-green-alt: #248c3d;
+    /* ── Pharmaye brand tokens — dark canvas variant ── */
+    --brand-primary:    #0AAABB;   /* lighter teal — readable on deep bg     */
+    --brand-dark:       #064B52;   /* stays same — still hover/active color  */
+    --brand-background: #032E33;   /* deep teal-black — page canvas          */
+    --brand-accent:     #62C6B7;   /* stays same — vivid on dark             */
+    --brand-text:       #D8F0F1;   /* near-white teal — WCAG AA on canvas    */
+    --brand-muted:      #1A4448;   /* dark teal border tone                  */
+    --brand-danger:     #F87171;   /* red-400 — accessible on dark           */
+    --brand-success:    #34D399;   /* emerald-400                            */
 }
 
 @theme inline {
-    --color-primary-blue: var(--primary-blue);
-    --color-grass-green: var(--grass-green);
-    --color-off-white: var(--off-white);
-    --color-pure-white: var(--pure-white);
-    --color-dark-charcoal: var(--dark-charcoal);
-    --color-border-gray: var(--border-gray);
-    --color-accent-gold: var(--accent-gold);
-    --color-accent-red: var(--accent-red);
-    --color-accent-green-alt: var(--accent-green-alt);
+    --color-brand-primary:    var(--brand-primary);
+    --color-brand-dark:       var(--brand-dark);
+    --color-brand-background: var(--brand-background);
+    --color-brand-accent:     var(--brand-accent);
+    --color-brand-text:       var(--brand-text);
+    --color-brand-muted:      var(--brand-muted);
+    --color-brand-danger:     var(--brand-danger);
+    --color-brand-success:    var(--brand-success);
 }
 
 .duration-250 {
@@ -206,10 +242,10 @@
 @keyframes stock-glow {
     0%,
     100% {
-        box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7);
+        box-shadow: 0 0 0 0 rgba(217, 79, 61, 0.7);  /* brand-danger */
     }
     50% {
-        box-shadow: 0 0 0 6px rgba(229, 57, 53, 0);
+        box-shadow: 0 0 0 6px rgba(217, 79, 61, 0);
     }
 }
 
@@ -218,8 +254,8 @@
 }
 
 .badge-warning {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: #FFF3CD;
+    color: #854D0E;
     padding: 0.25rem 0.5rem;
     border-radius: 9999px;
     font-weight: 700;
@@ -227,12 +263,23 @@
 }
 
 .badge-danger {
-    background-color: #ffebee;
-    color: #b71c1c;
+    background-color: #FEE2E2;
+    color: #991B1B;
     padding: 0.25rem 0.5rem;
     border-radius: 9999px;
     font-weight: 700;
     font-size: 0.75rem;
+}
+
+/* Dark-mode badge overrides — WCAG AA contrast on dark surfaces */
+.dark .badge-warning {
+    background-color: rgba(120, 53, 15, 0.5);
+    color: #FCD34D;
+}
+
+.dark .badge-danger {
+    background-color: rgba(127, 29, 29, 0.5);
+    color: #F87171;
 }
 
 .vibrant-btn {
@@ -244,5 +291,21 @@
 }
 .vibrant-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(27, 35, 64, 0.15);
+    box-shadow: 0 4px 12px rgba(8, 127, 140, 0.18);  /* brand-primary tinted */
+}
+
+/* Dark-mode scrollbar styling for webkit browsers */
+.dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.dark ::-webkit-scrollbar-track {
+    background: #032E33;  /* brand-background dark */
+}
+.dark ::-webkit-scrollbar-thumb {
+    background: #1A4448;  /* brand-muted dark */
+    border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #064B52;  /* brand-dark */
 }

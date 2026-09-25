@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+﻿import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
@@ -56,12 +56,12 @@ export default function StoresIndex() {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search name or slug"
-                        className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue"
+                        className="w-full rounded-lg border border-brand-muted bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                     />
                     <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm sm:w-44"
+                        className="w-full rounded-lg border border-brand-muted bg-white px-3 py-2 text-sm sm:w-44"
                     >
                         <option value="">All statuses</option>
                         <option value="trial">Trial</option>
@@ -72,15 +72,15 @@ export default function StoresIndex() {
                 </div>
                 <Link
                     href={route('admin.stores.create')}
-                    className="w-full rounded-lg bg-primary-blue px-4 py-2 text-center text-sm font-bold text-white shadow-sm sm:w-auto sm:ml-auto"
+                    className="w-full rounded-lg bg-brand-dark px-4 py-2 text-center text-sm font-bold text-white shadow-sm sm:w-auto sm:ml-auto"
                 >
                     New store
                 </Link>
             </div>
 
-            <div className="overflow-x-auto w-full rounded-xl border border-border-gray bg-pure-white shadow-sm">
+            <div className="overflow-x-auto w-full rounded-xl border border-brand-muted bg-white shadow-sm">
                 <table className="w-full min-w-[560px] text-left text-sm">
-                    <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
+                    <thead className="bg-brand-background text-xs font-bold text-brand-text/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">Store</th>
                             <th className="px-4 py-3">Plan</th>
@@ -88,14 +88,14 @@ export default function StoresIndex() {
                             <th className="px-4 py-3 text-right">This month</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-gray">
+                    <tbody className="divide-y divide-brand-muted">
                         {stores.data.map((store) => (
                             <tr key={store.id}>
                                 <td className="px-4 py-3">
-                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-primary-blue hover:underline">
+                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-brand-dark hover:underline">
                                         {store.name}
                                     </Link>
-                                    <p className="text-xs text-dark-charcoal/60">{store.slug}</p>
+                                    <p className="text-xs text-brand-text/60">{store.slug}</p>
                                 </td>
                                 <td className="px-4 py-3 capitalize">{store.plan}</td>
                                 <td className="px-4 py-3">

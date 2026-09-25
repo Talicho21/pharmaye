@@ -25,17 +25,18 @@ Route::middleware(['auth', 'require.password.change', 'store.not_suspended'])->g
     Route::get('sell-out', [SaleController::class, 'create'])->name('sell-out');
     Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
 
-    // Inventory (batches)
+    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
     Route::get('stock-entry', [InventoryController::class, 'create'])->name('stock-entry');
     Route::post('stock-entry', [InventoryController::class, 'store'])->name('batches.store');
     Route::put('batches/{batch}', [InventoryController::class, 'update'])->name('batches.update');
 
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
+    
+    Route::get('reports', [AnalyticsController::class, 'index'])->name('reports');
 
     // Admin only
     Route::middleware('admin')->group(function () {
         Route::delete('batches/{batch}', [InventoryController::class, 'destroy'])->name('batches.destroy');
-        Route::get('reports', [AnalyticsController::class, 'index'])->name('reports');
     });
 });
 

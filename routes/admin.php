@@ -36,6 +36,10 @@ Route::prefix('admin')->name('admin.')->middleware('admin.guard')->group(functio
 
         Route::get('activity', [ActivityLogController::class, 'index'])->name('activity.index');
 
+        // POS Settings
+        Route::resource('sell-out-field-settings', \App\Http\Controllers\Admin\SellOutFieldSettingController::class)
+            ->only(['index', 'store', 'update', 'destroy']);
+
         Route::get('billing', function () {
             $stores = \App\Models\Store::orderBy('name')->get()->map(fn ($store) => [
                 'id' => $store->id,

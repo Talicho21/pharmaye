@@ -2,15 +2,97 @@ import { SVGAttributes } from 'react';
 
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
     return (
-        <svg {...props} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            {/* Pestle */}
-            <path d="M26.4 1.6c1.6-1.1 3.8-.7 4.9.9l5 7.1c1.1 1.6.7 3.8-.9 4.9l-1.7 1.2c-1.6 1.1-3.8.7-4.9-.9l-5-7.1c-1.1-1.6-.7-3.8.9-4.9l1.7-1.2Z" />
-            {/* Mortar bowl with pharmacy-cross cutout */}
-            <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M4 16.1c0-1.2 1-2.1 2.1-2.1h27.8c1.1 0 2.1.9 2.1 2.1v.9c0 2.3-.7 5.4-2.9 8.8C30.5 31.3 25.8 36 20 36s-10.5-4.7-13.1-10.2C4.7 22.4 4 19.3 4 17v-.9Zm16 5.4c-.7 0-1.3.6-1.3 1.3v2.4h-2.4c-.7 0-1.3.6-1.3 1.3s.6 1.3 1.3 1.3h2.4v2.4c0 .7.6 1.3 1.3 1.3s1.3-.6 1.3-1.3V28h2.4c.7 0 1.3-.6 1.3-1.3s-.6-1.3-1.3-1.3h-2.4v-2.4c0-.7-.6-1.3-1.3-1.3Z"
-            />
+        <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="160 120 190 290" aria-hidden="true">
+            <defs>
+                <style>{`
+                    .cup-green { fill: #137438; }
+                    .leaf-green { fill: #78B833; }
+                    .cross-white { fill: #FFFFFF; }
+                    .line-dark { stroke: #0B4E25; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+                    .line-leaf { stroke: #4F821A; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+                `}</style>
+            </defs>
+
+            <g transform="translate(10, 20)">
+                {/* 1. Mortar Bowl with pedestal & inner depth */}
+                <path d="M 205 352 L 295 352 L 295 375 L 205 375 Z" className="cup-green" />
+                <path d="M 205 352 L 295 352 L 295 375 L 205 375 Z" fill="none" className="line-dark" />
+
+                <path d="M 172 260 C 175 330, 205 352, 250 352 C 295 352, 325 330, 328 260 Z" className="cup-green" />
+                <path d="M 172 260 C 175 330, 205 352, 250 352 C 295 352, 325 330, 328 260 Z" fill="none" className="line-dark" />
+
+                {/* Oval Mortar Rim */}
+                <ellipse cx="250" cy="260" rx="78" ry="24" className="cup-green" />
+                <ellipse cx="250" cy="260" rx="78" ry="24" fill="none" className="line-dark" />
+                
+                {/* Inner bowl cavity */}
+                <ellipse cx="250" cy="260" rx="63" ry="16" fill="#0E582A" />
+                <ellipse cx="250" cy="260" rx="63" ry="16" fill="none" className="line-dark" />
+
+                {/* Centered Medical Cross on Mortar */}
+                <path d="M 242 284 H 258 V 298 H 272 V 314 H 258 V 328 H 242 V 314 H 228 V 298 H 242 Z" className="cross-white" />
+
+                {/* 2. Leaves inside Mortar */}
+                {/* Left Leaf */}
+                <path d="M 248 262 C 252 245, 260 230, 268 220 C 275 235, 272 252, 266 262 Z" className="leaf-green" />
+                <path d="M 248 262 C 252 245, 260 230, 268 220 C 275 235, 272 252, 266 262 Z" fill="none" className="line-leaf" />
+                <line x1="254" y1="258" x2="268" y2="220" className="line-leaf" />
+
+                {/* Right Leaf */}
+                <path d="M 264 262 C 278 248, 298 234, 320 232 C 310 248, 292 258, 280 263 Z" className="leaf-green" />
+                <path d="M 264 262 C 278 248, 298 234, 320 232 C 310 248, 292 258, 280 263 Z" fill="none" className="line-leaf" />
+                <line x1="268" y1="260" x2="320" y2="232" className="line-leaf" />
+
+                {/* 3. Pestle */}
+                {/* Pestle lower rod going into the mortar */}
+                <path d="M 213 192 L 235 264 L 255 264 L 244 192 Z" fill="#188C44" />
+                <path d="M 213 192 L 235 264 L 255 264 L 244 192 Z" fill="none" className="line-dark" />
+
+                {/* Flared top head above fist */}
+                <path d="M 194 135 C 192 125, 222 118, 230 128 L 225 155 L 204 155 Z" fill="#188C44" />
+                <ellipse cx="212" cy="130" rx="19" ry="8" transform="rotate(-15 212 130)" fill="#188C44" />
+                <ellipse cx="212" cy="130" rx="19" ry="8" transform="rotate(-15 212 130)" fill="none" className="line-dark" />
+
+                {/* 4. Shortened Forearm & Hand with Gentle Slope */}
+                {/* Trimmed forearm with a soft, gradual slope (~20A angle instead of steep) */}
+                <path d="M 320 148 L 254 186 C 248 194, 242 202, 238 210 L 228 162 L 298 116 Z" className="cup-green" />
+                
+                {/* Arm outline with rounded wrist cut-off */}
+                <path d="M 254 186 L 320 148 C 326 144, 330 138, 326 130 C 322 122, 308 112, 298 116 L 228 162" fill="none" className="line-dark" />
+
+                {/* Palm Base */}
+                <path d="M 206 142 C 220 134, 238 136, 248 152 C 256 166, 252 184, 242 200 C 230 210, 218 214, 204 214 C 195 214, 185 206, 184 195 Z" className="cup-green" />
+
+                {/* Thumb gripping over the pestle */}
+                <path d="M 235 150 C 230 140, 212 145, 202 165 C 198 174, 208 178, 214 172 C 222 162, 230 156, 235 150 Z" fill="#1FB357" />
+                <path d="M 235 150 C 230 140, 212 145, 202 165 C 198 174, 208 178, 214 172 C 222 162, 230 156, 235 150 Z" fill="none" className="line-dark" />
+
+                {/* 4 Horizontal Fingers Gripping Pestle */}
+                {/* Finger 1 */}
+                <path d="M 200 155 C 178 152, 178 170, 196 174 L 234 174" className="cup-green" />
+                <path d="M 200 155 C 178 152, 178 170, 196 174 L 234 174" fill="none" className="line-dark" />
+                <path d="M 224 165 C 228 165, 230 172, 226 174" fill="none" className="line-dark" strokeWidth={2} />
+
+                {/* Finger 2 */}
+                <path d="M 196 174 C 176 172, 176 190, 196 194 L 238 194" className="cup-green" />
+                <path d="M 196 174 C 176 172, 176 190, 196 194 L 238 194" fill="none" className="line-dark" />
+                <path d="M 228 184 C 232 184, 234 192, 230 194" fill="none" className="line-dark" strokeWidth={2} />
+
+                {/* Finger 3 */}
+                <path d="M 196 194 C 178 192, 178 210, 198 214 L 240 214" className="cup-green" />
+                <path d="M 196 194 C 178 192, 178 210, 198 214 L 240 214" fill="none" className="line-dark" />
+                <path d="M 230 204 C 234 204, 236 212, 232 214" fill="none" className="line-dark" strokeWidth={2} />
+
+                {/* Finger 4 */}
+                <path d="M 198 214 C 182 214, 184 232, 202 234 L 238 234" className="cup-green" />
+                <path d="M 198 214 C 182 214, 184 232, 202 234 L 238 234" fill="none" className="line-dark" />
+                <path d="M 228 224 C 232 224, 234 232, 230 234" fill="none" className="line-dark" strokeWidth={2} />
+
+                {/* Knuckle crease marks */}
+                <path d="M 200 174 L 206 174" className="line-dark" />
+                <path d="M 200 194 L 206 194" className="line-dark" />
+                <path d="M 202 214 L 208 214" className="line-dark" />
+            </g>
         </svg>
     );
 }

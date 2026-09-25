@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+﻿import { Download } from 'lucide-react';
 
 import { downloadInvoicePdf } from '@/lib/receipt-print';
 import type { StoreBranding } from '@/types';
@@ -77,7 +77,7 @@ export function InvoicePreview({
                 <button
                     type="button"
                     onClick={handleDownloadPdf}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-primary-blue px-3 py-1.5 text-xs font-bold text-white shadow-md transition duration-150 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:ring-offset-2 active:translate-y-0"
+                    className="inline-flex items-center gap-1.5 rounded-md bg-brand-dark px-3 py-1.5 text-xs font-bold text-white shadow-md transition duration-150 hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 active:translate-y-0"
                     title="Download invoice as PDF"
                 >
                     <Download className="h-3.5 w-3.5" />

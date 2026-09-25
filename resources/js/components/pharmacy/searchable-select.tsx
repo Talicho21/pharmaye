@@ -76,31 +76,31 @@ export function SearchableSelect({
                     placeholder={placeholder}
                     onChange={(event) => setQuery(event.target.value)}
                     className={cn(
-                        'w-full rounded-lg border border-border-gray bg-pure-white py-2 pl-3 text-sm text-dark-charcoal outline-none placeholder:text-dark-charcoal/50 focus-visible:ring-2 focus-visible:ring-primary-blue',
+                        'w-full rounded-lg border border-brand-muted bg-white py-2 pl-3 text-sm text-brand-text outline-none placeholder:text-brand-text/50 focus-visible:ring-2 focus-visible:ring-brand-primary dark:border-brand-muted dark:bg-brand-dark/90 dark:text-brand-text dark:placeholder:text-brand-text/40',
                         inputClassName,
                         'pr-9',
                     )}
                 />
-                <ComboboxButton className="absolute inset-y-0 right-0 flex items-center px-2 text-dark-charcoal/60">
+                <ComboboxButton className="absolute inset-y-0 right-0 flex items-center px-2 text-brand-text/60">
                     <ChevronsUpDown className="h-4 w-4" />
                 </ComboboxButton>
 
                 <ComboboxOptions
                     anchor="bottom start"
-                    className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-lg border border-border-gray bg-pure-white py-1 shadow-sm [--anchor-gap:4px] empty:invisible"
+                    className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-lg border border-brand-muted bg-white py-1 shadow-sm [--anchor-gap:4px] empty:invisible dark:border-brand-muted/80 dark:bg-brand-dark dark:shadow-slate-950/70"
                 >
                     {filtered.length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-dark-charcoal/60">{emptyMessage}</p>
+                        <p className="px-3 py-2 text-sm text-brand-text/60">{emptyMessage}</p>
                     ) : (
                         filtered.map((option) => (
                             <ComboboxOption
                                 key={option.value || option.label}
                                 value={option.value}
-                                className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-dark-charcoal select-none data-focus:bg-primary-blue/10"
+                                className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-brand-text select-none data-focus:bg-brand-dark/10 dark:data-focus:bg-white/10"
                             >
                                 {({ selected }) => (
                                     <>
-                                        <Check className={cn('h-3.5 w-3.5 shrink-0 text-primary-blue', selected ? 'opacity-100' : 'opacity-0')} />
+                                        <Check className={cn('h-3.5 w-3.5 shrink-0 text-brand-dark dark:text-brand-accent', selected ? 'opacity-100' : 'opacity-0')} />
                                         <span className={cn('truncate', selected && 'font-semibold')}>{option.label}</span>
                                     </>
                                 )}

@@ -24,7 +24,7 @@ class AnalyticsController extends Controller
      */
     public function analyticsProps(Request $request): array
     {
-        $range = in_array($request->query('range'), ['24h', 'monthly', '6months', 'yearly'], true)
+        $range = in_array($request->query('range'), ['24h', '7d', 'monthly', '6months', 'yearly'], true)
             ? $request->query('range')
             : 'monthly';
 
@@ -47,6 +47,24 @@ class AnalyticsController extends Controller
         ];
     }
 
+    /**
+     * Lightweight subset used by the Dashboard summary panel.
+     * Runs only the overview and top-selling queries — skips the
+     * heavy salesLog and expiryHealth paginated queries entirely.
+     */
+    public function summaryProps(Request $request): array
+    {
+        $range = in_array($request->query('range'), ['24h', '7d', 'monthly', '6months', 'yearly'], true)
+            ? $request->query('range')
+            : 'monthly';
+
+        return [
+            'range'      => $range,
+            'overview'   => $this->overview($range),
+            'topSelling' => $this->topSelling($range),
+        ];
+    }
+
     public function index(Request $request): Response
     {
         return Inertia::render('reports', $this->analyticsProps($request));
@@ -56,6 +74,7 @@ class AnalyticsController extends Controller
     {
         return match ($range) {
             '24h' => now()->subDay(),
+            '7d' => now()->subDays(7),
             '6months' => now()->subMonths(6),
             'yearly' => now()->subYear(),
             default => now()->subDays(30),

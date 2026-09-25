@@ -71,22 +71,14 @@ export default function Reports() {
                 remain Reports-only actions. Dashboard shows the panel without these buttons. */}
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <p className="text-xs font-black tracking-[0.3em] text-dark-charcoal/70 uppercase">Analytics &amp; Audit</p>
-                    <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-dark-charcoal">Sales Reports</h1>
+                    <p className="text-xs font-black tracking-[0.3em] text-brand-text/70 uppercase">Analytics &amp; Audit</p>
+                    <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-brand-text">Sales Reports</h1>
                 </div>
                 <div className="flex gap-2">
                     <button
                         type="button"
-                        onClick={() => router.reload()}
-                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm font-semibold text-dark-charcoal"
-                    >
-                        <RefreshCw className="h-4 w-4" />
-                        Refresh
-                    </button>
-                    <button
-                        type="button"
                         onClick={exportCsv}
-                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm font-semibold text-dark-charcoal"
+                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg border border-brand-muted bg-white px-3 py-2 text-sm font-semibold text-brand-text dark:border-brand-muted/80 dark:bg-brand-dark/70 dark:text-brand-text dark:hover:bg-brand-dark"
                     >
                         <Download className="h-4 w-4" />
                         Export CSV
@@ -94,7 +86,7 @@ export default function Reports() {
                     <button
                         type="button"
                         onClick={() => window.print()}
-                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg bg-primary-blue px-3 py-2 text-sm font-bold text-white"
+                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg bg-brand-dark px-3 py-2 text-sm font-bold text-white dark:bg-brand-accent dark:text-brand-dark"
                     >
                         <Printer className="h-4 w-4" />
                         Print

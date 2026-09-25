@@ -15,23 +15,40 @@ class StoreSaleRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'items' => ['required', 'array', 'min:1'],
             'items.*.medicine_id' => ['required', 'integer'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             // Manual batch override for returns/edge cases; FEFO by default.
             'items.*.batch_id' => ['nullable', 'integer'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
-            'customer_name' => ['nullable', 'string', 'max:255'],
-            'customer_tin' => ['nullable', 'string', 'max:50'],
-            'customer_sno' => ['nullable', 'string', 'max:50'],
-            'invoice_no' => ['nullable', 'string', 'max:50'],
-            'receiver_name' => ['nullable', 'string', 'max:255'],
-            'seller_name' => ['nullable', 'string', 'max:255'],
-            'reference' => ['nullable', 'string', 'max:255'],
-            'payment_method' => ['required', Rule::enum(PaymentMethod::class)],
-            'discount_amount' => ['nullable', 'numeric', 'min:0'],
-            'tax_amount' => ['nullable', 'numeric', 'min:0'],
         ];
+
+        $fieldConfigs = \App\Models\SellOutFieldConfig::where('store_id', $this->user()->store_id)
+            ->where('is_active', true)
+            ->get();
+        foreach ($fieldConfigs as $field) {
+            $fieldRules = [];
+            if ($field->is_required) {
+                $fieldRules[] = 'required';
+            } else {
+                $fieldRules[] = 'nullable';
+            }
+            if ($field->input_type === 'number') {
+                $fieldRules[] = 'numeric';
+            } elseif ($field->input_type === 'date') {
+                $fieldRules[] = 'date';
+            } else {
+                $fieldRules[] = 'string';
+                $fieldRules[] = 'max:255';
+            }
+            $rules[$field->field_key] = $fieldRules;
+        }
+
+        // Hardcode subtotal modifiers (not part of dynamic config form yet)
+        $rules['discount_amount'] = ['nullable', 'numeric', 'min:0'];
+        $rules['tax_amount'] = ['nullable', 'numeric', 'min:0'];
+
+        return $rules;
     }
 }

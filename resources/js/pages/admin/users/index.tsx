@@ -1,4 +1,4 @@
-import { Head, router, usePage } from '@inertiajs/react';
+﻿import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 import { Toast } from '@/components/pharmacy/toast';
@@ -55,12 +55,12 @@ export default function UsersIndex() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Search name or email"
-                    className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue sm:w-auto sm:flex-1"
+                    className="w-full rounded-lg border border-brand-muted bg-white px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-primary sm:w-auto sm:flex-1"
                 />
                 <select
                     value={storeId}
                     onChange={(e) => setStoreId(e.target.value)}
-                    className="w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2 text-sm sm:w-48"
+                    className="w-full rounded-lg border border-brand-muted bg-white px-3 py-2 text-sm sm:w-48"
                 >
                     <option value="">All stores</option>
                     {stores.map((store) => (
@@ -71,9 +71,9 @@ export default function UsersIndex() {
                 </select>
             </div>
 
-            <div className="overflow-x-auto w-full rounded-xl border border-border-gray bg-pure-white shadow-sm">
+            <div className="overflow-x-auto w-full rounded-xl border border-brand-muted bg-white shadow-sm">
                 <table className="w-full min-w-[640px] text-left text-sm">
-                    <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
+                    <thead className="bg-brand-background text-xs font-bold text-brand-text/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">User</th>
                             <th className="px-4 py-3">Store</th>
@@ -82,12 +82,12 @@ export default function UsersIndex() {
                             <th className="px-4 py-3 text-right">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-gray">
+                    <tbody className="divide-y divide-brand-muted">
                         {users.data.map((user) => (
                             <tr key={user.id}>
                                 <td className="px-4 py-3">
                                     <p className="font-semibold">{user.name}</p>
-                                    <p className="text-xs text-dark-charcoal/60">{user.email}</p>
+                                    <p className="text-xs text-brand-text/60">{user.email}</p>
                                 </td>
                                 <td className="px-4 py-3">{user.store?.name ?? '—'}</td>
                                 <td className="px-4 py-3 capitalize">{user.role}</td>
@@ -96,7 +96,7 @@ export default function UsersIndex() {
                                     <div className="flex justify-end gap-2">
                                         <button
                                             type="button"
-                                            className="text-xs font-bold text-primary-blue hover:underline"
+                                            className="text-xs font-bold text-brand-dark hover:underline"
                                             onClick={() => {
                                                 if (confirm(`Reset password for ${user.email}?`)) {
                                                     router.post(route('admin.users.password-reset', user.id));
@@ -108,7 +108,7 @@ export default function UsersIndex() {
                                         {user.deactivated_at ? (
                                             <button
                                                 type="button"
-                                                className="text-xs font-bold text-grass-green hover:underline"
+                                                className="text-xs font-bold text-brand-accent hover:underline"
                                                 onClick={() => router.post(route('admin.users.activate', user.id))}
                                             >
                                                 Reactivate
@@ -116,7 +116,7 @@ export default function UsersIndex() {
                                         ) : (
                                             <button
                                                 type="button"
-                                                className="text-xs font-bold text-accent-red hover:underline"
+                                                className="text-xs font-bold text-brand-danger hover:underline"
                                                 onClick={() => {
                                                     if (confirm(`Deactivate ${user.email}?`)) {
                                                         router.post(route('admin.users.deactivate', user.id));

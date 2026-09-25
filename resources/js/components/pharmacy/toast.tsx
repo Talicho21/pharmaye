@@ -16,12 +16,12 @@ export function Toast({ message, onClose, duration = 3000 }: ToastProps) {
     }, [duration, onClose]);
 
     return (
-        <div className="animate-in slide-in-from-top-2 fade-in fixed top-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-grass-green bg-pure-white p-4 shadow-lg duration-300">
-            <CheckCircle className="h-5 w-5 text-grass-green" />
-            <span className="text-sm font-semibold text-dark-charcoal">{message}</span>
+        <div className="animate-in slide-in-from-top-2 fade-in fixed top-4 right-4 z-50 flex items-center gap-3 rounded-lg border border-brand-accent bg-white p-4 shadow-lg duration-300 dark:border-brand-accent/60 dark:bg-slate-800 dark:shadow-black/40">
+            <CheckCircle className="h-5 w-5 text-brand-accent" />
+            <span className="text-sm font-semibold text-brand-text">{message}</span>
             <button
                 onClick={onClose}
-                className="ml-2 rounded text-dark-charcoal/50 hover:text-dark-charcoal focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:outline-none"
+                className="ml-2 rounded text-brand-text/50 hover:text-brand-text focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:outline-none"
                 aria-label="Close notification"
             >
                 <X className="h-4 w-4" />

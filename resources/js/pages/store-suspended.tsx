@@ -1,4 +1,4 @@
-import { Head, router, usePage } from "@inertiajs/react";
+﻿import { Head, router, usePage } from "@inertiajs/react";
 import { AlertTriangle, LogOut, Mail, Phone } from "lucide-react";
 import { useEffect } from "react";
 
@@ -18,7 +18,7 @@ export default function StoreSuspended() {
     // refreshes), redirect them back to the dashboard automatically.
     useEffect(() => {
         if (!store_suspended && auth.user) {
-            router.replace(route("dashboard"));
+            router.visit(route("dashboard"), { replace: true });
         }
     }, [store_suspended, auth.user]);
 
@@ -30,7 +30,7 @@ export default function StoreSuspended() {
         <>
             <Head title="Store Suspended" />
 
-            <div className="flex min-h-screen flex-col items-center justify-center bg-off-white px-4 py-16">
+            <div className="flex min-h-screen flex-col items-center justify-center bg-brand-background px-4 py-16">
                 {/* Card */}
                 <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 shadow-xl">
                     {/* Icon */}
@@ -39,13 +39,13 @@ export default function StoreSuspended() {
                     </div>
 
                     {/* Heading */}
-                    <h1 className="text-center text-2xl font-black tracking-tight text-dark-charcoal">
+                    <h1 className="text-center text-2xl font-black tracking-tight text-brand-text">
                         Store Suspended
                     </h1>
 
                     <p className="mt-3 text-center text-sm leading-relaxed text-gray-500">
                         Access to{" "}
-                        <span className="font-semibold text-dark-charcoal">{storeName}</span> has
+                        <span className="font-semibold text-brand-text">{storeName}</span> has
                         been temporarily suspended. Please contact support to resolve this.
                     </p>
 
@@ -60,7 +60,7 @@ export default function StoreSuspended() {
                         <div className="space-y-2">
                             <a
                                 href="mailto:yonatanshitaye@gmail.com"
-                                className="flex items-center gap-3 text-sm font-semibold text-primary-blue hover:underline"
+                                className="flex items-center gap-3 text-sm font-semibold text-brand-dark hover:underline"
                             >
                                 <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
                                 yonatanshitaye@gmail.com
@@ -68,7 +68,7 @@ export default function StoreSuspended() {
                             {store?.phone && (
                                 <a
                                     href={`tel:${store.phone}`}
-                                    className="flex items-center gap-3 text-sm font-semibold text-primary-blue hover:underline"
+                                    className="flex items-center gap-3 text-sm font-semibold text-brand-dark hover:underline"
                                 >
                                     <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
                                     {store.phone}
@@ -85,7 +85,7 @@ export default function StoreSuspended() {
                         type="button"
                         id="store-suspended-logout"
                         onClick={handleLogout}
-                        className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-primary-blue px-4 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-primary-blue/90 hover:shadow-md active:scale-95"
+                        className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-brand-dark px-4 py-3 text-sm font-bold text-white transition-all duration-200 hover:bg-brand-dark/90 hover:shadow-md active:scale-95"
                     >
                         <LogOut className="h-4 w-4" aria-hidden="true" />
                         Sign out

@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+﻿import { Head, usePage } from '@inertiajs/react';
 
 import AdminLayout from '@/layouts/admin-layout';
 import type { SharedData } from '@/types';
@@ -23,9 +23,9 @@ export default function ActivityLogIndex() {
         <AdminLayout title="Activity log">
             <Head title="Activity log" />
 
-            <div className="overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-brand-muted bg-white shadow-sm">
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
+                    <thead className="bg-brand-background text-xs font-bold text-brand-text/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">When</th>
                             <th className="px-4 py-3">Admin</th>
@@ -33,10 +33,10 @@ export default function ActivityLogIndex() {
                             <th className="px-4 py-3">Description</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-gray">
+                    <tbody className="divide-y divide-brand-muted">
                         {logs.data.map((log) => (
                             <tr key={log.id}>
-                                <td className="px-4 py-3 text-xs text-dark-charcoal/70">
+                                <td className="px-4 py-3 text-xs text-brand-text/70">
                                     {new Date(log.created_at).toLocaleString()}
                                 </td>
                                 <td className="px-4 py-3 font-semibold">{log.admin_name ?? '—'}</td>
@@ -46,7 +46,7 @@ export default function ActivityLogIndex() {
                         ))}
                         {logs.data.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-4 py-8 text-center text-dark-charcoal/60">
+                                <td colSpan={4} className="px-4 py-8 text-center text-brand-text/60">
                                     No activity yet.
                                 </td>
                             </tr>

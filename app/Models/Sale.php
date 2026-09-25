@@ -32,6 +32,7 @@ class Sale extends Model
         'payment_method',
         'sync_status',
         'synced_at',
+        'meta',
     ];
 
     protected function casts(): array
@@ -43,6 +44,7 @@ class Sale extends Model
             'total_amount' => 'decimal:2',
             'payment_method' => PaymentMethod::class,
             'synced_at' => 'datetime',
+            'meta' => 'array',
         ];
     }
 

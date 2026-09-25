@@ -56,8 +56,8 @@ export default function StockEntry() {
     };
 
     const inputClass =
-        'w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2.5 text-sm text-dark-charcoal outline-none transition duration-150 placeholder:text-dark-charcoal/50 focus-visible:ring-2 focus-visible:ring-primary-blue';
-    const labelClass = 'mb-1 block text-xs font-semibold text-dark-charcoal/70';
+        'w-full rounded-lg border border-brand-muted bg-white px-3 py-2.5 text-sm text-brand-text outline-none transition duration-150 placeholder:text-brand-text/50 focus-visible:ring-2 focus-visible:ring-brand-primary dark:border-brand-muted dark:bg-brand-dark/90 dark:text-brand-text dark:placeholder:text-brand-text/40';
+    const labelClass = 'mb-1 block text-xs font-semibold text-brand-text/70';
 
     return (
         <AppShell>
@@ -66,13 +66,13 @@ export default function StockEntry() {
             {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage('')} />}
 
             <div className="mb-5">
-                <p className="text-xs font-black tracking-[0.3em] text-dark-charcoal/70 uppercase">Inventory Intake</p>
-                <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-dark-charcoal">Stock Entry</h1>
+                <p className="text-xs font-black tracking-[0.3em] text-brand-text/70 uppercase">Inventory Intake</p>
+                <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-brand-text">Stock Entry</h1>
             </div>
 
-            <div className="mb-4 flex items-start gap-3 rounded-lg border border-primary-blue/20 bg-primary-blue/5 px-4 py-3">
-                <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary-blue" />
-                <p className="text-sm text-dark-charcoal/80">
+            <div className="mb-4 flex items-start gap-3 rounded-lg border border-brand-dark/20 bg-brand-dark/5 px-4 py-3 dark:border-brand-accent/20 dark:bg-brand-dark/40">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-dark dark:text-brand-accent" />
+                <p className="text-sm text-brand-text/80">
                     Register each incoming batch with its own batch number and expiry date. Batches feed the FEFO (first-expiry-first-out)
                     selection at the point of sale.
                 </p>
@@ -80,9 +80,9 @@ export default function StockEntry() {
 
             <form onSubmit={submit} className="space-y-5">
                 {/* Product section */}
-                <div className="rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
+                <div className="rounded-xl border border-brand-muted bg-white p-6 shadow-sm dark:border-brand-muted/80 dark:bg-brand-dark/70 dark:shadow-slate-950/40">
                     <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-sm font-black tracking-[0.2em] text-dark-charcoal/80 uppercase">Product</h2>
+                        <h2 className="text-sm font-black tracking-[0.2em] text-brand-text/80 uppercase">Product</h2>
                         <div className="flex gap-2">
                             {(['new', 'existing'] as const).map((mode) => (
                                 <button
@@ -99,8 +99,8 @@ export default function StockEntry() {
                                     }}
                                     className={`rounded-lg px-3 py-1.5 text-xs font-bold capitalize transition ${
                                         medicineMode === mode
-                                            ? 'bg-primary-blue text-white'
-                                            : 'bg-off-white text-dark-charcoal/80 hover:bg-border-gray'
+                                            ? 'bg-brand-dark text-white shadow-sm dark:bg-brand-accent dark:text-brand-dark'
+                                            : 'bg-brand-background text-brand-text/80 hover:bg-brand-muted dark:bg-brand-dark/60 dark:text-brand-text/80 dark:hover:bg-brand-dark'
                                     }`}
                                 >
                                     {mode === 'new' ? 'New medicine' : 'Existing medicine'}
@@ -133,7 +133,7 @@ export default function StockEntry() {
                                         </option>
                                     ))}
                                 </select>
-                                {form.errors.medicine_id && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.medicine_id}</p>}
+                                {form.errors.medicine_id && <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.medicine_id}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Low Stock Level</label>
@@ -144,11 +144,11 @@ export default function StockEntry() {
                                     onChange={(e) => form.setData('reorder_level', e.target.value)}
                                     className={inputClass}
                                 />
-                                <p className="mt-1 text-xs text-dark-charcoal/60">
+                                <p className="mt-1 text-xs text-brand-text/60">
                                     Flagged as low stock when remaining units fall to this number or below.
                                 </p>
                                 {form.errors.reorder_level && (
-                                    <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.reorder_level}</p>
+                                    <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.reorder_level}</p>
                                 )}
                             </div>
                         </div>
@@ -164,7 +164,7 @@ export default function StockEntry() {
                                     className={inputClass}
                                 />
                                 {form.errors.medicine_name && (
-                                    <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.medicine_name}</p>
+                                    <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.medicine_name}</p>
                                 )}
                             </div>
                             <div>
@@ -186,7 +186,7 @@ export default function StockEntry() {
                                         </option>
                                     ))}
                                 </select>
-                                {form.errors.unit && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.unit}</p>}
+                                {form.errors.unit && <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.unit}</p>}
                             </div>
                             <div>
                                 <label className={labelClass}>Units per Box</label>
@@ -208,11 +208,11 @@ export default function StockEntry() {
                                     onChange={(e) => form.setData('reorder_level', e.target.value)}
                                     className={inputClass}
                                 />
-                                <p className="mt-1 text-xs text-dark-charcoal/60">
+                                <p className="mt-1 text-xs text-brand-text/60">
                                     Flagged as low stock when remaining units fall to this number or below. Default is 10.
                                 </p>
                                 {form.errors.reorder_level && (
-                                    <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.reorder_level}</p>
+                                    <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.reorder_level}</p>
                                 )}
                             </div>
                             <div>
@@ -245,8 +245,8 @@ export default function StockEntry() {
                 </div>
 
                 {/* Batch section */}
-                <div className="rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
-                    <h2 className="mb-4 text-sm font-black tracking-[0.2em] text-dark-charcoal/80 uppercase">Batch & Pricing</h2>
+                <div className="rounded-xl border border-brand-muted bg-white p-6 shadow-sm dark:border-brand-muted/80 dark:bg-brand-dark/70 dark:shadow-slate-950/40">
+                    <h2 className="mb-4 text-sm font-black tracking-[0.2em] text-brand-text/80 uppercase">Batch & Pricing</h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div>
                             <label className={labelClass}>Batch Number *</label>
@@ -257,7 +257,7 @@ export default function StockEntry() {
                                 placeholder="e.g. B24X0091"
                                 className={inputClass}
                             />
-                            {form.errors.batch_number && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.batch_number}</p>}
+                            {form.errors.batch_number && <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.batch_number}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Quantity *</label>
@@ -268,7 +268,7 @@ export default function StockEntry() {
                                 onChange={(e) => form.setData('quantity', e.target.value)}
                                 className={inputClass}
                             />
-                            {form.errors.quantity && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.quantity}</p>}
+                            {form.errors.quantity && <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.quantity}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Expiry Date *</label>
@@ -278,7 +278,7 @@ export default function StockEntry() {
                                 onChange={(e) => form.setData('expiry_date', e.target.value)}
                                 className={inputClass}
                             />
-                            {form.errors.expiry_date && <p className="mt-1 text-xs font-medium text-accent-red">{form.errors.expiry_date}</p>}
+                            {form.errors.expiry_date && <p className="mt-1 text-xs font-medium text-brand-danger">{form.errors.expiry_date}</p>}
                         </div>
                         <div>
                             <label className={labelClass}>Unit Cost (ETB)</label>
@@ -326,14 +326,14 @@ export default function StockEntry() {
                     <button
                         type="button"
                         onClick={() => form.reset()}
-                        className="flex-1 rounded-lg border border-border-gray bg-off-white px-4 py-3 text-sm font-semibold text-dark-charcoal transition hover:bg-border-gray"
+                        className="flex-1 rounded-lg border border-brand-muted bg-brand-background px-4 py-3 text-sm font-semibold text-brand-text transition hover:bg-brand-muted dark:border-brand-muted/80 dark:bg-brand-dark/50 dark:hover:bg-brand-dark/80"
                     >
                         Clear
                     </button>
                     <button
                         type="submit"
                         disabled={form.processing}
-                        className="flex-[2] rounded-lg bg-grass-green px-4 py-3 text-sm font-bold text-white shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex-[2] rounded-lg bg-brand-primary px-4 py-3 text-sm font-bold text-white shadow-sm transition duration-150 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <PackagePlus className="mr-1.5 -mt-0.5 inline-block h-4 w-4" />
                         {form.processing ? 'Saving…' : 'Add Stock Batch'}

@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+﻿import { Head, Link, usePage } from '@inertiajs/react';
 import { AlertTriangle, Building2, CircleDollarSign, Clock, ShieldAlert } from 'lucide-react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
@@ -44,15 +44,15 @@ export default function AdminDashboard() {
     }, [flash.success]);
 
     const cards = [
-        { label: 'Total stores', value: kpis.total_stores, icon: Building2, accent: 'text-primary-blue' },
-        { label: 'Active subscriptions', value: kpis.active, icon: ShieldAlert, accent: 'text-grass-green' },
+        { label: 'Total stores', value: kpis.total_stores, icon: Building2, accent: 'text-brand-dark' },
+        { label: 'Active subscriptions', value: kpis.active, icon: ShieldAlert, accent: 'text-brand-accent' },
         {
             label: 'MRR',
             value: `ETB ${kpis.mrr.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             icon: CircleDollarSign,
-            accent: 'text-accent-gold',
+            accent: 'text-amber-400',
         },
-        { label: 'Overdue', value: kpis.overdue, icon: Clock, accent: 'text-accent-red' },
+        { label: 'Overdue', value: kpis.overdue, icon: Clock, accent: 'text-brand-danger' },
     ];
 
     const hasAttention = attention.overdue.length > 0 || attention.trials_ending.length > 0;
@@ -64,10 +64,10 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {cards.map((card) => (
-                    <div key={card.label} className="rounded-xl border border-border-gray bg-pure-white p-4 shadow-sm">
+                    <div key={card.label} className="rounded-xl border border-brand-muted bg-white p-4 shadow-sm">
                         <card.icon className={`h-5 w-5 ${card.accent}`} />
-                        <p className="mt-3 text-xl font-black text-dark-charcoal tabular-nums">{card.value}</p>
-                        <p className="mt-1 text-xs font-semibold text-dark-charcoal/70">{card.label}</p>
+                        <p className="mt-3 text-xl font-black text-brand-text tabular-nums">{card.value}</p>
+                        <p className="mt-1 text-xs font-semibold text-brand-text/70">{card.label}</p>
                     </div>
                 ))}
             </div>
@@ -91,16 +91,16 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            <div className="mt-6 overflow-hidden rounded-xl border border-border-gray bg-pure-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-border-gray px-4 py-3">
-                    <h2 className="text-sm font-black tracking-wide text-dark-charcoal/80 uppercase">Stores</h2>
-                    <Link href={route('admin.stores.create')} className="text-sm font-bold text-primary-blue hover:underline">
+            <div className="mt-6 overflow-hidden rounded-xl border border-brand-muted bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-brand-muted px-4 py-3">
+                    <h2 className="text-sm font-black tracking-wide text-brand-text/80 uppercase">Stores</h2>
+                    <Link href={route('admin.stores.create')} className="text-sm font-bold text-brand-dark hover:underline">
                         New store
                     </Link>
                 </div>
                 <div className="overflow-x-auto">
                 <table className="w-full min-w-[480px] text-left text-sm">
-                    <thead className="bg-off-white text-xs font-bold text-dark-charcoal/70 uppercase">
+                    <thead className="bg-brand-background text-xs font-bold text-brand-text/70 uppercase">
                         <tr>
                             <th className="px-4 py-3">Store</th>
                             <th className="px-4 py-3">Plan</th>
@@ -108,14 +108,14 @@ export default function AdminDashboard() {
                             <th className="px-4 py-3 text-right">This month</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-gray">
+                    <tbody className="divide-y divide-brand-muted">
                         {stores.data.map((store) => (
-                            <tr key={store.id} className="hover:bg-off-white/60">
+                            <tr key={store.id} className="hover:bg-brand-background/60">
                                 <td className="px-4 py-3">
-                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-primary-blue hover:underline">
+                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-brand-dark hover:underline">
                                         {store.name}
                                     </Link>
-                                    <p className="text-xs text-dark-charcoal/60">{store.slug}</p>
+                                    <p className="text-xs text-brand-text/60">{store.slug}</p>
                                 </td>
                                 <td className="px-4 py-3 capitalize">{store.plan}</td>
                                 <td className="px-4 py-3">
@@ -128,7 +128,7 @@ export default function AdminDashboard() {
                         ))}
                         {stores.data.length === 0 && (
                             <tr>
-                                <td colSpan={4} className="px-4 py-8 text-center text-dark-charcoal/60">
+                                <td colSpan={4} className="px-4 py-8 text-center text-brand-text/60">
                                     No stores yet.
                                 </td>
                             </tr>

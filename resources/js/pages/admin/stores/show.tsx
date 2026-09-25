@@ -1,10 +1,10 @@
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+﻿import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
 import { Toast } from '@/components/pharmacy/toast';
 import AdminLayout from '@/layouts/admin-layout';
-import type { SharedData } from '@/types';
+import type { SharedData, StoreBranding } from '@/types';
 
 type StoreUser = {
     id: number;
@@ -15,12 +15,8 @@ type StoreUser = {
 };
 
 interface StoreShowProps extends SharedData {
-    store: {
+    store: StoreBranding & {
         id: number;
-        name: string;
-        slug: string;
-        address: string | null;
-        phone: string | null;
         plan: string;
         monthly_fee: number;
         subscription_status: string;
@@ -76,7 +72,7 @@ export default function StoreShow() {
     };
 
     const inputClass =
-        'w-full rounded-lg border border-border-gray bg-pure-white px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-blue';
+        'w-full rounded-lg border border-brand-muted bg-white px-3 py-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-primary';
 
     return (
         <AdminLayout title={store.name}>
@@ -85,21 +81,21 @@ export default function StoreShow() {
 
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <Link href={route('admin.stores.index')} className="text-xs font-bold text-primary-blue hover:underline">
+                    <Link href={route('admin.stores.index')} className="text-xs font-bold text-brand-dark hover:underline">
                         ← All stores
                     </Link>
                     <div className="mt-1 flex items-center gap-2">
-                        <h2 className="text-2xl font-black text-dark-charcoal">{store.name}</h2>
+                        <h2 className="text-2xl font-black text-brand-text">{store.name}</h2>
                         <StatusBadge status={store.subscription_status} />
                     </div>
-                    <p className="text-sm text-dark-charcoal/60">{store.slug}</p>
+                    <p className="text-sm text-brand-text/60">{store.slug}</p>
                 </div>
                 <div className="flex gap-2">
                     {store.subscription_status === 'suspended' ? (
                         <button
                             type="button"
                             onClick={() => router.post(route('admin.stores.activate', store.id))}
-                            className="rounded-lg bg-grass-green px-4 py-2 text-sm font-bold text-white"
+                            className="rounded-lg bg-brand-primary px-4 py-2 text-sm font-bold text-white"
                         >
                             Activate
                         </button>
@@ -111,7 +107,7 @@ export default function StoreShow() {
                                     router.post(route('admin.stores.suspend', store.id));
                                 }
                             }}
-                            className="rounded-lg bg-accent-red px-4 py-2 text-sm font-bold text-white"
+                            className="rounded-lg bg-brand-danger px-4 py-2 text-sm font-bold text-white"
                         >
                             Suspend
                         </button>
@@ -126,8 +122,8 @@ export default function StoreShow() {
                 <Stat label="Users" value={stats.user_count} />
             </div>
 
-            <form onSubmit={submit} className="mb-5 rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-black tracking-wide text-dark-charcoal/80 uppercase">Branding & plan</h3>
+            <form onSubmit={submit} className="mb-5 rounded-xl border border-brand-muted bg-white p-6 shadow-sm">
+                <h3 className="mb-4 text-sm font-black tracking-wide text-brand-text/80 uppercase">Branding & plan</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                     <Field label="Name">
                         <input className={inputClass} value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} />
@@ -167,16 +163,16 @@ export default function StoreShow() {
                         <input type="date" className={inputClass} value={form.data.trial_ends_at} onChange={(e) => form.setData('trial_ends_at', e.target.value)} />
                     </Field>
                 </div>
-                <button type="submit" disabled={form.processing} className="mt-4 rounded-lg bg-primary-blue px-4 py-2 text-sm font-bold text-white">
+                <button type="submit" disabled={form.processing} className="mt-4 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-white">
                     Save changes
                 </button>
             </form>
 
-            <div className="rounded-xl border border-border-gray bg-pure-white p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-black tracking-wide text-dark-charcoal/80 uppercase">Users</h3>
+            <div className="rounded-xl border border-brand-muted bg-white p-6 shadow-sm">
+                <h3 className="mb-4 text-sm font-black tracking-wide text-brand-text/80 uppercase">Users</h3>
                 <div className="overflow-x-auto">
                 <table className="w-full min-w-[440px] text-left text-sm">
-                    <thead className="text-xs font-bold text-dark-charcoal/70 uppercase">
+                    <thead className="text-xs font-bold text-brand-text/70 uppercase">
                         <tr>
                             <th className="py-2">Name</th>
                             <th className="py-2">Email</th>
@@ -184,7 +180,7 @@ export default function StoreShow() {
                             <th className="py-2">Status</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border-gray">
+                    <tbody className="divide-y divide-brand-muted">
                         {users.map((user) => (
                             <tr key={user.id}>
                                 <td className="py-2 font-semibold">{user.name}</td>
@@ -203,9 +199,9 @@ export default function StoreShow() {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
     return (
-        <div className="rounded-xl border border-border-gray bg-pure-white p-4 shadow-sm">
-            <p className="text-lg font-black text-dark-charcoal tabular-nums">{value}</p>
-            <p className="mt-1 text-xs font-semibold text-dark-charcoal/70">{label}</p>
+        <div className="rounded-xl border border-brand-muted bg-white p-4 shadow-sm">
+            <p className="text-lg font-black text-brand-text tabular-nums">{value}</p>
+            <p className="mt-1 text-xs font-semibold text-brand-text/70">{label}</p>
         </div>
     );
 }

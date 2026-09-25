@@ -32,14 +32,15 @@ export interface CartItem {
 }
 
 export interface SaleMeta {
-    customer_name: string;
-    customer_tin: string;
+    customer_name?: string;
+    customer_tin?: string;
     customer_sno?: string;
     invoice_no?: string;
     seller_name?: string;
     receiver_name?: string;
     reference?: string;
-    payment_method: 'cash' | 'credit';
+    payment_method?: string;
+    [key: string]: any;
 }
 
 export interface ReceiptItem {

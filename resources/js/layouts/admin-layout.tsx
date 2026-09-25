@@ -1,4 +1,4 @@
-import { Link, router, usePage } from '@inertiajs/react';
+﻿import { Link, router, usePage } from '@inertiajs/react';
 import { Activity, Building2, CreditCard, LayoutDashboard, LogOut, Menu, Settings, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -17,6 +17,7 @@ const navItems = [
     { href: '/admin/users',     label: 'Users',         icon: Users },
     { href: '/admin/billing',   label: 'Billing',       icon: CreditCard },
     { href: '/admin/activity',  label: 'Activity log',  icon: Activity },
+    { href: '/admin/sell-out-field-settings', label: 'Sell Out Form', icon: LayoutDashboard },
     { href: '/admin/settings',  label: 'Settings',      icon: Settings },
 ];
 
@@ -43,7 +44,7 @@ function SidebarContent({
                 </div>
                 <div>
                     <p className="text-sm font-black tracking-wide">
-                        Pharma<span className="text-grass-green">ye</span>
+                        Pharma<span className="text-brand-accent">ye</span>
                     </p>
                     <p className="text-[10px] font-bold tracking-[0.2em] text-white/60 uppercase">Platform</p>
                 </div>
@@ -65,7 +66,7 @@ function SidebarContent({
                             onClick={onNavigate}
                             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
                                 isActive
-                                    ? 'bg-white text-primary-blue shadow-sm'
+                                    ? 'bg-white text-brand-dark shadow-sm'
                                     : 'text-white/80 hover:bg-white/10 hover:text-white'
                             }`}
                         >
@@ -128,14 +129,14 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
     }, [pathname]);
 
     return (
-        <div className="flex min-h-screen bg-off-white">
+        <div className="flex min-h-screen bg-brand-background dark:bg-brand-background">
 
             {/* ══════════════════════════════════════════
                 DESKTOP SIDEBAR — visible on md+
                 Slides in/out with sidebarOpen state
             ══════════════════════════════════════════ */}
             <aside
-                className={`hidden md:flex fixed inset-y-0 left-0 z-20 flex-col bg-primary-blue p-5 text-white overflow-y-auto shadow-xl transition-all duration-300 ease-in-out ${
+                className={`hidden md:flex fixed inset-y-0 left-0 z-20 flex-col bg-brand-dark p-5 text-white overflow-y-auto shadow-xl transition-all duration-300 ease-in-out ${
                     sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full'
                 }`}
             >
@@ -160,7 +161,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 id="admin-mobile-drawer"
                 role="navigation"
                 aria-label="Admin navigation drawer"
-                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-primary-blue shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
+                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-brand-dark shadow-2xl transition-transform duration-300 ease-in-out md:hidden ${
                     drawerOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
             >
@@ -168,7 +169,7 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 px-4">
                     <div>
                         <p className="text-sm font-black tracking-wide text-white">
-                            Pharma<span className="text-grass-green">ye</span>
+                            Pharma<span className="text-brand-accent">ye</span>
                         </p>
                         <p className="text-[9px] font-bold tracking-[0.2em] text-white/60 uppercase">Platform</p>
                     </div>
@@ -198,27 +199,27 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
                 }`}
             >
                 {/* ── Sticky top header (ALL screen sizes) ── */}
-                <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border-gray bg-pure-white/95 px-4 shadow-sm backdrop-blur sm:px-6">
+                <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-brand-muted bg-white/95 px-4 shadow-sm backdrop-blur sm:px-6 dark:border-brand-muted dark:bg-brand-dark/95">
                     {/* Hamburger — always visible, toggles sidebar on desktop / drawer on mobile */}
                     <button
                         type="button"
                         aria-label={sidebarOpen ? 'Collapse navigation' : 'Expand navigation'}
                         aria-expanded={sidebarOpen}
                         onClick={toggleSidebar}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-dark-charcoal/60 transition hover:bg-off-white hover:text-dark-charcoal focus-visible:ring-2 focus-visible:ring-primary-blue focus-visible:outline-none"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-brand-text/60 transition hover:bg-brand-background hover:text-brand-text focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:outline-none dark:text-brand-text dark:hover:bg-brand-dark dark:hover:text-white"
                     >
                         <Menu className="h-5 w-5" aria-hidden="true" />
                     </button>
 
-                    <h1 className="flex-1 text-base font-bold text-dark-charcoal truncate">{title ?? 'Platform'}</h1>
+                    <h1 className="flex-1 text-base font-bold text-brand-text truncate">{title ?? 'Platform'}</h1>
 
-                    <span className="shrink-0 rounded-full bg-primary-blue/10 px-3 py-1 text-[10px] font-black tracking-widest text-primary-blue uppercase">
+                    <span className="shrink-0 rounded-full bg-brand-primary/10 px-3 py-1 text-[10px] font-black tracking-widest text-brand-primary uppercase dark:bg-brand-primary/20 dark:text-brand-accent">
                         Super admin
                     </span>
                 </header>
 
                 {/* ── Page content — scrolls both X and Y ── */}
-                <main className="flex-1 overflow-x-auto overflow-y-auto p-4 sm:p-6 lg:p-8">
+                <main className="flex-1 overflow-x-auto overflow-y-auto p-4 sm:p-6 lg:p-8 dark:bg-brand-background">
                     <div className="min-w-0">
                         {children}
                     </div>

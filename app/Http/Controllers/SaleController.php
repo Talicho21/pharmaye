@@ -55,9 +55,17 @@ class SaleController extends Controller
                 ]);
         }
 
+        $fieldConfigs = \App\Models\SellOutFieldConfig::where('store_id', $request->user()->store_id)
+            ->where('is_active', true)
+            ->orderBy('section')
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('section');
+
         return Inertia::render('sell-out', [
             'results' => $medicines,
             'search' => $search,
+            'fieldConfigs' => $fieldConfigs,
         ]);
     }
 

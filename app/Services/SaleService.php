@@ -68,6 +68,9 @@ class SaleService
 
             $invoiceNo = trim((string) ($meta['invoice_no'] ?? ''));
 
+            $standardFields = ['customer_name', 'customer_tin', 'customer_sno', 'invoice_no', 'receiver_name', 'seller_name', 'reference', 'payment_method'];
+            $metaData = collect($meta)->except($standardFields)->except(['tax_amount', 'discount_amount'])->toArray();
+
             $sale = Sale::query()->create([
                 'store_id' => $store->id,
                 'user_id' => $user->id,
@@ -83,6 +86,7 @@ class SaleService
                 'discount_amount' => $discountAmount,
                 'total_amount' => round($subtotal + $taxAmount - $discountAmount, 2),
                 'payment_method' => $meta['payment_method'] ?? 'cash',
+                'meta' => empty($metaData) ? null : $metaData,
             ]);
 
             foreach ($allocations as $allocation) {

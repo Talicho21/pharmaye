@@ -18,4 +18,5 @@ Route::middleware(['auth', 'store.not_suspended'])->group(function () {
     Route::get('settings/appearance', function () {
         return Inertia::render('settings/appearance');
     })->name('appearance');
+
 });

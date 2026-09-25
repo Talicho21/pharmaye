@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+﻿import { Head, useForm, usePage } from '@inertiajs/react';
 import { CheckCircle2, KeyRound, Shield, User } from 'lucide-react';
 import { FormEventHandler, useEffect, useRef, useState } from 'react';
 
@@ -80,23 +80,23 @@ export default function AdminSettings({ status }: Props) {
 
             <div className="max-w-3xl space-y-6">
                 {/* ── Admin identity card ── */}
-                <div className="flex items-center gap-4 rounded-2xl border border-border-gray bg-pure-white p-5 shadow-sm">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-blue text-xl font-black text-white shadow">
+                <div className="flex items-center gap-4 rounded-2xl border border-brand-muted bg-white p-5 shadow-sm">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-dark text-xl font-black text-white shadow">
                         {admin?.name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <p className="text-base font-bold text-dark-charcoal">{admin?.name}</p>
-                        <p className="text-sm text-dark-charcoal/60">{admin?.email}</p>
-                        <span className="mt-1 inline-block rounded-full bg-primary-blue/10 px-2.5 py-0.5 text-[10px] font-black tracking-widest text-primary-blue uppercase">
+                        <p className="text-base font-bold text-brand-text">{admin?.name}</p>
+                        <p className="text-sm text-brand-text/60">{admin?.email}</p>
+                        <span className="mt-1 inline-block rounded-full bg-brand-dark/10 px-2.5 py-0.5 text-[10px] font-black tracking-widest text-brand-dark uppercase">
                             Super Admin
                         </span>
                     </div>
                 </div>
 
                 {/* ── Tabs ── */}
-                <div className="rounded-2xl border border-border-gray bg-pure-white shadow-sm">
+                <div className="rounded-2xl border border-brand-muted bg-white shadow-sm">
                     {/* Tab headers */}
-                    <div className="flex border-b border-border-gray">
+                    <div className="flex border-b border-brand-muted">
                         {tabs.map(({ key, label, icon: Icon }) => (
                             <button
                                 key={key}
@@ -104,8 +104,8 @@ export default function AdminSettings({ status }: Props) {
                                 onClick={() => setActiveTab(key)}
                                 className={`flex flex-1 items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
                                     activeTab === key
-                                        ? 'border-b-2 border-primary-blue text-primary-blue'
-                                        : 'text-dark-charcoal/50 hover:text-dark-charcoal'
+                                        ? 'border-b-2 border-brand-dark text-brand-dark'
+                                        : 'text-brand-text/50 hover:text-brand-text'
                                 }`}
                             >
                                 <Icon className="h-4 w-4" />
@@ -119,13 +119,13 @@ export default function AdminSettings({ status }: Props) {
                         {activeTab === 'profile' && (
                             <form onSubmit={submitProfile} className="space-y-5">
                                 <div>
-                                    <h2 className="text-base font-bold text-dark-charcoal">Profile information</h2>
-                                    <p className="mt-0.5 text-sm text-dark-charcoal/60">Update your name and email address.</p>
+                                    <h2 className="text-base font-bold text-brand-text">Profile information</h2>
+                                    <p className="mt-0.5 text-sm text-brand-text/60">Update your name and email address.</p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label htmlFor="name" className="mb-1.5 block text-sm font-semibold text-dark-charcoal">
+                                        <label htmlFor="name" className="mb-1.5 block text-sm font-semibold text-brand-text">
                                             Full name
                                         </label>
                                         <input
@@ -133,7 +133,7 @@ export default function AdminSettings({ status }: Props) {
                                             type="text"
                                             value={profileForm.data.name}
                                             onChange={(e) => profileForm.setData('name', e.target.value)}
-                                            className="w-full rounded-lg border border-border-gray px-3.5 py-2.5 text-sm text-dark-charcoal shadow-sm outline-none transition focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20"
+                                            className="w-full rounded-lg border border-brand-muted px-3.5 py-2.5 text-sm text-brand-text shadow-sm outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand-primary/20"
                                             required
                                             autoComplete="name"
                                         />
@@ -143,7 +143,7 @@ export default function AdminSettings({ status }: Props) {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-dark-charcoal">
+                                        <label htmlFor="email" className="mb-1.5 block text-sm font-semibold text-brand-text">
                                             Email address
                                         </label>
                                         <input
@@ -151,7 +151,7 @@ export default function AdminSettings({ status }: Props) {
                                             type="email"
                                             value={profileForm.data.email}
                                             onChange={(e) => profileForm.setData('email', e.target.value)}
-                                            className="w-full rounded-lg border border-border-gray px-3.5 py-2.5 text-sm text-dark-charcoal shadow-sm outline-none transition focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20"
+                                            className="w-full rounded-lg border border-brand-muted px-3.5 py-2.5 text-sm text-brand-text shadow-sm outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand-primary/20"
                                             required
                                             autoComplete="email"
                                         />
@@ -165,7 +165,7 @@ export default function AdminSettings({ status }: Props) {
                                     <button
                                         type="submit"
                                         disabled={profileForm.processing}
-                                        className="rounded-lg bg-primary-blue px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-blue/90 disabled:opacity-60"
+                                        className="rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark/90 disabled:opacity-60"
                                     >
                                         {profileForm.processing ? 'Saving…' : 'Save changes'}
                                     </button>
@@ -180,13 +180,13 @@ export default function AdminSettings({ status }: Props) {
                         {activeTab === 'password' && (
                             <form onSubmit={submitPassword} className="space-y-5">
                                 <div>
-                                    <h2 className="text-base font-bold text-dark-charcoal">Change password</h2>
-                                    <p className="mt-0.5 text-sm text-dark-charcoal/60">Use a long, random password to keep your account secure.</p>
+                                    <h2 className="text-base font-bold text-brand-text">Change password</h2>
+                                    <p className="mt-0.5 text-sm text-brand-text/60">Use a long, random password to keep your account secure.</p>
                                 </div>
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label htmlFor="current_password" className="mb-1.5 block text-sm font-semibold text-dark-charcoal">
+                                        <label htmlFor="current_password" className="mb-1.5 block text-sm font-semibold text-brand-text">
                                             Current password
                                         </label>
                                         <input
@@ -195,7 +195,7 @@ export default function AdminSettings({ status }: Props) {
                                             type="password"
                                             value={passwordForm.data.current_password}
                                             onChange={(e) => passwordForm.setData('current_password', e.target.value)}
-                                            className="w-full rounded-lg border border-border-gray px-3.5 py-2.5 text-sm text-dark-charcoal shadow-sm outline-none transition focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20"
+                                            className="w-full rounded-lg border border-brand-muted px-3.5 py-2.5 text-sm text-brand-text shadow-sm outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand-primary/20"
                                             autoComplete="current-password"
                                         />
                                         {passwordForm.errors.current_password && (
@@ -204,7 +204,7 @@ export default function AdminSettings({ status }: Props) {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="new_password" className="mb-1.5 block text-sm font-semibold text-dark-charcoal">
+                                        <label htmlFor="new_password" className="mb-1.5 block text-sm font-semibold text-brand-text">
                                             New password
                                         </label>
                                         <input
@@ -213,7 +213,7 @@ export default function AdminSettings({ status }: Props) {
                                             type="password"
                                             value={passwordForm.data.password}
                                             onChange={(e) => passwordForm.setData('password', e.target.value)}
-                                            className="w-full rounded-lg border border-border-gray px-3.5 py-2.5 text-sm text-dark-charcoal shadow-sm outline-none transition focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20"
+                                            className="w-full rounded-lg border border-brand-muted px-3.5 py-2.5 text-sm text-brand-text shadow-sm outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand-primary/20"
                                             autoComplete="new-password"
                                         />
                                         {passwordForm.errors.password && (
@@ -222,7 +222,7 @@ export default function AdminSettings({ status }: Props) {
                                     </div>
 
                                     <div>
-                                        <label htmlFor="password_confirmation" className="mb-1.5 block text-sm font-semibold text-dark-charcoal">
+                                        <label htmlFor="password_confirmation" className="mb-1.5 block text-sm font-semibold text-brand-text">
                                             Confirm new password
                                         </label>
                                         <input
@@ -230,7 +230,7 @@ export default function AdminSettings({ status }: Props) {
                                             type="password"
                                             value={passwordForm.data.password_confirmation}
                                             onChange={(e) => passwordForm.setData('password_confirmation', e.target.value)}
-                                            className="w-full rounded-lg border border-border-gray px-3.5 py-2.5 text-sm text-dark-charcoal shadow-sm outline-none transition focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/20"
+                                            className="w-full rounded-lg border border-brand-muted px-3.5 py-2.5 text-sm text-brand-text shadow-sm outline-none transition focus:border-brand-dark focus:ring-2 focus:ring-brand-primary/20"
                                             autoComplete="new-password"
                                         />
                                         {passwordForm.errors.password_confirmation && (
@@ -243,7 +243,7 @@ export default function AdminSettings({ status }: Props) {
                                     <button
                                         type="submit"
                                         disabled={passwordForm.processing}
-                                        className="rounded-lg bg-primary-blue px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-blue/90 disabled:opacity-60"
+                                        className="rounded-lg bg-brand-dark px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark/90 disabled:opacity-60"
                                     >
                                         {passwordForm.processing ? 'Updating…' : 'Update password'}
                                     </button>
@@ -258,35 +258,35 @@ export default function AdminSettings({ status }: Props) {
                         {activeTab === 'security' && (
                             <div className="space-y-5">
                                 <div>
-                                    <h2 className="text-base font-bold text-dark-charcoal">Security information</h2>
-                                    <p className="mt-0.5 text-sm text-dark-charcoal/60">Your account security status and access details.</p>
+                                    <h2 className="text-base font-bold text-brand-text">Security information</h2>
+                                    <p className="mt-0.5 text-sm text-brand-text/60">Your account security status and access details.</p>
                                 </div>
 
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between rounded-xl border border-border-gray p-4">
+                                    <div className="flex items-center justify-between rounded-xl border border-brand-muted p-4">
                                         <div>
-                                            <p className="text-sm font-semibold text-dark-charcoal">Account role</p>
-                                            <p className="text-xs text-dark-charcoal/60">Highest privilege level on this platform</p>
+                                            <p className="text-sm font-semibold text-brand-text">Account role</p>
+                                            <p className="text-xs text-brand-text/60">Highest privilege level on this platform</p>
                                         </div>
-                                        <span className="rounded-full bg-primary-blue/10 px-3 py-1 text-xs font-black tracking-widest text-primary-blue uppercase">
+                                        <span className="rounded-full bg-brand-dark/10 px-3 py-1 text-xs font-black tracking-widest text-brand-dark uppercase">
                                             Super Admin
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between rounded-xl border border-border-gray p-4">
+                                    <div className="flex items-center justify-between rounded-xl border border-brand-muted p-4">
                                         <div>
-                                            <p className="text-sm font-semibold text-dark-charcoal">Authentication guard</p>
-                                            <p className="text-xs text-dark-charcoal/60">Separate from store user accounts</p>
+                                            <p className="text-sm font-semibold text-brand-text">Authentication guard</p>
+                                            <p className="text-xs text-brand-text/60">Separate from store user accounts</p>
                                         </div>
-                                        <span className="rounded-full bg-grass-green/10 px-3 py-1 text-xs font-bold text-grass-green">
+                                        <span className="rounded-full bg-brand-primary/10 px-3 py-1 text-xs font-bold text-brand-accent">
                                             admin guard
                                         </span>
                                     </div>
 
-                                    <div className="flex items-center justify-between rounded-xl border border-border-gray p-4">
+                                    <div className="flex items-center justify-between rounded-xl border border-brand-muted p-4">
                                         <div>
-                                            <p className="text-sm font-semibold text-dark-charcoal">Registration</p>
-                                            <p className="text-xs text-dark-charcoal/60">New admin accounts require direct DB or seeder access</p>
+                                            <p className="text-sm font-semibold text-brand-text">Registration</p>
+                                            <p className="text-xs text-brand-text/60">New admin accounts require direct DB or seeder access</p>
                                         </div>
                                         <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                                             Restricted

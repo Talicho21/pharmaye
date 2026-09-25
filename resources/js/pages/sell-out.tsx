@@ -12,13 +12,14 @@ import type { CartItem, MedicineSearchResult, Receipt, SaleMeta } from '@/types/
 interface SellOutProps extends SharedData {
     results: MedicineSearchResult[];
     search: string;
+    fieldConfigs: Record<string, any[]>;
     flash: { success?: string; receipt?: Receipt };
     errors: Record<string, string>;
 }
 
 export default function SellOut() {
     const { props } = usePage<SellOutProps>();
-    const { results, store, flash, errors } = props;
+    const { results, store, fieldConfigs, flash, errors } = props;
 
     const [isProcessing, setIsProcessing] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
@@ -61,14 +62,14 @@ export default function SellOut() {
 
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                    <p className="text-xs font-black tracking-[0.3em] text-dark-charcoal/70 uppercase">Point of Sale</p>
-                    <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-dark-charcoal">Sell Out</h1>
+                    <p className="text-xs font-black tracking-[0.3em] text-brand-text/70 uppercase">Point of Sale</p>
+                    <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-brand-text">Sell Out</h1>
                 </div>
                 {lastReceipt && (
                     <button
                         type="button"
                         onClick={() => printReceipt(lastReceipt, store)}
-                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg bg-primary-blue px-4 py-2.5 text-sm font-bold text-white shadow-sm"
+                        className="vibrant-btn inline-flex items-center gap-2 rounded-lg bg-brand-dark px-4 py-2.5 text-sm font-bold text-white shadow-sm"
                     >
                         <Printer className="h-4 w-4" />
                         Print Invoice {lastReceipt.invoice_no}
@@ -76,7 +77,13 @@ export default function SellOut() {
                 )}
             </div>
 
-            <MultiItemOrderCart results={results} onSubmit={handleSubmit} isProcessing={isProcessing} serverError={errors.items} />
+            <MultiItemOrderCart 
+                results={results} 
+                fieldConfigs={fieldConfigs}
+                onSubmit={handleSubmit} 
+                isProcessing={isProcessing} 
+                serverError={errors.items} 
+            />
         </AppShell>
     );
 }

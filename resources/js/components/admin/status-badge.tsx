@@ -2,9 +2,9 @@ export type SubscriptionStatus = 'trial' | 'active' | 'overdue' | 'suspended';
 
 export function StatusBadge({ status }: { status: SubscriptionStatus | string }) {
     const styles: Record<string, string> = {
-        active: 'bg-green-100 text-green-800',
-        trial: 'bg-amber-100 text-amber-800',
-        overdue: 'bg-red-100 text-red-800',
+        active:    'bg-brand-accent/20 text-brand-dark',
+        trial:     'bg-amber-100 text-amber-800',
+        overdue:   'bg-red-100 text-red-800',
         suspended: 'bg-gray-200 text-gray-700',
     };
 
