@@ -22,13 +22,13 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                    <Link className="block w-full" href={route('profile.edit')} as="button" prefetch onClick={cleanup}>
+                    <Link className="block w-full" href={route('profile.edit')} as="button" prefetch cacheFor="1m" onClick={cleanup}>
                         <Settings className="mr-2" />
                         Settings
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                    <Link className="block w-full" href={route('password.edit')} as="button" prefetch onClick={cleanup}>
+                    <Link className="block w-full" href={route('password.edit')} as="button" prefetch cacheFor="1m" onClick={cleanup}>
                         <KeyRound className="mr-2" />
                         Change Password
                     </Link>

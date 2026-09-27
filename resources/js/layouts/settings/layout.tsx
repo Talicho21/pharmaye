@@ -47,7 +47,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                                         'text-brand-text/70 font-medium hover:bg-brand-dark/10 dark:hover:bg-brand-dark/50 dark:text-brand-text/70': !isActive,
                                     })}
                                 >
-                                    <Link href={item.url} prefetch>
+                                    <Link href={item.url} prefetch cacheFor="1m">
                                         {item.title}
                                     </Link>
                                 </Button>

@@ -1,4 +1,4 @@
-﻿import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
@@ -72,6 +72,7 @@ export default function StoresIndex() {
                 </div>
                 <Link
                     href={route('admin.stores.create')}
+                    prefetch
                     className="w-full rounded-lg bg-brand-dark px-4 py-2 text-center text-sm font-bold text-white shadow-sm sm:w-auto sm:ml-auto"
                 >
                     New store
@@ -92,7 +93,12 @@ export default function StoresIndex() {
                         {stores.data.map((store) => (
                             <tr key={store.id}>
                                 <td className="px-4 py-3">
-                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-brand-dark hover:underline">
+                                    <Link
+                                        href={route('admin.stores.show', store.id)}
+                                        prefetch
+                                        cacheFor="30s"
+                                        className="font-semibold text-brand-dark hover:underline"
+                                    >
                                         {store.name}
                                     </Link>
                                     <p className="text-xs text-brand-text/60">{store.slug}</p>

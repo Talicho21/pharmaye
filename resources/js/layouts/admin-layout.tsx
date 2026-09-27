@@ -1,4 +1,4 @@
-﻿import { Link, router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Activity, Building2, CreditCard, LayoutDashboard, LogOut, Menu, Settings, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
@@ -36,6 +36,8 @@ function SidebarContent({
             {/* Brand */}
             <Link
                 href={route('admin.dashboard')}
+                prefetch
+                cacheFor="1m"
                 className="mb-8 flex items-center gap-3"
                 onClick={onNavigate}
             >
@@ -63,6 +65,8 @@ function SidebarContent({
                         <Link
                             key={item.href}
                             href={item.href}
+                            prefetch
+                            cacheFor="1m"
                             onClick={onNavigate}
                             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 ${
                                 isActive

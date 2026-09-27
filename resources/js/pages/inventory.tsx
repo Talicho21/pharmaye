@@ -48,6 +48,8 @@ export default function Inventory() {
                 </div>
                 <Link
                     href={route('stock-entry')}
+                    prefetch
+                    cacheFor="1m"
                     className="vibrant-btn inline-flex items-center gap-2 rounded-lg bg-brand-dark px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-brand-dark/90"
                 >
                     <Plus className="h-4 w-4" />
@@ -145,6 +147,8 @@ export default function Inventory() {
                                     <Link
                                         key={i}
                                         href={link.url}
+                                        prefetch
+                                        cacheFor="30s"
                                         preserveScroll
                                         preserveState
                                         className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${

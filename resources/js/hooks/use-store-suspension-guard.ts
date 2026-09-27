@@ -18,7 +18,7 @@ export function useStoreSuspensionGuard(): void {
 
     useEffect(() => {
         if (store_suspended) {
-            router.replace(route('store.suspended'));
+            router.visit(route('store.suspended'), { replace: true });
         }
     }, [store_suspended]);
 }

@@ -59,7 +59,7 @@ class DashboardController extends Controller
 
         return Inertia::render('admin/dashboard', [
             'kpis' => [
-                'total_stores' => Store::query()->count(),
+                'total_stores' => (int) $counts->sum(),
                 'active' => (int) ($counts[SubscriptionStatus::Active->value] ?? 0),
                 'trial' => (int) ($counts[SubscriptionStatus::Trial->value] ?? 0),
                 'overdue' => (int) ($counts[SubscriptionStatus::Overdue->value] ?? 0),

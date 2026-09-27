@@ -1,4 +1,4 @@
-﻿import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
@@ -81,7 +81,12 @@ export default function StoreShow() {
 
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <Link href={route('admin.stores.index')} className="text-xs font-bold text-brand-dark hover:underline">
+                    <Link
+                        href={route('admin.stores.index')}
+                        prefetch
+                        cacheFor="30s"
+                        className="text-xs font-bold text-brand-dark hover:underline"
+                    >
                         ← All stores
                     </Link>
                     <div className="mt-1 flex items-center gap-2">

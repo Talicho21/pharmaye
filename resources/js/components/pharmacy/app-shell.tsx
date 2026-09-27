@@ -96,6 +96,8 @@ export function AppShell({ children, pageTitle, pageSubtitle }: AppShellProps) {
                         <Link
                             key={item.href}
                             href={item.href}
+                            prefetch
+                            cacheFor="1m"
                             onClick={closeDrawer}
                             className={`group flex min-h-[44px] items-center justify-between rounded-xl px-4 py-3 transition-all duration-200 ease-out ${
                                 isActive

@@ -29,6 +29,9 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
+    private ?Store $resolvedStore = null;
+    private bool $hasResolvedStore = false;
+
     /**
      * Define the props that are shared by default.
      *
@@ -38,12 +41,12 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
-
         return array_merge(parent::share($request), [
-            ...parent::share($request),
             'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
+            'quote' => fn () => [
+                'message' => trim(str(Inspiring::quotes()->random())->before('-')),
+                'author' => trim(str(Inspiring::quotes()->random())->after('-')),
+            ],
             'auth' => [
                 'user' => $request->user('web'),
                 'admin' => $request->user('admin'),
@@ -61,15 +64,30 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{name: string, slug: string, logo_url: string|null}|null
+     * Resolve the store once per request without duplicate DB queries.
+     */
+    private function getStore(Request $request): ?Store
+    {
+        if ($this->hasResolvedStore) {
+            return $this->resolvedStore;
+        }
+
+        $this->hasResolvedStore = true;
+        $this->resolvedStore = $request->user('web')?->store;
+
+        if ($this->resolvedStore === null && $request->hasSession() && $request->session()->has('store_id')) {
+            $this->resolvedStore = Store::find($request->session()->get('store_id'));
+        }
+
+        return $this->resolvedStore;
+    }
+
+    /**
+     * @return array{name: string, slug: string, phone: string|null, address: string|null, logo_url: string|null}|null
      */
     private function resolveStoreBranding(Request $request): ?array
     {
-        $store = $request->user('web')?->store;
-
-        if ($store === null && $request->hasSession() && $request->session()->has('store_id')) {
-            $store = Store::find($request->session()->get('store_id'));
-        }
+        $store = $this->getStore($request);
 
         if ($store === null) {
             return null;
@@ -85,8 +103,7 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Returns true when the authenticated store user's store is suspended
-     * (or missing). Always reads from DB — never from a cached value.
+     * Returns true when the authenticated store user's store is suspended (or missing).
      */
     private function isStoreSuspended(Request $request): bool
     {
@@ -95,7 +112,7 @@ class HandleInertiaRequests extends Middleware
             return false;
         }
 
-        $store = $user->store;
+        $store = $this->getStore($request);
 
         return $store === null
             || $store->subscription_status === SubscriptionStatus::Suspended;

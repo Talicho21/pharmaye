@@ -170,7 +170,7 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
                                                     size="sm"
                                                     asChild
                                                 >
-                                                    <Link href={route('admin.stores.show', store.id)}>
+                                                    <Link href={route('admin.stores.show', store.id)} prefetch cacheFor="30s">
                                                         Manage Plan
                                                     </Link>
                                                 </Button>

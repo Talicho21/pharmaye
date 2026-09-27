@@ -31,40 +31,40 @@ class InventoryController extends Controller
         $search = trim((string) $request->query('search', ''));
         $categoryId = $request->integer('category') ?: null;
 
-        $batches = Batch::query()
-            ->with(['medicine' => fn ($q) => $q->withTrashed()->with('category')])
-            ->when($search !== '', function ($query) use ($search) {
-                $like = '%'.mb_strtolower($search).'%';
-                $query->where(function ($q) use ($like) {
-                    $q->whereRaw('lower(batch_number) like ?', [$like])
-                        ->orWhereHas('medicine', fn ($m) => $m->withTrashed()->whereRaw('lower(name) like ?', [$like]));
-                });
-            })
-            ->when($categoryId, function ($query) use ($categoryId) {
-                $query->whereHas('medicine', fn ($m) => $m->where('category_id', $categoryId));
-            })
-            ->join('medicines', 'medicines.id', '=', 'batches.medicine_id')
-            ->orderBy('medicines.name')
-            ->orderBy('batches.expiry_date')
-            ->select('batches.*')
-            ->paginate(15)
-            ->withQueryString()
-            ->through(fn (Batch $batch): array => [
-                'id' => $batch->id,
-                'medicine_id' => $batch->medicine_id,
-                'name' => $batch->medicine->name,
-                'category' => $batch->medicine->category?->name,
-                'batch_number' => $batch->batch_number,
-                'quantity' => $batch->quantity,
-                'unit' => $batch->medicine->unit->value,
-                'price' => (float) $batch->medicine->default_price,
-                'expiry_date' => $batch->expiry_date->toDateString(),
-                'is_expired' => $batch->isExpired(),
-            ]);
-
         return Inertia::render('inventory', [
-            'batches' => $batches,
-            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'batches' => function () use ($search, $categoryId) {
+                return Batch::query()
+                    ->with(['medicine' => fn ($q) => $q->withTrashed()->with('category')])
+                    ->when($search !== '', function ($query) use ($search) {
+                        $like = '%'.mb_strtolower($search).'%';
+                        $query->where(function ($q) use ($like) {
+                            $q->whereRaw('lower(batch_number) like ?', [$like])
+                                ->orWhereHas('medicine', fn ($m) => $m->withTrashed()->whereRaw('lower(name) like ?', [$like]));
+                        });
+                    })
+                    ->when($categoryId, function ($query) use ($categoryId) {
+                        $query->whereHas('medicine', fn ($m) => $m->where('category_id', $categoryId));
+                    })
+                    ->join('medicines', 'medicines.id', '=', 'batches.medicine_id')
+                    ->orderBy('medicines.name')
+                    ->orderBy('batches.expiry_date')
+                    ->select('batches.*')
+                    ->paginate(15)
+                    ->withQueryString()
+                    ->through(fn (Batch $batch): array => [
+                        'id' => $batch->id,
+                        'medicine_id' => $batch->medicine_id,
+                        'name' => $batch->medicine->name,
+                        'category' => $batch->medicine->category?->name,
+                        'batch_number' => $batch->batch_number,
+                        'quantity' => $batch->quantity,
+                        'unit' => $batch->medicine->unit->value,
+                        'price' => (float) $batch->medicine->default_price,
+                        'expiry_date' => $batch->expiry_date->toDateString(),
+                        'is_expired' => $batch->isExpired(),
+                    ]);
+            },
+            'categories' => fn () => Category::query()->orderBy('name')->get(['id', 'name']),
             'filters' => [
                 'search' => $search,
                 'category' => $categoryId,
@@ -78,9 +78,9 @@ class InventoryController extends Controller
     public function create(): Response
     {
         return Inertia::render('stock-entry', [
-            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
-            'suppliers' => Supplier::query()->orderBy('name')->get(['id', 'name']),
-            'medicines' => Medicine::query()->orderBy('name')->get(['id', 'name', 'unit', 'default_price', 'reorder_level']),
+            'categories' => fn () => Category::query()->orderBy('name')->get(['id', 'name']),
+            'suppliers' => fn () => Supplier::query()->orderBy('name')->get(['id', 'name']),
+            'medicines' => fn () => Medicine::query()->orderBy('name')->get(['id', 'name', 'unit', 'default_price', 'reorder_level']),
         ]);
     }
 

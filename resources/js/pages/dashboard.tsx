@@ -343,6 +343,8 @@ export default function Dashboard() {
                                     <Link
                                         key={i}
                                         href={link.url}
+                                        prefetch
+                                        cacheFor="30s"
                                         preserveScroll
                                         preserveState
                                         only={['batches']}

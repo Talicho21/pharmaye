@@ -89,9 +89,10 @@ class AnalyticsController extends Controller
     {
         $from = $this->rangeStart($range);
 
-        $revenue = (float) Sale::query()
+        $salesAggregates = Sale::query()
             ->where('created_at', '>=', $from)
-            ->sum('total_amount');
+            ->selectRaw('coalesce(sum(total_amount), 0) as total_revenue, count(*) as sales_count')
+            ->first();
 
         $itemsSold = (int) Sale::query()
             ->join('sale_items', 'sale_items.sale_id', '=', 'sales.id')
@@ -99,9 +100,9 @@ class AnalyticsController extends Controller
             ->sum('sale_items.quantity');
 
         return [
-            'totalRevenue' => $revenue,
+            'totalRevenue' => (float) ($salesAggregates->total_revenue ?? 0),
             'totalItemsSold' => $itemsSold,
-            'salesCount' => Sale::query()->where('created_at', '>=', $from)->count(),
+            'salesCount' => (int) ($salesAggregates->sales_count ?? 0),
         ];
     }
 

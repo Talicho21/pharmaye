@@ -1,4 +1,4 @@
-﻿import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { AlertTriangle, Building2, CircleDollarSign, Clock, ShieldAlert } from 'lucide-react';
 
 import { StatusBadge } from '@/components/admin/status-badge';
@@ -94,7 +94,11 @@ export default function AdminDashboard() {
             <div className="mt-6 overflow-hidden rounded-xl border border-brand-muted bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-brand-muted px-4 py-3">
                     <h2 className="text-sm font-black tracking-wide text-brand-text/80 uppercase">Stores</h2>
-                    <Link href={route('admin.stores.create')} className="text-sm font-bold text-brand-dark hover:underline">
+                    <Link
+                        href={route('admin.stores.create')}
+                        prefetch
+                        className="text-sm font-bold text-brand-dark hover:underline"
+                    >
                         New store
                     </Link>
                 </div>
@@ -112,7 +116,12 @@ export default function AdminDashboard() {
                         {stores.data.map((store) => (
                             <tr key={store.id} className="hover:bg-brand-background/60">
                                 <td className="px-4 py-3">
-                                    <Link href={route('admin.stores.show', store.id)} className="font-semibold text-brand-dark hover:underline">
+                                    <Link
+                                        href={route('admin.stores.show', store.id)}
+                                        prefetch
+                                        cacheFor="30s"
+                                        className="font-semibold text-brand-dark hover:underline"
+                                    >
                                         {store.name}
                                     </Link>
                                     <p className="text-xs text-brand-text/60">{store.slug}</p>

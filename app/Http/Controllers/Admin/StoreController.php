@@ -135,6 +135,8 @@ class StoreController extends Controller
             ->where('store_id', $store->id)
             ->count();
 
+        $users = $store->users()->orderBy('name')->get(['id', 'name', 'email', 'role', 'deactivated_at', 'created_at']);
+
         return Inertia::render('admin/stores/show', [
             'store' => [
                 'id' => $store->id,
@@ -149,12 +151,12 @@ class StoreController extends Controller
                 'trial_ends_at' => $store->trial_ends_at?->toDateString(),
             ],
             'statuses' => array_column(SubscriptionStatus::cases(), 'value'),
-            'users' => $store->users()->orderBy('name')->get(['id', 'name', 'email', 'role', 'deactivated_at', 'created_at']),
+            'users' => $users,
             'stats' => [
                 'this_month_revenue' => $salesThisMonth,
                 'inventory_value' => $inventoryValue,
                 'medicine_count' => $medicineCount,
-                'user_count' => $store->users()->count(),
+                'user_count' => $users->count(),
             ],
         ]);
     }
