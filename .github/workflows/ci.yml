@@ -45,10 +45,19 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      - name: Check that page bundles were built
+        run: |
+          echo "Built files:"
+          ls public/build/assets
+          ls public/build/assets | grep -E '^dashboard-.*\.js$'
+          ls public/build/assets | grep -E '^reports-.*\.js$'
+
       - name: Create a temporary app key for tests
         run: echo "APP_KEY=$(php artisan key:generate --show)" >> "$GITHUB_ENV"
 
       - name: Run tests
+        env:
+          COLUMNS: 250
         run: vendor/bin/pest
 
       - name: Check that the production install works (no dev packages)
