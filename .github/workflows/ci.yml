@@ -1,0 +1,55 @@
+name: CI (build and test)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up PHP 8.3 (same major version as production)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, xml, ctype, fileinfo, tokenizer, curl, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install PHP dependencies (with dev tools, for tests)
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Create a temporary app key for tests
+        run: echo "APP_KEY=$(php artisan key:generate --show)" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        run: vendor/bin/pest
+
+      - name: Check that the production install works (no dev packages)
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
