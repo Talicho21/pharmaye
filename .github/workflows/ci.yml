@@ -52,8 +52,10 @@ jobs:
           ls public/build/assets | grep -E '^dashboard-.*\.js$'
           ls public/build/assets | grep -E '^reports-.*\.js$'
 
-      - name: Create a temporary app key for tests
-        run: echo "APP_KEY=$(php artisan key:generate --show)" >> "$GITHUB_ENV"
+      - name: Prepare test environment file (CI only, never deployed)
+        run: |
+          cp .env.example .env
+          php artisan key:generate
 
       - name: Run tests
         env:
