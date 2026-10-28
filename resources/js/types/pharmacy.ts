@@ -40,7 +40,15 @@ export interface SaleMeta {
     receiver_name?: string;
     reference?: string;
     payment_method?: string;
-    [key: string]: any;
+    [key: string]: unknown;
+}
+
+export interface DynamicFieldConfig {
+    id: number;
+    field_key: string;
+    label: string;
+    input_type: string;
+    is_required: boolean;
 }
 
 export interface ReceiptItem {

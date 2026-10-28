@@ -7,12 +7,12 @@ import { MultiItemOrderCart } from '@/components/pharmacy/multi-item-order-cart'
 import { Toast } from '@/components/pharmacy/toast';
 import { printReceipt } from '@/lib/receipt-print';
 import type { SharedData } from '@/types';
-import type { CartItem, MedicineSearchResult, Receipt, SaleMeta } from '@/types/pharmacy';
+import type { CartItem, DynamicFieldConfig, MedicineSearchResult, Receipt, SaleMeta } from '@/types/pharmacy';
 
 interface SellOutProps extends SharedData {
     results: MedicineSearchResult[];
     search: string;
-    fieldConfigs: Record<string, any[]>;
+    fieldConfigs: Record<string, DynamicFieldConfig[]>;
     flash: { success?: string; receipt?: Receipt };
     errors: Record<string, string>;
 }
