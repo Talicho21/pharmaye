@@ -38,7 +38,6 @@ export default function Login({ status, canResetPassword }: LoginProps) {
         });
     };
 
-    const handleLogout = () => router.post(route('logout'));
     const storeName = store?.name ?? 'Your Store';
 
     // When the backend signals STORE_SUSPENDED, replace the entire form with

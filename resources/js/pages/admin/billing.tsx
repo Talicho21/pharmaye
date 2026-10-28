@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AdminLayout from '@/layouts/admin-layout';
+import type { SharedData } from '@/types';
 
 type StoreStatus = 'trial' | 'active' | 'suspended';
 
@@ -25,8 +26,14 @@ interface AdminBillingProps {
     stores: StoreData[];
 }
 
+interface BillingPageProps extends SharedData {
+    flash?: {
+        success?: string;
+    };
+}
+
 export default function AdminBilling({ stores }: AdminBillingProps) {
-    const { flash } = usePage<any>().props;
+    const { flash } = usePage<BillingPageProps>().props;
     const [toastMessage, setToastMessage] = useState('');
     
     const [showBanner, setShowBanner] = useState(true);
@@ -204,4 +211,3 @@ export default function AdminBilling({ stores }: AdminBillingProps) {
         </AdminLayout>
     );
 }
-

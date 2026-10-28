@@ -19,7 +19,7 @@ interface Props {
     status?: string;
 }
 
-export default function Password({ forced = false, status }: Props) {
+export default function Password({ forced = false }: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
     const [showToast, setShowToast] = useState(false);

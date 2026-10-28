@@ -1,6 +1,6 @@
 ﻿import { Head, router, usePage } from '@inertiajs/react';
-import { Settings as SettingsIcon, Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Plus, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { useState } from 'react';
 
 import AdminLayout from '@/layouts/admin-layout';
 import type { SharedData } from '@/types';

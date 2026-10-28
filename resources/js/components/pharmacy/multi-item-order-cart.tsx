@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { downloadInvoicePdf } from '@/lib/receipt-print';
 import type { SharedData } from '@/types';
-import type { BatchOption, CartItem, MedicineSearchResult, SaleMeta } from '@/types/pharmacy';
+import type { BatchOption, CartItem, DynamicFieldConfig, MedicineSearchResult, SaleMeta } from '@/types/pharmacy';
 
 type EditableForm = {
     medicine: MedicineSearchResult | null;
@@ -29,7 +29,7 @@ const formatExpiry = (dateValue?: string | null): string => {
 
 type MultiItemOrderCartProps = {
     results: MedicineSearchResult[];
-    fieldConfigs?: Record<string, any[]>;
+    fieldConfigs?: Record<string, DynamicFieldConfig[]>;
     onSubmit: (items: CartItem[], meta: SaleMeta) => void;
     isProcessing?: boolean;
     serverError?: string;
@@ -249,7 +249,7 @@ export function MultiItemOrderCart({ results, fieldConfigs = {}, onSubmit, isPro
             seller_name: sellerName.trim() || undefined,
             receiver_name: customerName.trim(),
             reference: reference.trim() || undefined,
-            payment_method: paymentMethod as any,
+            payment_method: paymentMethod,
         });
     };
 

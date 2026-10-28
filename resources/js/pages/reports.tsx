@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Download, Printer, RefreshCw } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 
 import { AnalyticsPanel, type AnalyticsData } from '@/components/pharmacy/analytics-panel';
 import { AppShell } from '@/components/pharmacy/app-shell';

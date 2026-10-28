@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { AlertTriangle, BarChart3, Boxes, CircleDollarSign, PackageSearch, Pencil, RefreshCw, Search, Trash2, TrendingUp, X } from 'lucide-react';
+import { AlertTriangle, BarChart3, Boxes, CircleDollarSign, PackageSearch, Pencil, Search, Trash2, TrendingUp, X } from 'lucide-react';
 import { FormEventHandler, useEffect, useState } from 'react';
 
 import { type RangeOption, RANGE_LABELS } from '@/components/pharmacy/analytics-panel';
