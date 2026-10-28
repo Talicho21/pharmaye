@@ -3,6 +3,7 @@
 use App\Models\Batch;
 use App\Models\Medicine;
 use App\Models\Sale;
+use App\Models\SellOutFieldConfig;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\User;
@@ -12,6 +13,22 @@ beforeEach(function () {
     $this->user = User::factory()->for($this->store)->create();
     $this->medicine = Medicine::factory()->for($this->store)->create(['default_price' => 10.00]);
 });
+
+function enableSellOutFields(Store $store, array $fieldKeys): void
+{
+    foreach (array_values($fieldKeys) as $index => $key) {
+        SellOutFieldConfig::create([
+            'store_id' => $store->id,
+            'section' => 'customer_information',
+            'field_key' => $key,
+            'label' => ucwords(str_replace('_', ' ', $key)),
+            'input_type' => 'text',
+            'is_required' => false,
+            'is_active' => true,
+            'sort_order' => $index + 1,
+        ]);
+    }
+}
 
 function makeBatch(Store $store, Medicine $medicine, int $quantity, string $expiry): Batch
 {
@@ -78,6 +95,7 @@ test('a manual batch override sells from exactly the chosen batch', function () 
 });
 
 test('a sale records header, items, totals, stock movements and a store-scoped invoice number', function () {
+    enableSellOutFields($this->store, ['customer_name', 'customer_tin']);
     makeBatch($this->store, $this->medicine, 100, now()->addYear()->toDateString());
 
     $this->actingAs($this->user)->post(route('sales.store'), [
@@ -122,6 +140,7 @@ test('invoice numbers increment per store per day', function () {
 });
 
 test('a provided invoice number and seller name are stored instead of the generated defaults', function () {
+    enableSellOutFields($this->store, ['invoice_no', 'seller_name', 'customer_sno', 'reference']);
     makeBatch($this->store, $this->medicine, 100, now()->addYear()->toDateString());
 
     $this->actingAs($this->user)->post(route('sales.store'), [
