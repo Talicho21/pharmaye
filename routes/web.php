@@ -32,11 +32,10 @@ Route::middleware(['auth', 'require.password.change', 'store.not_suspended'])->g
 
     Route::post('categories', [CategoryController::class, 'store'])->name('categories.store');
     
-    Route::get('reports', [AnalyticsController::class, 'index'])->name('reports');
-
     // Admin only
     Route::middleware('admin')->group(function () {
         Route::delete('batches/{batch}', [InventoryController::class, 'destroy'])->name('batches.destroy');
+        Route::get('reports', [AnalyticsController::class, 'index'])->name('reports');
     });
 });
 
