@@ -75,7 +75,9 @@ class DashboardController extends Controller
             },
             // Lightweight sales summary (range + 3 overview cards + top sellers).
             // Admin-only; uses only 2 fast aggregate queries via summaryProps().
-            'salesSummary' => fn () => (new AnalyticsController())->summaryProps($request),
+            'salesSummary' => fn () => $request->user()->isAdmin()
+                ? (new AnalyticsController())->summaryProps($request)
+                : null,
         ]);
     }
 }

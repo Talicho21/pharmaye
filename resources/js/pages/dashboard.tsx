@@ -23,7 +23,7 @@ interface DashboardProps extends SharedData {
     };
     flash: { success?: string };
     /** Lightweight sales summary: range pills + overview cards + top sellers. */
-    salesSummary: {
+    salesSummary: null | {
         range: RangeOption;
         overview: { totalRevenue: number; totalItemsSold: number; salesCount: number };
         topSelling: { medicineName: string; quantitySold: number; totalRevenue: number }[];

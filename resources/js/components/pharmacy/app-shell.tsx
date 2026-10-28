@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
     { href: '/dashboard', label: 'Dashboard', description: 'Overview and quick actions', icon: LayoutDashboard },
     { href: '/inventory', label: 'Inventory', description: 'View and manage stock items', icon: Package },
     { href: '/sell-out', label: 'Sell Out', description: 'Process outgoing sales', icon: ShoppingCart },
-    { href: '/reports', label: 'Reports', description: 'Analytics and sales reports', icon: BarChart3 },
+    { href: '/reports', label: 'Reports', description: 'Analytics and sales reports', adminOnly: true, icon: BarChart3 },
     { href: '/settings/profile', label: 'Settings', description: '', icon: Settings, activeBase: '/settings' },
 ];
 
