@@ -1,0 +1,119 @@
+name: Deploy to production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    name: Dry run (nothing is changed on the server)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up PHP 8.3 (same major version as production)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, xml, ctype, fileinfo, tokenizer, curl, pdo_sqlite, sqlite3
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install PHP dependencies (with dev tools, for tests)
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Prepare test environment file (CI only, never deployed)
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run tests
+        env:
+          COLUMNS: 250
+        run: vendor/bin/pest
+
+      - name: Install production-only PHP packages
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
+
+      - name: Remove CI-only files from the release
+        run: rm -f .env
+
+      - name: Prepare SSH
+        env:
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.SERVER_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Compare with the server (dry run, changes nothing)
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          REMOTE_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          set -euo pipefail
+          echo "Commit being checked: $GITHUB_SHA"
+          echo "DRY RUN: nothing will be changed on the server."
+          echo
+
+          rsync -rlpzci --dry-run --delete-after \
+            --chmod=D755,F644 \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/.gitignore' \
+            --exclude='/.gitattributes' \
+            --exclude='/.env' \
+            --exclude='/.env.*' \
+            --exclude='/storage/' \
+            --exclude='/public/storage' \
+            --exclude='/public/uploads/' \
+            --exclude='/public/hot' \
+            --exclude='/node_modules/' \
+            --exclude='/tests/' \
+            --exclude='/.backup/' \
+            --exclude='/bootstrap/cache/*.php' \
+            -e "ssh -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p 22" \
+            ./ "$USER_NAME@$HOST:$REMOTE_PATH/" | tee /tmp/dryrun.txt
+
+          echo
+          echo "========== SUMMARY =========="
+          SENT=$(grep -c '^>f' /tmp/dryrun.txt || true)
+          NEW=$(grep -c '^>f+++++++++' /tmp/dryrun.txt || true)
+          DELETED=$(grep -c '^\*deleting' /tmp/dryrun.txt || true)
+          echo "Files that would be sent (new or changed): $SENT (new: $NEW)"
+          echo "Files or folders that would be DELETED on the server: $DELETED"
+          echo
+          echo "---- Changes OUTSIDE vendor/ ----"
+          grep -E '^(>f|\*deleting|cd|cL)' /tmp/dryrun.txt | grep -v ' vendor/' || echo "(none)"
+          echo
+          echo "---- vendor/ packages that would be REMOVED ----"
+          grep '^\*deleting' /tmp/dryrun.txt | grep ' vendor/' | sed 's/^\*deleting *//' | awk -F/ '{print $2"/"$3}' | sort -u || echo "(none)"
+          echo
+          echo "---- vendor/ packages that would change or be added (files per package) ----"
+          grep '^>f' /tmp/dryrun.txt | grep ' vendor/' | sed 's/^[^ ]* *//' | awk -F/ '{print $2"/"$3}' | sort | uniq -c | sort -rn | head -40 || echo "(none)"
+          echo "========== END SUMMARY =========="
