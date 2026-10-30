@@ -2,6 +2,14 @@ name: Deploy to production
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run = only list the changes. deploy = really update the server."
+        type: choice
+        options:
+          - dry-run
+          - deploy
+        default: dry-run
 
 permissions:
   contents: read
@@ -11,10 +19,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  dry-run:
-    name: Dry run (nothing is changed on the server)
+  deploy:
+    name: Test, build and (optionally) deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -70,25 +78,34 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Compare with the server (dry run, changes nothing)
+      - name: Sync files to the server
         env:
+          MODE: ${{ inputs.mode }}
           HOST: ${{ secrets.SERVER_HOST }}
           USER_NAME: ${{ secrets.SERVER_USER }}
           REMOTE_PATH: ${{ secrets.SERVER_PATH }}
         run: |
           set -euo pipefail
-          echo "Commit being checked: $GITHUB_SHA"
-          echo "DRY RUN: nothing will be changed on the server."
+          echo "Mode: $MODE"
+          echo "Commit: $GITHUB_SHA"
+          DRY=""
+          if [ "$MODE" != "deploy" ]; then
+            DRY="--dry-run"
+            echo "DRY RUN: nothing will be changed on the server."
+          fi
           echo
 
-          rsync -rlpzci --dry-run --delete-after \
+          rsync -rlpzci $DRY --delete-after --delay-updates \
             --chmod=D755,F644 \
             --exclude='/.git/' \
             --exclude='/.github/' \
             --exclude='/.gitignore' \
             --exclude='/.gitattributes' \
+            --exclude='/.vscode/' \
             --exclude='/.env' \
             --exclude='/.env.*' \
+            --exclude='/create_db.php' \
+            --exclude='/DEPLOYED_COMMIT' \
             --exclude='/storage/' \
             --exclude='/public/storage' \
             --exclude='/public/uploads/' \
@@ -98,22 +115,49 @@ jobs:
             --exclude='/.backup/' \
             --exclude='/bootstrap/cache/*.php' \
             -e "ssh -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p 22" \
-            ./ "$USER_NAME@$HOST:$REMOTE_PATH/" | tee /tmp/dryrun.txt
+            ./ "$USER_NAME@$HOST:$REMOTE_PATH/" | tee /tmp/rsync.txt
 
           echo
-          echo "========== SUMMARY =========="
-          SENT=$(grep -c '^>f' /tmp/dryrun.txt || true)
-          NEW=$(grep -c '^>f+++++++++' /tmp/dryrun.txt || true)
-          DELETED=$(grep -c '^\*deleting' /tmp/dryrun.txt || true)
-          echo "Files that would be sent (new or changed): $SENT (new: $NEW)"
-          echo "Files or folders that would be DELETED on the server: $DELETED"
+          echo "========== SUMMARY ($MODE) =========="
+          SENT=$(grep -c '^<f' /tmp/rsync.txt || true)
+          NEW=$(grep -c '^<f+++++++++' /tmp/rsync.txt || true)
+          DELETED=$(grep -c '^\*deleting' /tmp/rsync.txt || true)
+          echo "Files sent (new or changed): $SENT (new: $NEW)"
+          echo "Files or folders deleted on the server: $DELETED"
           echo
-          echo "---- Changes OUTSIDE vendor/ ----"
-          grep -E '^(>f|\*deleting|cd|cL)' /tmp/dryrun.txt | grep -v ' vendor/' || echo "(none)"
+          echo "---- Changes outside vendor/ and public/build/assets/ ----"
+          grep -E '^(<f|\*deleting|cd|cL)' /tmp/rsync.txt | grep -v -e ' vendor/' -e ' public/build/assets/' || echo "(none)"
           echo
-          echo "---- vendor/ packages that would be REMOVED ----"
-          grep '^\*deleting' /tmp/dryrun.txt | grep ' vendor/' | sed 's/^\*deleting *//' | awk -F/ '{print $2"/"$3}' | sort -u || echo "(none)"
+          echo "---- Frontend build lines: $(grep -c ' public/build/assets/' /tmp/rsync.txt || true) ----"
           echo
-          echo "---- vendor/ packages that would change or be added (files per package) ----"
-          grep '^>f' /tmp/dryrun.txt | grep ' vendor/' | sed 's/^[^ ]* *//' | awk -F/ '{print $2"/"$3}' | sort | uniq -c | sort -rn | head -40 || echo "(none)"
+          echo "---- vendor/ lines (first 60) ----"
+          grep ' vendor/' /tmp/rsync.txt | head -60 || echo "(none)"
           echo "========== END SUMMARY =========="
+
+      - name: Refresh Laravel on the server
+        if: inputs.mode == 'deploy'
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER_NAME: ${{ secrets.SERVER_USER }}
+          REMOTE_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -p 22 "$USER_NAME@$HOST" "REMOTE_PATH='$REMOTE_PATH' COMMIT='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$REMOTE_PATH"
+          PHP_BIN=$(command -v php || echo /usr/local/bin/php)
+          "$PHP_BIN" -v | head -1
+          rm -f bootstrap/cache/*.php
+          "$PHP_BIN" artisan package:discover --ansi
+          "$PHP_BIN" artisan view:clear
+          echo "$COMMIT" > DEPLOYED_COMMIT
+          echo "Server refreshed."
+          REMOTE
+
+      - name: Check the live site
+        if: inputs.mode == 'deploy'
+        run: |
+          set -euo pipefail
+          sleep 5
+          curl --fail --silent --show-error --max-time 30 -o /dev/null -w "Health check /up: HTTP %{http_code}\n" https://pharmaye.kaldisbunnaet.com/up
+          curl --fail --silent --show-error --location --max-time 30 -o /dev/null -w "Home page: HTTP %{http_code}\n" https://pharmaye.kaldisbunnaet.com/
